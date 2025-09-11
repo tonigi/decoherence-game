@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Decoherence – Prototype</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #0a0b10;
+        color: #e8f0ff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      #root {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      .stage {
+        position: relative;
+        image-rendering: pixelated;
+      }
+      canvas {
+        display: block;
+      }
+      #overlayCanvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        pointer-events: none;
+      }
+      .hud {
+        position: fixed;
+        left: 16px;
+        top: 16px;
+        width: 240px;
+      }
+      .bar {
+        height: 10px;
+        background: #222a;
+        border: 1px solid #445;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .bar > .fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #3ee 0%, #49f 100%);
+        transform-origin: left center;
+        transform: scaleX(1);
+      }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.6);
+      }
+      .overlay.active { display: flex; }
+      .panel {
+        background: #10131a;
+        border: 1px solid #2a3240;
+        padding: 24px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px #0008;
+        text-align: center;
+      }
+      .panel h1 { margin: 0 0 12px; }
+      .panel button {
+        background: #2a67ff;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .panel button:hover { filter: brightness(1.1); }
+    </style>
+  </head>
+  <body>
+    <div id="compatWarning" class="overlay" style="display:none"><div class="panel"><h1>Cannot Start</h1><div class="msg">Loading…</div><p>Run from a local server (not file://). Example:<br/><code>python3 -m http.server</code> then open <code>http://localhost:8000</code></p></div></div>
+    <div id="root">
+      <div class="stage">
+        <canvas id="simCanvas" width="320" height="180"></canvas>
+        <canvas id="overlayCanvas" width="320" height="180"></canvas>
+      </div>
+    </div>
+    <div class="hud">
+      <div>Coherence</div>
+      <div class="bar"><div class="fill" id="coherenceFill"></div></div>
+    </div>
+    <div id="winOverlay" class="overlay"><div class="panel"><h1>Level Complete</h1><button id="nextBtn">Restart</button></div></div>
+    <div id="loseOverlay" class="overlay"><div class="panel"><h1>Decoherence</h1><button id="retryBtn">Retry</button></div></div>
+    <script>
+      (function(){
+        function show(msg){
+          var el = document.getElementById('compatWarning');
+          if(!el) return;
+          el.querySelector('.msg').textContent = msg;
+          el.style.display = 'flex';
+        }
+        if (location.protocol === 'file:') {
+          show('This app uses ES modules. Browsers often block module imports from file://.');
+        }
+        window.addEventListener('error', function(e){
+          show('Error: ' + (e.error && e.error.message ? e.error.message : (e.message || 'Unknown error')));
+        });
+      })();
+    </script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+  </html>
