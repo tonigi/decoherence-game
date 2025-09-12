@@ -6,13 +6,14 @@ import { Player } from './game/player.js';
 import { Coherence } from './game/coherence.js';
 import { Detector } from './game/detector.js';
 import { HUD } from './ui/hud.js';
+import { Controls } from './ui/controls.js';
 
 const CONFIG = {
   width: 320,
   height: 180,
   dx: 1.0,
-  dt: 0.01,
-  substeps: 3,
+  dt: 0.015,
+  substeps: 5,
 };
 
 function setupCanvases(w, h) {
@@ -54,19 +55,22 @@ function drawOverlay(ctx, player, detector) {
 }
 
 function main() {
-  const { width: W, height: H, dx, dt, substeps } = CONFIG;
+  const { width: W, height: H } = CONFIG;
   const { simCanvas, overlayCanvas } = setupCanvases(W, H);
   const overlayCtx = overlayCanvas.getContext('2d');
   const renderer = new CPURenderer(simCanvas, W, H);
   const hud = new HUD();
 
   // Build potential and absorbing mask
-  const V = makeDoubleSlit(W, H, { barrierThickness: 6, barrierV: 40, slitHeight: Math.floor(H * 0.14), slitSeparation: Math.floor(H * 0.20) });
-  const absorbMask = makeAbsorbMask(W, H, { margin: 16, strength: 0.06 });
+  const potentialParams = { barrierThickness: 6, barrierV: 40, slitHeight: Math.floor(H * 0.14), slitSeparation: Math.floor(H * 0.20), slitOffsetY: 0 };
+  const V = makeDoubleSlit(W, H, potentialParams);
+  const absorbParams = { margin: 16, strength: 0.06 };
+  const absorbMask = makeAbsorbMask(W, H, absorbParams);
 
   // Create simulation
-  const sim = createFDTDSim({ width: W, height: H, dx, dt, V, absorbMask });
-  sim.seedGaussian({ x0: Math.floor(W * 0.18), y0: Math.floor(H * 0.5), sigma: 7, kx: 0.7, ky: 0 });
+  const sim = createFDTDSim({ width: W, height: H, dx: CONFIG.dx, dt: CONFIG.dt, V, absorbMask });
+  const seedParams = { sigma: 7, kx: 0.7, ky: 0 };
+  sim.seedGaussian({ x0: Math.floor(W * 0.18), y0: Math.floor(H * 0.5), ...seedParams });
 
   // Game objects
   const player = new Player({
@@ -98,6 +102,7 @@ function main() {
 
   let lastTime = performance.now();
   let running = true;
+  let substeps = CONFIG.substeps;
 
   function restart() {
     winOverlay.classList.remove('active');
@@ -136,14 +141,39 @@ function main() {
       winOverlay.classList.add('active');
     }
 
-    // Render
-    renderer.render(density);
+    // Render with phase coloring and regen overlay
+    const state = sim.getState();
+    renderer.render(density, { psiR: state.psiR, psiI: state.psiIhalf, dMax, regenThreshold: coherence.regenThreshold });
     drawOverlay(overlayCtx, player, detector);
 
     if (running) requestAnimationFrame(loop);
   }
 
   requestAnimationFrame(loop);
+
+  // Controls wiring
+  const controls = new Controls({
+    sim,
+    renderer,
+    player,
+    coherence,
+    config: CONFIG,
+    potentialParams,
+    absorbParams,
+    seedParams,
+    rebuildPotential: () => {
+      const Vnew = makeDoubleSlit(W, H, potentialParams);
+      sim.setPotential(Vnew);
+    },
+    rebuildAbsorb: () => {
+      const m = makeAbsorbMask(W, H, absorbParams);
+      sim.setAbsorbMask(m);
+    },
+    reseed: () => {
+      sim.seedGaussian({ x0: Math.floor(W * 0.18), y0: Math.floor(H * 0.5), ...seedParams });
+    },
+    setSubsteps: (v) => { substeps = v; },
+  });
 }
 
 main();

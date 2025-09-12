@@ -120,6 +120,22 @@ export function createFDTDSim({ width, height, dx = 1.0, dt = 0.02, V, absorbMas
     return { psiR, psiIhalf, V: pot, width: w, height: h };
   }
 
+  function setDt(newDt) {
+    if (typeof newDt === 'number' && isFinite(newDt) && newDt > 0) dt = newDt;
+  }
+
+  function setPotential(Vnew) {
+    if (!Vnew || Vnew.length !== pot.length) return false;
+    for (let i = 0; i < pot.length; i++) pot[i] = Vnew[i];
+    return true;
+  }
+
+  function setAbsorbMask(maskNew) {
+    if (!maskNew || maskNew.length !== mask.length) return false;
+    for (let i = 0; i < mask.length; i++) mask[i] = maskNew[i];
+    return true;
+  }
+
   return {
     width: w,
     height: h,
@@ -130,5 +146,8 @@ export function createFDTDSim({ width, height, dx = 1.0, dt = 0.02, V, absorbMas
     sampleDensity,
     getState,
     getLastMaxDensity,
+    setDt,
+    setPotential,
+    setAbsorbMask,
   };
 }

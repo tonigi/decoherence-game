@@ -100,3 +100,21 @@ Key Risks + Mitigations
 - Performance on low‑end: dynamic grid and substeps; CPU fallback; light visuals.
 - WebGL float support: require WebGL2; fallback to CPU if unsupported.
 
+Current Prototype (status)
+
+- CPU Schrödinger solver with adjustable `dt` and substeps at runtime.
+- Canvas2D renderer with adaptive tone mapping (percentile white point) and gamma.
+- Phase coloring: hue encodes phase via atan2(Im, Re); value encodes intensity.
+- Regen visibility: mint overlay plus neon boundary outline above regen threshold.
+- Coherence HUD and win/lose overlays; double‑slit potential in use.
+- Top‑right tuning panel to adjust simulation, renderer, player, coherence, potential, absorb mask, and reseed the packet.
+
+Controls Reference (prototype)
+
+- Simulation: `dt`, `substeps` (live via setters).
+- Renderer: `gamma`, `percentile`, `regenOverlayAlphaMax`, `regenOverlayBrightMax`, `outlineIntensity`.
+- Player: `baseSpeed`, `speedProfile.minFactor`, `speedProfile.maxFactor`.
+- Coherence: `minDrain`, `maxDrain`, `regenThreshold`, `regenRate`.
+- Potential (double slit): `barrierThickness`, `barrierV`, `slitHeight`, `slitSeparation`, `slitOffsetY`.
+- Absorb: `margin`, `strength`.
+- Seed: Gaussian `sigma`, `kx`, `ky`.
