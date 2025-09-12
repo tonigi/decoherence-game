@@ -136,6 +136,11 @@ export function createFDTDSim({ width, height, dx = 1.0, dt = 0.02, V, absorbMas
     return true;
   }
 
+  // Collapse wavefunction to a localized Gaussian at (x0,y0)
+  function collapseAt(x0, y0, { sigma = 3 } = {}) {
+    seedGaussian({ x0: Math.floor(x0), y0: Math.floor(y0), sigma, kx: 0, ky: 0 });
+  }
+
   return {
     width: w,
     height: h,
@@ -149,5 +154,6 @@ export function createFDTDSim({ width, height, dx = 1.0, dt = 0.02, V, absorbMas
     setDt,
     setPotential,
     setAbsorbMask,
+    collapseAt,
   };
 }

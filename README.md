@@ -12,6 +12,7 @@ Controls
 - Win: reach the detector rectangle on the right.
 - Lose: coherence reaches zero.
 - Tuning panel: click the ⚙️ button (top-right) to open.
+- Observe: press O or Space to perform a measurement — a position is sampled from |Ψ|², the player is teleported to that location, and the wavefunction collapses around it (costs coherence; short cooldown).
 
 Tuning Panel (live parameters)
 
@@ -46,4 +47,3 @@ Notes
 - If visuals clip, lower percentile or raise gamma.
 - If unstable or too fast, lower dt or substeps.
 - Works in CPU mode; GPU/WebGL path is planned for later.
-

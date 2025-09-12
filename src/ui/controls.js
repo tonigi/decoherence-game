@@ -1,10 +1,11 @@
 export class Controls {
-  constructor({ sim, renderer, player, coherence, config, potentialParams, absorbParams, seedParams, rebuildPotential, rebuildAbsorb, reseed, setSubsteps }) {
+  constructor({ sim, renderer, player, coherence, config, observe, potentialParams, absorbParams, seedParams, rebuildPotential, rebuildAbsorb, reseed, setSubsteps }) {
     this.sim = sim;
     this.renderer = renderer;
     this.player = player;
     this.coherence = coherence;
     this.config = config;
+    this.observe = observe;
     this.potentialParams = potentialParams;
     this.absorbParams = absorbParams;
     this.seedParams = seedParams;
@@ -52,6 +53,10 @@ export class Controls {
     this._set('seedSigmaInput', this.seedParams.sigma);
     this._set('seedKxInput', this.seedParams.kx);
     this._set('seedKyInput', this.seedParams.ky);
+    // Observe
+    this._set('observeSigmaInput', this.observe.sigma);
+    this._set('observePenaltyInput', this.observe.penalty);
+    this._set('observeCooldownInput', this.observe.cooldown);
 
     // Wire events
     document.getElementById('dtInput').addEventListener('change', () => {
@@ -125,6 +130,16 @@ export class Controls {
       this.seedParams.ky = this._num('seedKyInput');
       this.reseed();
     });
+
+    // Observe params
+    document.getElementById('observeSigmaInput').addEventListener('change', () => {
+      this.observe.sigma = Math.max(1, Math.min(30, this._num('observeSigmaInput')));
+    });
+    document.getElementById('observePenaltyInput').addEventListener('change', () => {
+      this.observe.penalty = Math.max(0, Math.min(1, this._num('observePenaltyInput')));
+    });
+    document.getElementById('observeCooldownInput').addEventListener('change', () => {
+      this.observe.cooldown = Math.max(0, Math.min(5, this._num('observeCooldownInput')));
+    });
   }
 }
-

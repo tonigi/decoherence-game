@@ -89,7 +89,11 @@ function main() {
     ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
     w: 'up', s: 'down', a: 'left', d: 'right',
   };
-  window.addEventListener('keydown', (e) => { const k = keys[e.key]; if (k) { input[k] = true; e.preventDefault(); } });
+  window.addEventListener('keydown', (e) => {
+    const k = keys[e.key];
+    if (k) { input[k] = true; e.preventDefault(); return; }
+    if (e.key === ' ' || e.key === 'o' || e.key === 'O') { doObserve(); e.preventDefault(); }
+  });
   window.addEventListener('keyup', (e) => { const k = keys[e.key]; if (k) { input[k] = false; e.preventDefault(); } });
 
   // UI overlays
@@ -103,6 +107,46 @@ function main() {
   let lastTime = performance.now();
   let running = true;
   let substeps = CONFIG.substeps;
+  const observe = { sigma: 3, penalty: 0.3, cooldown: 0.6 };
+  let lastObserveAt = -1e9;
+  let observeFlashT = 0.0;
+  let lastDensity = null;
+
+  function samplePositionFromDensity(arr, w, h) {
+    if (!arr) return null;
+    let total = 0;
+    for (let i = 0; i < arr.length; i++) total += arr[i];
+    if (!(total > 0)) return null;
+    let r = Math.random() * total;
+    for (let i = 0; i < arr.length; i++) {
+      r -= arr[i];
+      if (r <= 0) {
+        const x = i % w;
+        const y = (i / w) | 0;
+        return { x, y };
+      }
+    }
+    // Fallback (should not happen)
+    return { x: (arr.length % w), y: (arr.length / w) | 0 };
+  }
+
+  function doObserve() {
+    const now = performance.now() / 1000;
+    if (now - lastObserveAt < observe.cooldown) return;
+    lastObserveAt = now;
+    // Sample a position from |Ψ|^2 and teleport the player there
+    const pos = samplePositionFromDensity(lastDensity, W, H);
+    if (pos) {
+      player.x = pos.x;
+      player.y = pos.y;
+      // Collapse Ψ at the observed position
+      sim.collapseAt(pos.x, pos.y, { sigma: observe.sigma });
+    }
+    // Coherence penalty (cost to observe)
+    coherence.value = Math.max(0, coherence.value - observe.penalty);
+    // Flash effect
+    observeFlashT = 0.18;
+  }
 
   function restart() {
     winOverlay.classList.remove('active');
@@ -124,6 +168,7 @@ function main() {
     // Sim substeps
     for (let i = 0; i < substeps; i++) sim.step(1);
     const density = sim.computeDensity();
+    lastDensity = density;
     const dMax = sim.getLastMaxDensity();
 
     // Player + coherence
@@ -145,6 +190,14 @@ function main() {
     const state = sim.getState();
     renderer.render(density, { psiR: state.psiR, psiI: state.psiIhalf, dMax, regenThreshold: coherence.regenThreshold });
     drawOverlay(overlayCtx, player, detector);
+    if (observeFlashT > 0) {
+      const t = Math.max(0, Math.min(1, observeFlashT / 0.18));
+      overlayCtx.save();
+      overlayCtx.fillStyle = `rgba(255,255,255,${0.25 * t})`;
+      overlayCtx.fillRect(0, 0, W, H);
+      overlayCtx.restore();
+      observeFlashT -= dtFrame;
+    }
 
     if (running) requestAnimationFrame(loop);
   }
@@ -158,6 +211,7 @@ function main() {
     player,
     coherence,
     config: CONFIG,
+    observe,
     potentialParams,
     absorbParams,
     seedParams,

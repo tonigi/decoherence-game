@@ -70,6 +70,7 @@ Gameplay Systems
 - Coherence: drain = baseDrain / (density + epsilon); decohere at 0.
 - Detector: AABB; entering triggers win.
 - Observer effect (later): swap potential, reset Ψ, keep player position.
+- Observe (prototype gameplay): pressing O/Space samples a position from |Ψ|², teleports the player there, and collapses Ψ around that location; applies a coherence penalty and brief visual flash; cooldown prevents spamming.
 
 UI/UX
 
@@ -108,6 +109,7 @@ Current Prototype (status)
 - Regen visibility: mint overlay plus neon boundary outline above regen threshold.
 - Coherence HUD and win/lose overlays; double‑slit potential in use.
 - Top‑right tuning panel to adjust simulation, renderer, player, coherence, potential, absorb mask, and reseed the packet.
+- New gameplay: on-demand Observe collapse (O/Space) with penalty and cooldown.
 
 Controls Reference (prototype)
 
