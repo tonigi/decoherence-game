@@ -28,24 +28,37 @@ async function init() {
   requestAnimationFrame(loop);
 }
 
+// Level picker: a chapter-grouped drop-down with stars, plus previous / next.
+const starText = (id) => {
+  const n = ui.stars[id] || 0, ex = ui.stars[starKey(id, 'expect')] || 0;
+  return '★'.repeat(n) + '☆'.repeat(3 - n) + (ex ? `  (E ${'★'.repeat(ex)})` : '');
+};
 function buildNav() {
-  const nav = $('levels'); nav.innerHTML = '';
-  let chap = null;
+  const sel = $('lvlSelect'); sel.innerHTML = '';
+  let group = null, total = 0;
   for (const id of ui.index.levels) {
     const lv = ui.levels[id];
-    if (lv.chapter !== chap) {
-      chap = lv.chapter;
-      const c = document.createElement('span'); c.className = 'chap';
-      c.textContent = 'Ch ' + chap + ' · ' + (ui.index.chapters.find(x => x.id === chap)?.name || ''); nav.append(c);
+    if (!group || +group.dataset.chapter !== lv.chapter) {
+      group = document.createElement('optgroup'); group.dataset.chapter = lv.chapter;
+      group.label = `Chapter ${lv.chapter} · ${ui.index.chapters.find(x => x.id === lv.chapter)?.name || ''}`;
+      sel.append(group);
     }
-    const b = document.createElement('button'); b.dataset.id = id;
-    const ex = ui.stars[starKey(id, 'expect')] || 0;
-    b.innerHTML = `${id} <span class="st">${'★'.repeat(ui.stars[id] || 0)}</span>${ex ? `<span class="st ex" title="expectation mode">${'★'.repeat(ex)}</span>` : ''}`;
-    b.title = lv.title; b.onclick = () => loadLevel(id);
-    if (ui.level && ui.level.id === id) b.classList.add('cur');
-    nav.append(b);
+    const o = document.createElement('option'); o.value = id;
+    o.textContent = `${id}  ${lv.title}   ${starText(id)}`;
+    group.append(o); total += ui.stars[id] || 0;
   }
+  if (ui.level) sel.value = ui.level.id;
+  const i = ui.level ? ui.index.levels.indexOf(ui.level.id) : 0;
+  $('lvlPrev').disabled = i <= 0; $('lvlNext').disabled = i >= ui.index.levels.length - 1;
+  $('starTotal').textContent = `★ ${total} / ${3 * ui.index.levels.length}`;
 }
+function stepLevel(d) {
+  const L = ui.index.levels, i = L.indexOf(ui.level.id) + d;
+  if (i >= 0 && i < L.length) loadLevel(L[i]);
+}
+$('lvlSelect').onchange = (e) => { loadLevel(e.target.value); e.target.blur(); };
+$('lvlPrev').onclick = () => stepLevel(-1);
+$('lvlNext').onclick = () => stepLevel(1);
 
 function loadLevel(id) {
   ui.level = ui.levels[id]; store.set('last', id); history.replaceState(null, '', '#' + id);
@@ -131,12 +144,18 @@ function buildItemPanel() {
     const p = param(spec[k]);
     const row = document.createElement('div'); row.className = 'slider';
     row.innerHTML = `<span>${names[k]}</span><input type="range" min="${p.min}" max="${p.max}" step="0.05" value="${it[k]}"><output>${(+it[k]).toFixed(2)}</output>`;
-    const inp = row.querySelector('input');
-    inp.oninput = () => { it[k] = +inp.value; row.querySelector('output').textContent = (+inp.value).toFixed(2); rebuildSetupView(); };
+    const inp = row.querySelector('input'); inp.dataset.key = k;
+    inp.oninput = () => { const cur = ui.setup.placed[ui.selected]; if (cur) cur[k] = +inp.value; row.querySelector('output').textContent = (+inp.value).toFixed(2); rebuildSetupView(); };
     host.append(row);
   }
   const del = document.createElement('button'); del.textContent = 'Remove  (Del)';
   del.onclick = removeSelected; host.append(del);
+}
+function syncItemPanel() {
+  const it = ui.setup.placed[ui.selected]; if (!it) return;
+  for (const inp of document.querySelectorAll('#itemPanel input[data-key]')) {
+    const k = inp.dataset.key; inp.value = it[k]; inp.parentElement.querySelector('output').textContent = (+it[k]).toFixed(2);
+  }
 }
 function removeSelected() {
   if (ui.selected < 0) return;
@@ -173,7 +192,7 @@ function updatePanels() {
   $('btnPlay').textContent = ui.playing ? '⏸ Pause' : (ui.phase === 'setup' ? '▶ Play' : '▶ Resume');
   $('btnPlay').disabled = ui.phase === 'done';
   $('btnObserve').disabled = ui.phase === 'done' || !s.canObserve();
-  $('phaseTag').textContent = ui.phase === 'setup' ? 'setup: drag the packet, its arrow, and any items' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
+  $('phaseTag').textContent = ui.phase === 'setup' ? 'setup: drag the packet and items; handles change size, width and strength' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
   const bits = [];
   if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges - click the field (impulse toward the cursor).`);
   if (inv.tilt) bits.push('Field tilt: hold arrow keys / WASD.');
@@ -275,6 +294,7 @@ addEventListener('keydown', (e) => {
   if (key === ' ') { e.preventDefault(); play(); return; }
   if (key === 'Enter') { e.preventDefault(); observe(); return; }
   if (key === 'r') { resetToSetup(true); return; }
+  if (key === '[' || key === ']') { stepLevel(key === '[' ? -1 : 1); return; }
   if (key === 'v') { const sel = $('view_mode'); sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; sel.onchange(); return; }
   if (key === 'c') { $('optCurrent').click(); return; }
   if (key === 'g') { $('optGhost').click(); return; }
@@ -297,42 +317,105 @@ function pointer(e) {
 }
 const pxPerUnit = () => canvas.width / ui.level.grid.L;
 
+// ---------------------------------------------------------------- playfield handles
+// Every editable geometric property of the setup has a handle on the playfield.
+// Handles live in world units and are rebuilt from the current setup each time
+// (the setup is re-sanitised while dragging, so they never hold stale objects).
+const ARROW_PX = 22;   // launch arrow: pixels per unit of |k|
+const editable = (p) => { const q = param(p); return q.max > q.min; };
+function setupHandles() {
+  if (ui.phase !== 'setup') return [];
+  const lv = ui.level, L = lv.launch, l = ui.setup.launch, S = pxPerUnit(), out = [];
+  const a = (l.angle * Math.PI) / 180;
+  if (editable(L.k) || editable(L.angle)) out.push({
+    id: 'k', x: l.x + (Math.cos(a) * l.k * ARROW_PX) / S, y: l.y + (Math.sin(a) * l.k * ARROW_PX) / S, shape: 'dot', cursor: 'grab', title: 'momentum (speed and direction)',
+    drag: (p) => { const dx = p.x - l.x, dy = p.y - l.y; if (editable(L.k)) l.k = (Math.hypot(dx, dy) * S) / ARROW_PX; if (editable(L.angle)) l.angle = (Math.atan2(dy, dx) * 180) / Math.PI; },
+  });
+  if (editable(L.sigma)) out.push({
+    id: 'sigma', x: l.x + 2 * l.sigma * Math.SQRT1_2, y: l.y + 2 * l.sigma * Math.SQRT1_2, shape: 'ring', cursor: 'nwse-resize', title: 'packet width σ',
+    drag: (p) => { l.sigma = Math.hypot(p.x - l.x, p.y - l.y) / 2; },
+  });
+  const it = ui.setup.placed[ui.selected];
+  if (it) {
+    const spec = lv.inventory.items.find(s => s.id === it.id);
+    if (spec.shape === 'circle') {
+      if (editable(spec.r)) out.push({ id: 'r', x: it.x + it.r, y: it.y, shape: 'square', cursor: 'ew-resize', title: 'radius', drag: (p) => { it.r = Math.hypot(p.x - it.x, p.y - it.y); } });
+    } else {
+      if (editable(spec.w)) out.push({ id: 'w', x: it.x + it.w / 2, y: it.y, shape: 'square', cursor: 'ew-resize', title: 'width', drag: (p) => { it.w = 2 * Math.abs(p.x - it.x); } });
+      if (editable(spec.h)) out.push({ id: 'h', x: it.x, y: it.y + it.h / 2, shape: 'square', cursor: 'ns-resize', title: 'height', drag: (p) => { it.h = 2 * Math.abs(p.y - it.y); } });
+    }
+    // scalar strengths (barrier V, detector strength) sit on a stalk above the item:
+    // the higher the handle, the larger the value over its range
+    const top = it.y - (spec.shape === 'circle' ? it.r : it.h / 2);
+    for (const k of ['V', 'strength']) {
+      if (!itemKeys(spec).includes(k) || !editable(spec[k])) continue;
+      const q = param(spec[k]), f = (it[k] - q.min) / (q.max - q.min);
+      out.push({
+        id: k, x: it.x, y: top - STALK_MIN - f * STALK_LEN, base: top, shape: 'stalk', cursor: 'ns-resize',
+        label: `${k === 'V' ? 'V' : 's'} ${(+it[k]).toFixed(2)}`, title: k === 'V' ? 'strength V (drag up / down)' : 'measurement strength (drag up / down)',
+        drag: (p) => { const g = (top - STALK_MIN - p.y) / STALK_LEN; it[k] = q.min + Math.min(1, Math.max(0, g)) * (q.max - q.min); },
+      });
+    }
+  }
+  return out;
+}
+const STALK_MIN = 0.8, STALK_LEN = 3.5; // world units
+const HANDLE_HIT_PX = 14;
+function handleAt(p) {
+  const S = pxPerUnit(); let best = null, bd = HANDLE_HIT_PX;
+  for (const h of setupHandles()) { const d = Math.hypot(h.x * S - p.px, h.y * S - p.py); if (d <= bd) { bd = d; best = h; } }
+  return best;
+}
+function itemAt(p) {
+  for (let i = ui.setup.placed.length - 1; i >= 0; i--) {          // topmost last
+    const it = ui.setup.placed[i], spec = ui.level.inventory.items.find(s => s.id === it.id);
+    const inside = spec.shape === 'circle' ? Math.hypot(p.x - it.x, p.y - it.y) <= it.r : Math.abs(p.x - it.x) <= it.w / 2 && Math.abs(p.y - it.y) <= it.h / 2;
+    if (inside) return i;
+  }
+  return -1;
+}
+function onPacket(p) {
+  const lv = ui.level, l = ui.setup.launch, S = pxPerUnit();
+  return (editable(lv.launch.x) || editable(lv.launch.y)) && Math.hypot(p.px - l.x * S, p.py - l.y * S) < Math.max(22, l.sigma * 2 * S);
+}
+/** Clamp the setup to the level's ranges right away and refresh sliders and the view. */
+function setupChanged() {
+  ui.setup = sanitizeSetup(ui.level, ui.setup);
+  syncLaunchSliders(); syncItemPanel(); rebuildSetupView();
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  const p = pointer(e), lv = ui.level;
+  const p = pointer(e);
   if (ui.phase === 'run' && ui.playing) {
     const [cx, cy] = ui.session.sim.centroid();
     ui.session.kick(p.x - cx, p.y - cy); updatePanels(); return;
   }
   if (ui.phase !== 'setup') return;
-  const l = ui.setup.launch, S = pxPerUnit(), a = l.angle * Math.PI / 180;
-  const hx = l.x * S + Math.cos(a) * l.k * 22, hy = l.y * S + Math.sin(a) * l.k * 22;
-  const kEditable = param(lv.launch.k).max > param(lv.launch.k).min || param(lv.launch.angle).max > param(lv.launch.angle).min;
-  const posEditable = param(lv.launch.x).max > param(lv.launch.x).min || param(lv.launch.y).max > param(lv.launch.y).min;
-  if (kEditable && Math.hypot(p.px - hx, p.py - hy) < 16) ui.drag = { kind: 'k' };
-  else {
-    // items first (topmost last)
-    for (let i = ui.setup.placed.length - 1; i >= 0; i--) {
-      const it = ui.setup.placed[i], spec = lv.inventory.items.find(s => s.id === it.id);
-      const inside = spec.shape === 'circle' ? Math.hypot(p.x - it.x, p.y - it.y) <= it.r : Math.abs(p.x - it.x) <= it.w / 2 && Math.abs(p.y - it.y) <= it.h / 2;
-      if (inside) { ui.selected = i; ui.drag = { kind: 'item', dx: it.x - p.x, dy: it.y - p.y }; updatePanels(); canvas.setPointerCapture(e.pointerId); return; }
-    }
-    if (posEditable && Math.hypot(p.px - l.x * S, p.py - l.y * S) < Math.max(22, l.sigma * 2 * S)) ui.drag = { kind: 'pos', dx: l.x - p.x, dy: l.y - p.y };
-    else { ui.selected = -1; updatePanels(); }
-  }
+  const h = handleAt(p), i = h ? -1 : itemAt(p);
+  if (h) ui.drag = { kind: 'handle', id: h.id };
+  else if (i >= 0) { if (ui.selected !== i) { ui.selected = i; updatePanels(); } const it = ui.setup.placed[i]; ui.drag = { kind: 'item', dx: it.x - p.x, dy: it.y - p.y }; }
+  else if (onPacket(p)) { const l = ui.setup.launch; ui.drag = { kind: 'pos', dx: l.x - p.x, dy: l.y - p.y }; }
+  else if (ui.selected >= 0) { ui.selected = -1; updatePanels(); }
   if (ui.drag) canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (!ui.drag) return;
-  const p = pointer(e), l = ui.setup.launch;
-  if (ui.drag.kind === 'k') {
-    const S = pxPerUnit(), dx = p.px - l.x * S, dy = p.py - l.y * S;
-    l.k = Math.hypot(dx, dy) / 22; l.angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    syncLaunchSliders();
-  } else if (ui.drag.kind === 'pos') { l.x = p.x + ui.drag.dx; l.y = p.y + ui.drag.dy; syncLaunchSliders(); }
+  const p = pointer(e);
+  if (!ui.drag) {                                   // hover feedback
+    if (ui.phase !== 'setup') { canvas.style.cursor = ''; ui.hover = null; return; }
+    const h = handleAt(p);
+    ui.hover = h?.id || null;
+    canvas.style.cursor = h ? h.cursor : itemAt(p) >= 0 || onPacket(p) ? 'move' : '';
+    canvas.title = h ? h.title : '';
+    return;
+  }
+  const l = ui.setup.launch;
+  if (ui.drag.kind === 'handle') setupHandles().find(h => h.id === ui.drag.id)?.drag(p);
+  else if (ui.drag.kind === 'pos') { l.x = p.x + ui.drag.dx; l.y = p.y + ui.drag.dy; }
   else if (ui.drag.kind === 'item') { const it = ui.setup.placed[ui.selected]; it.x = p.x + ui.drag.dx; it.y = p.y + ui.drag.dy; }
-  rebuildSetupView();
+  setupChanged();
 });
 canvas.addEventListener('pointerup', () => { ui.drag = null; });
+canvas.addEventListener('pointerleave', () => { if (!ui.drag) ui.hover = null; });
 
 $('btnPlay').onclick = play;
 $('btnObserve').onclick = observe;
@@ -391,6 +474,7 @@ function loop() {
 
 function draw() {
   const s = ui.session; if (!s) return;
+  ui.handles = setupHandles();
   ui.renderer.draw(s, ui);
   $('clock').textContent = `t = ${s.t.toFixed(1)} / ${ui.level.tmax}`;
   const pT = s.pT(), pM = s.pM(), lost = s.lost();

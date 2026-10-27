@@ -19,7 +19,8 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 
 | | |
 |---|---|
-| Setup | drag the packet (position), drag the arrow head (momentum k₀), sliders for σ; add inventory items, drag them, tune with sliders, `Del` removes |
+| Levels | drop-down in the header (grouped by chapter, with your stars), ◀ ▶ or `[` `]` for previous / next |
+| Setup | drag the packet (position) and every editable property on the playfield: the arrow head (momentum k₀), the round handle on the dashed ring (width σ); select a placed item to get square handles for width / height / radius and a ◆ stalk above it for its strength (V, or a detector's measurement strength). Sliders mirror all of them. Add items from the inventory, drag them, `Del` removes |
 | `Space` | play / pause (starts the run from setup) |
 | `Enter` | **Observe**: sample |ψ|², collapse, win or lose. At `t_max` the world observes for you |
 | click (while running) | **Kick**: momentum impulse toward the cursor, limited charges |

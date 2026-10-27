@@ -151,7 +151,7 @@ export class Renderer {
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(hx, hy);
       ctx.lineTo(hx - Math.cos(a - 0.4) * 9, hy - Math.sin(a - 0.4) * 9); ctx.moveTo(hx, hy); ctx.lineTo(hx - Math.cos(a + 0.4) * 9, hy - Math.sin(a + 0.4) * 9); ctx.stroke();
       ctx.beginPath(); ctx.arc(x, y, l.sigma * 2 * S, 0, 2 * Math.PI); ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+      this.drawHandles(ui.handles || [], ui.hover);
     }
     if (session.result?.sample && !session.kSpace) {
       const s = session.result.sample;
@@ -159,6 +159,26 @@ export class Renderer {
       ctx.moveTo(s.x * S - 16, s.y * S); ctx.lineTo(s.x * S + 16, s.y * S); ctx.moveTo(s.x * S, s.y * S - 16); ctx.lineTo(s.x * S, s.y * S + 16); ctx.stroke();
     }
     ctx.restore();
+  }
+
+  /** Setup handles: dot = momentum arrow head, ring = packet width, square = item size. */
+  drawHandles(handles, hover) {
+    const ctx = this.ctx, S = this.scale;
+    for (const h of handles) {
+      const x = h.x * S, y = h.y * S, on = h.id === hover, r = on ? 8 : 6;
+      if (h.shape === 'stalk') {
+        ctx.beginPath(); ctx.moveTo(x, h.base * S); ctx.lineTo(x, y); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]);
+        label(ctx, h.label, x, y - 12, on ? '#6ea8ff' : '#fff');
+      }
+      ctx.beginPath();
+      if (h.shape === 'square') ctx.rect(x - r, y - r, 2 * r, 2 * r);
+      else if (h.shape === 'stalk') { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); }
+      else ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillStyle = on ? '#6ea8ff' : h.shape === 'ring' ? 'rgba(13,16,23,0.85)' : '#fff';
+      ctx.fill(); ctx.stroke();
+      if (h.shape === 'ring') { ctx.beginPath(); ctx.arc(x, y, r - 2.5, 0, 2 * Math.PI); ctx.strokeStyle = on ? '#fff' : '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    }
   }
 
   draw(session, ui) {

@@ -9,7 +9,12 @@
 <body>
 <header>
   <h1>Born Rule <small>a wavefunction puzzle</small></h1>
-  <nav id="levels"></nav>
+  <nav id="levels" class="picker" aria-label="Levels">
+    <button id="lvlPrev" title="Previous level  [">◀</button>
+    <select id="lvlSelect" aria-label="Level"></select>
+    <button id="lvlNext" title="Next level  ]">▶</button>
+    <span id="starTotal" class="note"></span>
+  </nav>
 </header>
 <main>
   <section id="stage">
