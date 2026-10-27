@@ -3,6 +3,7 @@
 import { Sim } from './sim.js';
 import { rasterMask, rasterV, rasterKMask } from './shapes.js';
 import { mulberry32 } from './rng.js';
+import { opticTerm, jones } from './optics.js';
 
 export const DT = 0.05;
 export const SIGMA_M = 1.0; // position-measurement collapse width
@@ -11,15 +12,27 @@ export const SIGMA_M = 1.0; // position-measurement collapse width
 export function param(p) { return Array.isArray(p) ? { v: p[0], min: p[1], max: p[2] } : { v: p, min: p, max: p }; }
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const LAUNCH_KEYS = ['x', 'y', 'k', 'angle', 'sigma'];
-export const ITEM_KEYS = { rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'] };
+// spinor levels may also set the launch polarization: angle `pol` (deg) and ellipticity `ellip`
+const SPIN_LAUNCH_KEYS = ['pol', 'ellip'];
+export function launchKeys(level) { return [...LAUNCH_KEYS, ...(level.spinor ? SPIN_LAUNCH_KEYS.filter(k => level.launch[k] !== undefined) : [])]; }
+export const ITEM_KEYS = {
+  rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'],
+  // optics (spinor levels): `pol` is the polarization axis in degrees, not a rotation of the shape
+  polarizer: ['w', 'h', 'pol'], rotator: ['w', 'h', 'omega'], retarder: ['w', 'h', 'pol', 'delta'],
+};
+export const OPTIC_KINDS = ['polarizer', 'rotator', 'retarder'];
 export function itemKeys(spec) {
   if (spec.kind === 'detector') return [...ITEM_KEYS['detector_' + (spec.shape || 'rect')], ...(spec.strength !== undefined ? ['strength'] : [])];
-  return spec.kind === 'absorber' ? ITEM_KEYS.absorber : ITEM_KEYS.rect;
+  return ITEM_KEYS[spec.kind] || ITEM_KEYS.rect;
+}
+/** The optic of a placed optical item, in the element format of optics.js. */
+export function itemOptic(spec, it) {
+  return { kind: spec.kind, angle: it.pol, omega: it.omega, delta: it.delta, absorb: spec.absorb, V: spec.reflect };
 }
 
 export function defaultSetup(level) {
   const launch = {};
-  for (const k of LAUNCH_KEYS) launch[k] = param(level.launch[k]).v;
+  for (const k of launchKeys(level)) launch[k] = param(level.launch[k]).v;
   return { launch, placed: [] };
 }
 
@@ -32,7 +45,7 @@ export function defaultItem(spec, level) {
 /** Clamp a setup to what the level allows (ranges, inventory counts, placement area). */
 export function sanitizeSetup(level, setup) {
   const out = defaultSetup(level);
-  for (const k of LAUNCH_KEYS) {
+  for (const k of launchKeys(level)) {
     const p = param(level.launch[k]);
     const v = setup?.launch?.[k];
     out.launch[k] = clamp(typeof v === 'number' ? v : p.v, p.min, p.max);
@@ -64,7 +77,7 @@ export class Session {
     this.seed = opts.seed ?? 1;
     this.rng = mulberry32(this.seed);
     const g = level.grid;
-    this.sim = new Sim(opts.N || g.N, g.L, DT);
+    this.sim = new Sim(opts.N || g.N, g.L, DT, { spinor: !!level.spinor });
     this.stepCount = 0;
     this.events = [];
     this.result = null;
@@ -74,7 +87,20 @@ export class Session {
 
     const sim = this.sim;
     this.gates = [];
+    this.optics = [];   // {shape, optic, gate?} for display
+    const shapeOf = (el) => (el.type === 'disc' ? { shape: 'circle', x: el.x, y: el.y, r: el.r } : { shape: 'rect', x: el.x, y: el.y, w: el.w, h: el.h, angle: el.angle });
     for (const el of level.elements || []) {
+      // `optic` makes an element a polarization optic (src/optics.js), optionally switchable
+      if (el.optic) {
+        const spin = { chi: rasterV(sim, { ...el, V: 1 }), term: opticTerm(el.optic) }, entry = { shape: shapeOf(el), optic: el.optic };
+        if (el.gate) {
+          const i = sim.addGate(null, el.gate.open !== false, el.gate.ramp, null, false, spin);
+          entry.gate = this.gates.length;
+          this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Optic', open: el.gate.open !== false });
+        } else sim.addSpin(spin.chi, spin.term);
+        this.optics.push(entry);
+        continue;
+      }
       // `absorb` makes an element (e.g. a bomb) swallow probability: an imaginary potential
       // with a `gate` it is an absorbing shutter instead, whose loss counts as lost
       if (el.absorb && !el.gate) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
@@ -100,6 +126,10 @@ export class Session {
       if (spec.kind === 'detector') {
         const shape = spec.shape === 'circle' ? { shape: 'circle', x: it.x, y: it.y, r: it.r } : { shape: 'rect', x: it.x, y: it.y, w: it.w, h: it.h };
         addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold, it.strength ?? 1);
+      } else if (OPTIC_KINDS.includes(spec.kind)) {
+        const el = { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h }, optic = itemOptic(spec, it);
+        sim.addSpin(rasterV(sim, { ...el, V: 1 }), opticTerm(optic));
+        this.optics.push({ shape: { shape: 'rect', ...el }, optic, placed: true });
       } else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
       else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));
     }
@@ -107,18 +137,29 @@ export class Session {
     // targets / mines are regions of k-space ({x: kx, y: ky, ...})
     this.kSpace = level.observe === 'momentum';
     const raster = this.kSpace ? rasterKMask : rasterMask;
-    this.targetMask = unionMask(sim, level.targets || [], raster);
+    // a target with `pol` (deg) is behind a polarization analyzer: it scores
+    // |<pol|psi>|^2 instead of |psi|^2 (spinor levels, position space)
+    const plain = (level.targets || []).filter(t => t.pol === undefined);
+    this.analyzers = (level.targets || []).filter(t => t.pol !== undefined).map(t => ({ mask: raster(sim, t), pol: t.pol }));
+    if (this.analyzers.length && (this.kSpace || !level.spinor)) throw new Error(level.id + ': polarized targets need a spinor, position-space level');
+    this.targetMask = unionMask(sim, plain, raster);
     this.mineMask = unionMask(sim, level.mines || [], raster);
 
     const l = this.setup.launch, a = (l.angle * Math.PI) / 180;
-    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma });
+    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma, pol: jones(l.pol, l.ellip) });
     sim._refresh();
   }
 
   get t() { return this.stepCount * DT; }
   get finished() { return !!this.result; }
   _mass(m) { return this.kSpace ? this.sim.kMass(m) : this.sim.mass(m); }
-  pT() { return this._mass(this.targetMask); }
+  pT() { let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p; }
+  /** Probability that cell idx, once found, counts as on target (analyzers pass |<pol|psi_idx>|^2 / |psi_idx|^2). */
+  _targetAt(idx) {
+    let t = this.targetMask[idx];
+    for (const A of this.analyzers) if (A.mask[idx]) t += A.mask[idx] * this.sim.polFraction(idx, A.pol);
+    return t;
+  }
   /** Mines include probability already swallowed by absorbing elements (bombs). */
   pM() { return this._mass(this.mineMask) + this.sim.caught; }
   alive() { return this.sim.norm(); }
@@ -205,7 +246,7 @@ export class Session {
         // the masks are smooth, so a cell is on a mine / target with probability
         // mask[idx]: this makes P(hit) = P_T and P(mine) = P_M exactly
         const v = this.rng(), m = this.mineMask[idx];
-        outcome = v < m ? 'mine' : v < m + Math.min(this.targetMask[idx], 1 - m) ? 'hit' : 'miss';
+        outcome = v < m ? 'mine' : v < m + Math.min(this._targetAt(idx), 1 - m) ? 'hit' : 'miss';
         sim.collapseTo(sample.x, sample.y, SIGMA_M);
       }
     }

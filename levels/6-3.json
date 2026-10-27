@@ -1,0 +1,90 @@
+{
+ "id": "6-3",
+ "chapter": 6,
+ "title": "Half-Wave",
+ "spinor": true,
+ "intro": "A polarizer throws away whatever is not along its axis. A birefringent plate (retarder) loses nothing: it delays the component along its axis relative to the crossed one, by an amount that grows with the time spent inside it, i.e. with its thickness. A half-wave plate (delay π) mirrors the polarization about its axis. Set the plate's axis and thickness so the horizontal packet arrives vertical, and beat the 25% a lone 45° polarizer would pass.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 13,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 2,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 28,
+   "y": 20,
+   "w": 2,
+   "h": 40,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "plate",
+    "kind": "retarder",
+    "label": "Birefringent plate",
+    "count": 1,
+    "w": [
+     2,
+     0.5,
+     6
+    ],
+    "h": 40,
+    "pol": [
+     0,
+     -90,
+     90
+    ],
+    "delta": 2,
+    "x": 18,
+    "y": 20,
+    "area": [
+     12,
+     0,
+     24,
+     40
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 32.5,
+   "y": 20,
+   "r": 4
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "plate",
+     "x": 18,
+     "y": 20,
+     "w": 3.9,
+     "pol": 45
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.2,
+  0.4,
+  0.5
+ ],
+ "expectThreshold": 0.4
+}

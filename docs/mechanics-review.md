@@ -57,6 +57,26 @@
 > M3 done: a **Branches** panel after detector runs (run-length outcome histories,
 > Born weights, per-branch P_T; click to view that branch's wave function). M9 started:
 > live Δx·Δkₓ (≥ ½) and ⟨E⟩ readout.
+>
+> **Seventh round.** M8 spinor solver: ψ = (ψ_H, ψ_V), optics as a sparse per-cell
+> exact 2×2 exponential of h₀ + h·σ (complex h, so polarizers are non-Hermitian
+> projectors). Validated: the exponential matches a 40-term series to 1e-12; optics
+> without absorption conserve the norm to 1e-10; a uniform rotator precesses exactly;
+> an absorbing polarizer (W = 6, 2 units) gives T(θ)/T(0) = 0.750 / 0.500 / 0.250 at
+> 30° / 45° / 60°, leaves the packet on its axis (±0.5°), leaks 0.03 % crossed and
+> reflects ~1 %; a reflecting polarizer (V = 12) splits a 45° packet 0.49 / 0.51 into
+> pure H / V; 64² agrees with 128² to < 1 %. Chapter 6 levels: **6-1 Three
+> Polarizers** (30°/60° in order 22.9 %, one at 45° 13.5 %, reversed 2.7 %, none 0.03 %),
+> **6-2 Watched Pot** (polarization Zeno; thin polarizers follow cos^{2(N+1)}(π/2(N+1))
+> within 1–3 %: 0.24 / 0.42 / 0.55 / 0.63 for N = 1…4 against 0.25 / 0.42 / 0.53 / 0.61;
+> thicker ones beat the ideal law, because inside an absorbing polarizer the rotation is
+> watched continuously; three bunched polarizers give 0.30 against 0.55 equally
+> spaced) and **6-3 Half-Wave** (retardance δ·w/v; the plate thickness has an interior
+> optimum at w = πv/δ ≈ 3.9: 0.525 against 0.28 for a quarter-wave plate). The first
+> 6-3 draft let the player tune k instead of thickness and had a "max the speed
+> slider" optimum (capture grows with speed), so it was changed. A quantum-eraser
+> level was considered and deferred: erasure only removes the dark fringes and never
+> raises P_T above the incoherent sum, so it needs a two-part objective.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

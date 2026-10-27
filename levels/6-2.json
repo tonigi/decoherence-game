@@ -1,0 +1,110 @@
+{
+ "id": "6-2",
+ "chapter": 6,
+ "title": "Watched Pot",
+ "spinor": true,
+ "intro": "The long slab is a rotator: it turns the polarization steadily, so a horizontal packet leaves it vertical and the horizontal exit polarizer blocks it. Watch it on the way: each polarizer you insert projects the polarization back to horizontal, losing only sin² of the small angle turned since the last one. Many frequent looks freeze the rotation (the quantum Zeno effect, as in Kwiat's interaction-free measurement). How you space them matters.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 12,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 2,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 19,
+   "y": 20,
+   "w": 16,
+   "h": 40,
+   "optic": {
+    "kind": "rotator",
+    "omega": 0.24544
+   }
+  },
+  {
+   "type": "rect",
+   "x": 29,
+   "y": 20,
+   "w": 2,
+   "h": 40,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "pol",
+    "kind": "polarizer",
+    "label": "Polarizer (horizontal)",
+    "count": 5,
+    "w": 1,
+    "h": 40,
+    "pol": 0,
+    "x": 19,
+    "y": 20,
+    "area": [
+     11,
+     0,
+     27,
+     40
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 32,
+   "y": 20,
+   "r": 3
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "pol",
+     "x": 13.67,
+     "y": 20
+    },
+    {
+     "id": "pol",
+     "x": 16.33,
+     "y": 20
+    },
+    {
+     "id": "pol",
+     "x": 19,
+     "y": 20
+    },
+    {
+     "id": "pol",
+     "x": 21.67,
+     "y": 20
+    },
+    {
+     "id": "pol",
+     "x": 24.33,
+     "y": 20
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.12,
+  0.2,
+  0.245
+ ],
+ "expectThreshold": 0.2
+}

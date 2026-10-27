@@ -1,0 +1,90 @@
+{
+ "id": "6-1",
+ "chapter": 6,
+ "title": "Three Polarizers",
+ "spinor": true,
+ "intro": "The packet now carries a polarization (the colour in the polarization view: red = horizontal, cyan = vertical). It leaves horizontal, and a vertical polarizer guards the target: crossed polarizers pass nothing. A polarizer at angle θ passes cos²(θ − θ_in) of what reaches it and leaves it polarized along θ, so adding polarizers can let more through. Place them between the source and the guard and set their axes (drag the dial handle). Order matters.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 13,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 2,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 28,
+   "y": 20,
+   "w": 2,
+   "h": 40,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "pol",
+    "kind": "polarizer",
+    "label": "Polarizer",
+    "count": 2,
+    "w": 2,
+    "h": 40,
+    "pol": [
+     0,
+     -90,
+     90
+    ],
+    "x": 18,
+    "y": 20,
+    "area": [
+     12,
+     0,
+     25,
+     40
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 32.5,
+   "y": 20,
+   "r": 4
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "pol",
+     "x": 15,
+     "y": 20,
+     "pol": 30
+    },
+    {
+     "id": "pol",
+     "x": 21,
+     "y": 20,
+     "pol": 60
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.08,
+  0.17,
+  0.215
+ ],
+ "expectThreshold": 0.12
+}

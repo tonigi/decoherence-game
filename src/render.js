@@ -1,11 +1,12 @@
 // Canvas renderer: domain colouring (hue = phase, brightness = |psi|), |psi|^2
-// only, or the momentum-space density |phi(k)|^2, plus current arrows and
-// vector overlays for targets, mines, detectors and launch handles.
+// only, the momentum-space density |phi(k)|^2, or (spinor levels) the local
+// polarization, plus current arrows and vector overlays for targets, mines,
+// detectors, optics and launch handles.
 export class Renderer {
   constructor(canvas, sim) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.setSim(sim);
-    this.view = 'phase';        // 'phase' | 'density' | 'momentum'
+    this.view = 'phase';        // 'phase' | 'density' | 'momentum' | 'polarization'
     this.showCurrent = false;
     this.ref = 1e-3;            // brightness reference (peak |psi|^2), decays slowly
   }
@@ -20,21 +21,29 @@ export class Renderer {
   get scale() { return this.canvas.width / this.sim.L; }
 
   drawField() {
-    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.Wshow || (sim.hasWel ? sim.Wel : null), Vc = sim.Vcont;
-    let dens = null;
-    if (view === 'momentum') { sim.momentumDensity(this.kbuf); dens = this.kbuf; }
+    const { sim, img } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, re2 = sim.re2, im2 = sim.im2, V = sim.Vdraw, Wel = sim.Wshow || (sim.hasWel ? sim.Wel : null), Vc = sim.Vcont;
+    const view = this.view === 'polarization' && !re2 ? 'phase' : this.view;
+    const dens = view === 'momentum' ? (sim.momentumDensity(this.kbuf), this.kbuf) : sim.density(this.kbuf);
     let peak = 0;
     const n2 = N * N;
-    for (let i = 0; i < n2; i++) { const p = dens ? dens[i] : re[i] * re[i] + im[i] * im[i]; if (p > peak) peak = p; }
+    for (let i = 0; i < n2; i++) if (dens[i] > peak) peak = dens[i];
     this.ref = Math.max(peak, this.ref * 0.985, 1e-6);
     const inv = 1 / this.ref;
     for (let i = 0; i < n2; i++) {
-      const p = dens ? dens[i] : re[i] * re[i] + im[i] * im[i];
+      const p = dens[i];
       const b = Math.min(1, Math.pow(p * inv, 0.45));
       let r, g, bl;
       if (view === 'phase') {
-        const h = (Math.atan2(im[i], re[i]) / (2 * Math.PI) + 1) % 1;
+        // spinor: the phase of the larger component
+        const big = re2 && re2[i] * re2[i] + im2[i] * im2[i] > re[i] * re[i] + im[i] * im[i];
+        const h = ((big ? Math.atan2(im2[i], re2[i]) : Math.atan2(im[i], re[i])) / (2 * Math.PI) + 1) % 1;
         [r, g, bl] = hsv(h, 0.8, b);
+      } else if (view === 'polarization') {
+        // Poincare sphere: hue = linear polarization angle (0..180 deg -> full circle,
+        // horizontal red, vertical cyan), saturation = linear fraction (circular is white)
+        const a = re[i] * re[i] + im[i] * im[i], c = re2[i] * re2[i] + im2[i] * im2[i], n = a + c || 1;
+        const s1 = (a - c) / n, s2 = (2 * (re[i] * re2[i] + im[i] * im2[i])) / n;
+        [r, g, bl] = hsv((Math.atan2(s2, s1) / (2 * Math.PI) + 1) % 1, Math.min(1, Math.hypot(s1, s2)) * 0.85, b);
       } else {
         r = b * 0.35; g = b * 0.8; bl = b;       // cyan ramp
         if (view === 'momentum') { r = b; g = b * 0.75; bl = b * 0.25; }
@@ -79,15 +88,19 @@ export class Renderer {
   }
 
   drawCurrent() {
-    const { sim, ctx } = this, N = sim.N, S = this.scale, re = sim.re, im = sim.im, step = 6;
+    const { sim, ctx } = this, N = sim.N, S = this.scale, step = 6, C = sim.comps();
     ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5;
     for (let j = step; j < N - step; j += step) for (let i = step; i < N - step; i += step) {
-      const k = j * N + i, rho = re[k] ** 2 + im[k] ** 2;
+      const k = j * N + i;
+      let rho = 0, jx = 0, jy = 0;
+      // v = sum_c Im(psi_c* grad psi_c) / |psi|^2, central differences
+      for (const [re, im] of C) {
+        const dxr = (re[k + 1] - re[k - 1]) / (2 * sim.dx), dxi = (im[k + 1] - im[k - 1]) / (2 * sim.dx);
+        const dyr = (re[k + N] - re[k - N]) / (2 * sim.dx), dyi = (im[k + N] - im[k - N]) / (2 * sim.dx);
+        rho += re[k] ** 2 + im[k] ** 2; jx += re[k] * dxi - im[k] * dxr; jy += re[k] * dyi - im[k] * dyr;
+      }
       if (rho < 0.08 * this.ref) continue;
-      // v = Im(psi* grad psi)/|psi|^2, central differences
-      const dxr = (re[k + 1] - re[k - 1]) / (2 * sim.dx), dxi = (im[k + 1] - im[k - 1]) / (2 * sim.dx);
-      const dyr = (re[k + N] - re[k - N]) / (2 * sim.dx), dyi = (im[k + N] - im[k - N]) / (2 * sim.dx);
-      const vx = (re[k] * dxi - im[k] * dxr) / rho, vy = (re[k] * dyi - im[k] * dyr) / rho;
+      const vx = jx / rho, vy = jy / rho;
       const m = Math.hypot(vx, vy); if (m < 0.05) continue;
       const len = Math.min(1.8, m * 0.9) * S / 3 * 1.0, ux = vx / m, uy = vy / m;
       const x0 = (i + 0.5) * sim.dx * S, y0 = (j + 0.5) * sim.dx * S, x1 = x0 + ux * len, y1 = y0 + uy * len;
@@ -122,10 +135,26 @@ export class Renderer {
     }
   }
 
+  /** Polarization optics: a tinted outline and an axis dial near the top of the element. */
+  drawOptics(session) {
+    const ctx = this.ctx, S = this.scale;
+    for (const o of session.optics) {
+      const g = o.gate !== undefined ? session.gates[o.gate] : null, off = g && g.open;
+      const col = OPTIC_COLOURS[o.optic.kind];
+      this.shapePath(o.shape);
+      ctx.fillStyle = off ? 'transparent' : col + '22'; ctx.fill();
+      ctx.setLineDash(off ? [3, 5] : []); ctx.strokeStyle = col + (off ? '66' : 'cc'); ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
+      const [x, y] = dialPos(o.shape, o.placed);
+      opticDial(ctx, x * S, y * S, o.optic, col);
+    }
+  }
+
   drawOverlays(session, ui) {
     const ctx = this.ctx, S = this.scale, lv = session.level;
     ctx.save();
+    if (session.optics?.length) this.drawOptics(session);
     if (!session.kSpace) this.drawRegions(lv, this.mapping(false));
+    for (const t of lv.targets || []) if (t.pol !== undefined) opticDial(ctx, t.x * S, (t.y - (t.r ?? t.h / 2)) * S - 16, { kind: 'polarizer', angle: t.pol }, '#4cff7c');
     ctx.setLineDash([6, 4]); ctx.lineWidth = 2;
     const acts = session.actions();
     session.detectors.forEach((d, i) => {
@@ -151,6 +180,7 @@ export class Renderer {
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(hx, hy);
       ctx.lineTo(hx - Math.cos(a - 0.4) * 9, hy - Math.sin(a - 0.4) * 9); ctx.moveTo(hx, hy); ctx.lineTo(hx - Math.cos(a + 0.4) * 9, hy - Math.sin(a + 0.4) * 9); ctx.stroke();
       ctx.beginPath(); ctx.arc(x, y, l.sigma * 2 * S, 0, 2 * Math.PI); ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke(); ctx.setLineDash([]);
+      if (lv.spinor) opticDial(ctx, x, y - l.sigma * 2 * S - 16, { kind: 'source', angle: l.pol || 0, ellip: l.ellip || 0 }, '#fff');
       this.drawHandles(ui.handles || [], ui.hover);
     }
     if (session.result?.sample && !session.kSpace) {
@@ -200,6 +230,38 @@ export class Renderer {
     ctx.fillStyle = '#fff'; ctx.font = '14px system-ui';
     ctx.fillText(`momentum space |φ(k)|²  (kx → , ky ↓, centre = 0, |k| ≤ ${c.kv.toFixed(1)})`, 12, 22);
   }
+}
+
+const OPTIC_COLOURS = { polarizer: '#b9a7ff', rotator: '#ffb347', retarder: '#5fe0d0' };
+/** Where an optic's dial sits (world units): near the top of a rect, clear of the
+ *  absorbing border; placed items one row lower, so they never hide a level element's dial. */
+export function dialPos(sh, placed = false) {
+  if (sh.shape === 'circle') return [sh.x, sh.y];
+  return [sh.x, Math.max(sh.y - sh.h / 2 + 1.6, 7.5) + (placed ? 3.2 : 0)];
+}
+/** A small dial: the polarization axis (polarizer, retarder fast axis, source, analyzer)
+ *  drawn at angle theta counter-clockwise from horizontal, or a turning arrow for a rotator. */
+function opticDial(ctx, x, y, o, col) {
+  const R = 12;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.arc(x, y, R + 3, 0, 2 * Math.PI); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 2;
+  if (o.kind === 'rotator') {
+    const dir = Math.sign(o.omega || 1);
+    ctx.beginPath(); ctx.arc(x, y, R - 3, -0.3 * Math.PI, 1.2 * Math.PI, dir < 0); ctx.stroke();
+    const a = dir > 0 ? -0.3 * Math.PI : 1.2 * Math.PI, hx = x + (R - 3) * Math.cos(a), hy = y + (R - 3) * Math.sin(a);
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx - 5 * dir, hy - 2); ctx.moveTo(hx, hy); ctx.lineTo(hx + 1 * dir, hy + 5); ctx.stroke();
+  } else {
+    const a = ((o.angle || 0) * Math.PI) / 180, c = Math.cos(a) * R, s = -Math.sin(a) * R;
+    if (o.kind === 'source' && Math.abs(o.ellip) > 0.02) {   // polarization ellipse
+      ctx.beginPath(); ctx.ellipse(x, y, R, R * Math.abs(Math.tan((Math.PI / 4) * o.ellip)), -a, 0, 2 * Math.PI); ctx.stroke();
+    } else { ctx.beginPath(); ctx.moveTo(x - c, y - s); ctx.lineTo(x + c, y + s); ctx.stroke(); }
+    if (o.kind === 'retarder') {                              // a second, parallel line: a plate
+      const px = -s * 0.25, py = c * 0.25;
+      ctx.beginPath(); ctx.moveTo(x - c * 0.7 + px, y - s * 0.7 + py); ctx.lineTo(x + c * 0.7 + px, y + s * 0.7 + py); ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 function label(ctx, text, x, y, color) {

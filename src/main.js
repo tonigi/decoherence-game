@@ -1,5 +1,5 @@
-import { Session, defaultSetup, defaultItem, itemKeys, param, sanitizeSetup, DT } from './session.js';
-import { Renderer } from './render.js';
+import { Session, defaultSetup, defaultItem, itemKeys, launchKeys, param, sanitizeSetup, DT } from './session.js';
+import { Renderer, dialPos } from './render.js';
 import { simulateCurveAsync } from './ghost.js';
 import { ledgerAsync } from './ledger.js';
 
@@ -69,9 +69,11 @@ function loadLevel(id) {
   resetToSetup();
   // momentum-measurement levels open in the (zoomed) momentum view
   ui.renderer.kView = ui.level.kView;
-  const kLevel = ui.level.observe === 'momentum';
-  if (kLevel || ui.autoK) { $('view_mode').value = kLevel ? 'momentum' : 'phase'; ui.renderer.view = $('view_mode').value; }
-  ui.autoK = kLevel;
+  // and polarization levels in the polarization view
+  const kLevel = ui.level.observe === 'momentum', pLevel = !!ui.level.spinor;
+  $('view_mode').querySelector('[value=polarization]').disabled = !pLevel;
+  if (kLevel || pLevel || ui.autoView) { $('view_mode').value = kLevel ? 'momentum' : pLevel ? 'polarization' : 'phase'; ui.renderer.view = $('view_mode').value; }
+  ui.autoView = kLevel || pLevel;
 }
 
 // Born-mode and expectation-mode stars are kept apart: expectation mode removes
@@ -96,23 +98,23 @@ function rebuildSetupView() { ui.rebuildPending = true; }
 // ---------------------------------------------------------------- setup UI
 function buildLaunchSliders() {
   const host = $('launchSliders'); host.innerHTML = '';
-  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width' };
-  for (const key of ['x', 'y', 'k', 'angle', 'sigma']) {
-    const p = param(ui.level.launch[key]);
+  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width', pol: 'polarization °', ellip: 'ellipticity' };
+  for (const key of launchKeys(ui.level)) {
+    const p = param(ui.level.launch[key]), deg = DEGREE_KEYS.has(key);
     const row = document.createElement('div'); row.className = 'slider' + (p.max > p.min ? '' : ' fixed');
-    const step = key === 'angle' ? 1 : 0.05;
-    row.innerHTML = `<span>${names[key]}</span><input type="range" min="${p.min}" max="${p.max}" step="${step}" value="${p.v}" ${p.max > p.min ? '' : 'disabled'}><output></output>`;
+    row.innerHTML = `<span>${names[key]}</span><input type="range" min="${p.min}" max="${p.max}" step="${deg ? 1 : 0.05}" value="${p.v}" ${p.max > p.min ? '' : 'disabled'}><output></output>`;
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    out.textContent = (+p.v).toFixed(key === 'angle' ? 0 : 2);
-    inp.oninput = () => { ui.setup.launch[key] = +inp.value; out.textContent = (+inp.value).toFixed(key === 'angle' ? 0 : 2); rebuildSetupView(); };
+    out.textContent = (+p.v).toFixed(deg ? 0 : 2);
+    inp.oninput = () => { ui.setup.launch[key] = +inp.value; out.textContent = (+inp.value).toFixed(deg ? 0 : 2); rebuildSetupView(); };
     inp.dataset.key = key; host.append(row);
   }
 }
 
+const DEGREE_KEYS = new Set(['angle', 'pol']);
 function syncLaunchSliders() {
   for (const inp of document.querySelectorAll('#launchSliders input')) {
     const k = inp.dataset.key; inp.value = ui.setup.launch[k];
-    inp.parentElement.querySelector('output').textContent = ui.setup.launch[k].toFixed(k === 'angle' ? 0 : 2);
+    inp.parentElement.querySelector('output').textContent = ui.setup.launch[k].toFixed(DEGREE_KEYS.has(k) ? 0 : 2);
   }
 }
 
@@ -138,14 +140,15 @@ function buildItemPanel() {
   const host = $('itemPanel'); host.innerHTML = '';
   const it = ui.setup.placed[ui.selected]; if (!it || ui.phase !== 'setup') return;
   const spec = ui.level.inventory.items.find(s => s.id === it.id);
-  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength' };
-  host.innerHTML = `<h3>${spec.label}</h3>`;
+  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength', pol: 'axis °', omega: 'rotation rate ω', delta: 'retardance rate δ' };
+  host.innerHTML = `<h3>${spec.label || spec.kind}</h3>`;
   for (const k of itemKeys(spec)) {
-    const p = param(spec[k]);
+    const p = param(spec[k]), deg = DEGREE_KEYS.has(k), fix = (v) => (+v).toFixed(deg ? 0 : 2);
+    if (!(p.max > p.min)) continue;   // fixed properties have no slider
     const row = document.createElement('div'); row.className = 'slider';
-    row.innerHTML = `<span>${names[k]}</span><input type="range" min="${p.min}" max="${p.max}" step="0.05" value="${it[k]}"><output>${(+it[k]).toFixed(2)}</output>`;
+    row.innerHTML = `<span>${names[k] || k}</span><input type="range" min="${p.min}" max="${p.max}" step="${deg ? 1 : 0.05}" value="${it[k]}"><output>${fix(it[k])}</output>`;
     const inp = row.querySelector('input'); inp.dataset.key = k;
-    inp.oninput = () => { const cur = ui.setup.placed[ui.selected]; if (cur) cur[k] = +inp.value; row.querySelector('output').textContent = (+inp.value).toFixed(2); rebuildSetupView(); };
+    inp.oninput = () => { const cur = ui.setup.placed[ui.selected]; if (cur) cur[k] = +inp.value; row.querySelector('output').textContent = fix(inp.value); rebuildSetupView(); };
     host.append(row);
   }
   const del = document.createElement('button'); del.textContent = 'Remove  (Del)';
@@ -154,7 +157,7 @@ function buildItemPanel() {
 function syncItemPanel() {
   const it = ui.setup.placed[ui.selected]; if (!it) return;
   for (const inp of document.querySelectorAll('#itemPanel input[data-key]')) {
-    const k = inp.dataset.key; inp.value = it[k]; inp.parentElement.querySelector('output').textContent = (+it[k]).toFixed(2);
+    const k = inp.dataset.key; inp.value = it[k]; inp.parentElement.querySelector('output').textContent = (+it[k]).toFixed(DEGREE_KEYS.has(k) ? 0 : 2);
   }
 }
 function removeSelected() {
@@ -271,7 +274,7 @@ function viewBranch(i, el) {
   $('banner').hidden = i >= 0;   // the banner would cover the branch; "your run" brings it back
   if (i < 0) { ui.renderer.setSim(ui.session.sim); ui.viewBranch = null; updatePanels(); return; }
   const b = L.branches[i];
-  L.sim.re.set(b.state.re); L.sim.im.set(b.state.im);
+  L.sim.load(b.state);
   ui.renderer.setSim(L.sim); ui.viewBranch = b; updatePanels();
 }
 
@@ -332,7 +335,11 @@ addEventListener('keydown', (e) => {
   if (key === 'Enter') { e.preventDefault(); observe(); return; }
   if (key === 'r') { resetToSetup(true); return; }
   if (key === '[' || key === ']') { stepLevel(key === '[' ? -1 : 1); return; }
-  if (key === 'v') { const sel = $('view_mode'); sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; sel.onchange(); return; }
+  if (key === 'v') {
+    const sel = $('view_mode');
+    do sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; while (sel.options[sel.selectedIndex].disabled);
+    sel.onchange(); return;
+  }
   if (key === 'c') { $('optCurrent').click(); return; }
   if (key === 'g') { $('optGhost').click(); return; }
   if (key === 'Delete' || key === 'Backspace') { if (ui.phase === 'setup') removeSelected(); return; }
@@ -380,6 +387,14 @@ function setupHandles() {
     } else {
       if (editable(spec.w)) out.push({ id: 'w', x: it.x + it.w / 2, y: it.y, shape: 'square', cursor: 'ew-resize', title: 'width', drag: (p) => { it.w = 2 * Math.abs(p.x - it.x); } });
       if (editable(spec.h)) out.push({ id: 'h', x: it.x, y: it.y + it.h / 2, shape: 'square', cursor: 'ns-resize', title: 'height', drag: (p) => { it.h = 2 * Math.abs(p.y - it.y); } });
+    }
+    // a polarization axis is a dot on the item's dial (drawn at the top of the element, see render.js)
+    if (itemKeys(spec).includes('pol') && editable(spec.pol)) {
+      const [cx, cy] = dialPos({ shape: 'rect', ...it }, true), R = 12 / S, a = (it.pol * Math.PI) / 180;
+      out.push({
+        id: 'pol', x: cx + R * Math.cos(a), y: cy - R * Math.sin(a), shape: 'dot', cursor: 'grab', title: 'polarization axis (drag around the dial)',
+        drag: (p) => { let d = (Math.atan2(cy - p.y, p.x - cx) * 180) / Math.PI; if (d > 90) d -= 180; if (d < -90) d += 180; it.pol = Math.round(d); },
+      });
     }
     // scalar strengths (barrier V, detector strength) sit on a stalk above the item:
     // the higher the handle, the larger the value over its range
@@ -521,11 +536,18 @@ function draw() {
   if (ui.frame % 15 === 0) {
     ui.leak = s.sim.kLeak(0.6);
     const st = s.sim.stats();
-    $('readout').innerHTML = st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> (≥ ½) &nbsp; Δx = ${st.sx.toFixed(2)}, Δk<sub>x</sub> = ${st.skx.toFixed(2)} &nbsp; ⟨E⟩ = <b>${st.E.toFixed(2)}</b>` : '';
+    $('readout').innerHTML = (st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> (≥ ½) &nbsp; Δx = ${st.sx.toFixed(2)}, Δk<sub>x</sub> = ${st.skx.toFixed(2)} &nbsp; ⟨E⟩ = <b>${st.E.toFixed(2)}</b>` : '')
+      + (s.sim.spinor ? polReadout(s.sim.stokes()) : '');
   }
   $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
   $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';
   if (ui.frame % 3 === 0) drawPlot();
+}
+
+/** Mean polarization from the Stokes vector: linear angle, linear and circular fractions. */
+function polReadout([s1, s2, s3]) {
+  const lin = Math.hypot(s1, s2), ang = (Math.atan2(s2, s1) * 90) / Math.PI;
+  return `<br>polarization: ${lin > 0.05 ? `linear <b>${ang.toFixed(0)}°</b> (${(lin * 100).toFixed(0)}%)` : 'no linear part'}${Math.abs(s3) > 0.05 ? `, circular ${(s3 * 100).toFixed(0)}%` : ''}`;
 }
 
 const hasMines = () => (ui.level.mines || []).length > 0 || ui.session.sim.hasWel;

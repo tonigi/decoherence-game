@@ -62,12 +62,18 @@ export function jacobiEigen(A, n) {
 /** Replace weighted states by the K leading eigenvectors of rho = sum w |psi><psi|.
  *  Returns {states, dropped}; each new state is normalised and carries weight lambda. */
 export function compress(states, K) {
-  const M = states.length, n2 = states[0].re.length;
-  // Hermitian Gram matrix G = A + iB, G_ij = sqrt(w_i w_j) <psi_i|psi_j>
+  const M = states.length, n2 = states[0].re.length, spin = !!states[0].re2;
+  const comps = (st) => (spin ? [[st.re, st.im], [st.re2, st.im2]] : [[st.re, st.im]]);
+  // Hermitian Gram matrix G = A + iB, G_ij = sqrt(w_i w_j) <psi_i|psi_j> (summed over spinor components)
   const A = new Float64Array(M * M), B = new Float64Array(M * M);
   for (let i = 0; i < M; i++) for (let j = i; j < M; j++) {
-    const a = states[i], b = states[j]; let sr = 0, si = 0;
-    for (let k = 0; k < n2; k++) { sr += a.re[k] * b.re[k] + a.im[k] * b.im[k]; si += a.re[k] * b.im[k] - a.im[k] * b.re[k]; }
+    let sr = 0, si = 0;
+    const ca = comps(states[i]), cb = comps(states[j]);
+    for (let c = 0; c < ca.length; c++) {
+      const [ar, ai] = ca[c], [br, bi] = cb[c];
+      for (let k = 0; k < n2; k++) { sr += ar[k] * br[k] + ai[k] * bi[k]; si += ar[k] * bi[k] - ai[k] * br[k]; }
+    }
+    const a = states[i], b = states[j];
     const f = Math.sqrt(a.w * b.w);
     A[i * M + j] = A[j * M + i] = f * sr; B[i * M + j] = f * si; B[j * M + i] = -f * si;
   }
@@ -95,22 +101,31 @@ export function compress(states, K) {
   }
   const total = states.reduce((a, b) => a + b.w * normOf(b), 0);
   const out = picked.map(({ re: cr, im: ci, lambda }, k) => {
-    const re = new Float64Array(n2), im = new Float64Array(n2);
+    const st = { re: new Float64Array(n2), im: new Float64Array(n2), caught: 0, w: lambda, path: '~' + (k + 1) };
+    if (spin) { st.re2 = new Float64Array(n2); st.im2 = new Float64Array(n2); }
+    const oc = comps(st);
     for (let i = 0; i < M; i++) {
-      const f = Math.sqrt(states[i].w / lambda), ar = cr[i] * f, ai = ci[i] * f, s = states[i];
-      for (let q = 0; q < n2; q++) { re[q] += ar * s.re[q] - ai * s.im[q]; im[q] += ar * s.im[q] + ai * s.re[q]; }
+      const f = Math.sqrt(states[i].w / lambda), ar = cr[i] * f, ai = ci[i] * f, sc = comps(states[i]);
+      for (let c = 0; c < oc.length; c++) {
+        const [re, im] = oc[c], [sr, si] = sc[c];
+        for (let q = 0; q < n2; q++) { re[q] += ar * sr[q] - ai * si[q]; im[q] += ar * si[q] + ai * sr[q]; }
+      }
     }
-    return { re, im, caught: 0, w: lambda, path: '~' + (k + 1) };
+    return st;
   });
   const kept = out.reduce((a, b) => a + b.w, 0);
   return { states: out, dropped: Math.max(0, total - kept) };
 }
-const normOf = (b) => { let s = 0; for (let i = 0; i < b.re.length; i++) s += b.re[i] * b.re[i] + b.im[i] * b.im[i]; return s; };
+const normOf = (b) => {
+  let s = 0;
+  for (const [re, im] of b.re2 ? [[b.re, b.im], [b.re2, b.im2]] : [[b.re, b.im]]) for (let i = 0; i < re.length; i++) s += re[i] * re[i] + im[i] * im[i];
+  return s;
+};
 
 export function* ledgerSteps(level, solution, { N = 64, maxBranches = 16, chunk = 8 } = {}) {
   const s = new Session(level, solution.setup, { N, seed: 1 });
   const sim = s.sim;
-  let branches = [{ re: sim.re.slice(), im: sim.im.slice(), caught: 0, w: 1, path: '' }];
+  let branches = [{ ...sim.snapshot(), caught: 0, w: 1, path: '' }];
   let dropped = 0, resampled = false, bank = 0;
   const advanceTo = function* (step) {
     while (s.stepCount < step) {
@@ -130,7 +145,7 @@ export function* ledgerSteps(level, solution, { N = 64, maxBranches = 16, chunk 
       for (const b of branches) {
         const p = sim.withState(b, () => sim.mass2(mask));
         if (p > 1e-12) {
-          const y = { re: b.re.slice(), im: b.im.slice(), caught: 0, w: b.w * p, path: b.path + 'Y' };
+          const y = { ...copyState(b), caught: 0, w: b.w * p, path: b.path + 'Y' };
           sim.withState(y, () => sim.applyMask(mask, 1 / Math.sqrt(p)));
           next.push(y);
         }
@@ -154,6 +169,8 @@ export function* ledgerSteps(level, solution, { N = 64, maxBranches = 16, chunk 
   rows.sort((a, b) => b.w - a.w);
   return { score: sum('pT'), pM: sum('pM') + bank, alive: sum('alive'), branches: rows, dropped, resampled, N, sim };
 }
+
+const copyState = (b) => (b.re2 ? { re: b.re.slice(), im: b.im.slice(), re2: b.re2.slice(), im2: b.im2.slice() } : { re: b.re.slice(), im: b.im.slice() });
 
 /** Synchronous ledger (tests, tools/verify.js). */
 export function ledger(level, solution, opts) {

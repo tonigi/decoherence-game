@@ -70,11 +70,12 @@
     <section>
       <h3>View</h3>
       <div class="row">
-        <select id="view_mode"><option value="phase">domain colouring</option><option value="density">|ψ|² only</option><option value="momentum">momentum |φ(k)|²</option></select>
+        <select id="view_mode"><option value="phase">domain colouring</option><option value="density">|ψ|² only</option><option value="momentum">momentum |φ(k)|²</option><option value="polarization">polarization</option></select>
         <label><input type="checkbox" id="optCurrent"> current <kbd>C</kbd></label>
         <label><input type="checkbox" id="optGhost" checked> ghost preview <kbd>G</kbd></label>
       </div>
-      <p class="note">Hue = phase, brightness = |ψ|. Orange tint = potential barrier, blue = well. Ghost preview shows the P<sub>T</sub>(t) curve for the current launch with no real-time actions.</p>
+      <p class="note">Hue = phase, brightness = |ψ|. Orange tint = potential barrier, blue = well. Ghost preview shows the P<sub>T</sub>(t) curve for the current launch with no real-time actions.
+        Polarization view: hue = polarization axis (red horizontal, green 45°, cyan vertical, violet −45°), white = circular. Optics show their axis on a dial: violet polarizer, amber rotator, teal plate.</p>
     </section>
   </aside>
 </main>
