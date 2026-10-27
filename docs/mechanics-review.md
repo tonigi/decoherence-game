@@ -28,6 +28,15 @@
 > **4-1 Coherent State** (σ₀ = 1/√(2ω) is the only width that does not breathe; 65 %
 > vs 31 % for the default; matches the analytic width law to ~3 %) and **4-2 Fourier
 > Lens** (focus to 1/(2ωσ) at T/4 with a finite aperture; 70 % vs 21 %).
+>
+> **Fourth round.** M5 (gates as player tools): per-gate `ramp`, gated harmonic traps
+> and absorbing shutters. **4-3 Delta-Kick Cooling**: pulsing the trap at the right
+> time and for the right length removes the x–k correlation of an expanding packet (k = 0
+> target: 7 % → 80 %; leaving the trap on and measuring at T/4 is the same phase-space
+> rotation, an intended second solution). **2-6 Shutter was tried and dropped.** A
+> reflecting shutter mostly pumps energy into the wave (raising V under it) and traps it
+> in a cavity. An absorbing chopper is clean "diffraction in time", but chopping throws
+> away most of the packet: best P_T ≈ 3 % against 1.7 % with the shutter simply open.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

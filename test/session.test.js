@@ -216,3 +216,13 @@ test('a bomb (absorbing element) counts as a mine and as a loss branch', () => {
   for (let seed = 1; seed <= M; seed++) { const t = new Session(lv, defaultSetup(lv), { N: 64, seed }); t.step(200); if (t.observe().outcome === 'boom') boom++; }
   near(boom / M, s.sim.caught, 0.08, 'boom frequency');
 });
+
+test('absorbing gate (shutter): what it swallows is lost, not caught by a bomb', () => {
+  const lv = load('1-1');
+  lv.elements = [{ type: 'rect', x: 16, y: 20, w: 3, h: 40, V: 0, absorb: 3, gate: { key: 1, label: 'Shutter', open: false, ramp: 2 } }];
+  const s = new Session(lv, defaultSetup(lv), { N: 64 }); s.step(120);
+  assert.equal(s.sim.caught, 0);
+  assert.ok(s.lost() > 0.3, 'shutter absorbed ' + s.lost());
+  const o = new Session(lv, defaultSetup(lv), { N: 64 }); o.toggleGate(0); o.step(120);
+  assert.ok(o.lost() < 0.05, 'open shutter lets it pass: ' + o.lost());
+});

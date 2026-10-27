@@ -76,13 +76,15 @@ export class Session {
     this.gates = [];
     for (const el of level.elements || []) {
       // `absorb` makes an element (e.g. a bomb) swallow probability: an imaginary potential
-      if (el.absorb) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
-      const V = rasterV(sim, el);
-      if (el.type === 'harmonic') sim.addContour(V);
+      // with a `gate` it is an absorbing shutter instead, whose loss counts as lost
+      if (el.absorb && !el.gate) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
+      const V = el.V || el.type === 'harmonic' ? rasterV(sim, el) : null;
+      if (el.type === 'harmonic' && !el.gate) sim.addContour(V);
       if (el.gate) {
-        const i = sim.addGate(V, el.gate.open !== false);
+        const W = el.absorb ? rasterV(sim, { ...el, V: el.absorb }) : null;
+        const i = sim.addGate(V, el.gate.open !== false, el.gate.ramp, W, el.type === 'harmonic');
         this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Gate', open: el.gate.open !== false });
-      } else sim.addStatic(V);
+      } else if (V) sim.addStatic(V);
     }
     this.detectors = [];
     const addDetector = (shape, shots, label, cooldown, hold) => this.detectors.push({

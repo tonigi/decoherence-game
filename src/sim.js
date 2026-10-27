@@ -20,7 +20,8 @@ export class Sim {
     this.fEl = new Float64Array(n2);     // per half-step fraction of |psi|^2 swallowed by elements
     this.hasWel = false;
     this.caught = 0;                     // probability absorbed by elements so far
-    this.gates = [];                     // {V, level, target}
+    this.gates = [];                     // {V, W, level, target, ramp}
+    this.Wshow = null;                   // element + gate absorption, for display
     this.tilt = [0, 0];
     this.cH = new Float64Array(n2); this.sH = new Float64Array(n2);
     this.kc = new Float64Array(n2); this.ks = new Float64Array(n2);
@@ -55,10 +56,18 @@ export class Sim {
 
   addStatic(V) { for (let i = 0; i < V.length; i++) this.Vstat[i] += V[i]; this.dirty = true; }
   /** Smooth wells (harmonic) are drawn as equipotential contours, not as a tint. */
-  addContour(V) { if (!this.Vcont) this.Vcont = new Float64Array(V.length); for (let i = 0; i < V.length; i++) this.Vcont[i] += V[i]; }
+  addContour(V) {
+    if (!this.Vcont) { this.Vcont = new Float64Array(V.length); this.Vcont0 = new Float64Array(V.length); }
+    for (let i = 0; i < V.length; i++) this.Vcont0[i] += V[i];
+    this.dirty = true;
+  }
   addAbsorber(W) { for (let i = 0; i < W.length; i++) this.Wel[i] += W[i]; this.hasWel = true; this.dirty = true; }
-  addGate(V, open) {
-    this.gates.push({ V, level: open ? 0 : 1, target: open ? 0 : 1 });
+  /** A switchable element: potential V and/or absorption W (an absorbing
+   *  shutter, whose swallowed probability counts as lost, not as `caught`). */
+  addGate(V, open, ramp = GATE_RAMP_STEPS, W = null, contour = false) {
+    this.gates.push({ V, W, contour, level: open ? 0 : 1, target: open ? 0 : 1, ramp: Math.max(1, ramp) });
+    if (contour) this.addContour(new Float64Array(this.N * this.N));
+    if (W && !this.Wshow) this.Wshow = new Float64Array(this.N * this.N);
     this.dirty = true;
     return this.gates.length - 1;
   }
@@ -88,7 +97,7 @@ export class Sim {
     let moving = false;
     for (const g of this.gates) {
       if (g.level !== g.target) {
-        const d = g.target - g.level, st = 1 / GATE_RAMP_STEPS;
+        const d = g.target - g.level, st = 1 / g.ramp;
         g.level = Math.abs(d) <= st ? g.target : g.level + Math.sign(d) * st;
         moving = true;
       }
@@ -100,11 +109,13 @@ export class Sim {
       const y = (j + 0.5) * dx - hx;
       for (let i = 0; i < N; i++) {
         const k = j * N + i;
-        let v = Vstat[k];
-        for (const g of gates) v += g.level * g.V[k];
+        let v = Vstat[k], wg = 0, vc = this.Vcont ? this.Vcont0[k] : 0;
+        for (const g of gates) { if (g.V) { v += g.level * g.V[k]; if (g.contour) vc += g.level * g.V[k]; } if (g.W) wg += g.level * g.W[k]; }
+        if (this.Vcont) this.Vcont[k] = vc;
         Vdraw[k] = v;
+        if (this.Wshow) this.Wshow[k] = Wel[k] + wg;
         v -= tilt[0] * ((i + 0.5) * dx - hx) + tilt[1] * y;
-        const a = 0.5 * dt, w = W[k] + Wel[k], d = Math.exp(-w * a);
+        const a = 0.5 * dt, w = W[k] + Wel[k] + wg, d = Math.exp(-w * a);
         cH[k] = Math.cos(v * a) * d; sH[k] = -Math.sin(v * a) * d;
         fEl[k] = Wel[k] > 0 ? (1 - d * d) * Wel[k] / w : 0;
       }

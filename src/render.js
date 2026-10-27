@@ -20,7 +20,7 @@ export class Renderer {
   get scale() { return this.canvas.width / this.sim.L; }
 
   drawField() {
-    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.hasWel ? sim.Wel : null, Vc = sim.Vcont;
+    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.Wshow || (sim.hasWel ? sim.Wel : null), Vc = sim.Vcont;
     let dens = null;
     if (view === 'momentum') { sim.momentumDensity(this.kbuf); dens = this.kbuf; }
     let peak = 0;
