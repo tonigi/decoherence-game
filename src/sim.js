@@ -54,6 +54,8 @@ export class Sim {
   }
 
   addStatic(V) { for (let i = 0; i < V.length; i++) this.Vstat[i] += V[i]; this.dirty = true; }
+  /** Smooth wells (harmonic) are drawn as equipotential contours, not as a tint. */
+  addContour(V) { if (!this.Vcont) this.Vcont = new Float64Array(V.length); for (let i = 0; i < V.length; i++) this.Vcont[i] += V[i]; }
   addAbsorber(W) { for (let i = 0; i < W.length; i++) this.Wel[i] += W[i]; this.hasWel = true; this.dirty = true; }
   addGate(V, open) {
     this.gates.push({ V, level: open ? 0 : 1, target: open ? 0 : 1 });

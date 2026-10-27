@@ -177,7 +177,7 @@ function updatePanels() {
   const bits = [];
   if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges - click the field (impulse toward the cursor).`);
   if (inv.tilt) bits.push('Field tilt: hold arrow keys / WASD.');
-  if (lv.minObserveTime) bits.push(`Observation allowed after t = ${lv.minObserveTime}.`);
+  if (lv.minObserveTime) bits.push(lv.minObserveTime >= lv.tmax ? `The detector clicks at t = ${(+lv.minObserveTime).toFixed(1)}.` : `Observation allowed after t = ${(+lv.minObserveTime).toFixed(1)}.`);
   const dets = s.detectors.map((d, i) => `${d.label} ${d.shots} shots`).join(', ');
   if (dets) bits.push(dets + (s.detectors.some(d => d.hold) ? ' - hold the key to pulse repeatedly.' : '.'));
   $('rtInfo').textContent = bits.join(' ');

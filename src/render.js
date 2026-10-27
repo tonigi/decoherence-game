@@ -20,7 +20,7 @@ export class Renderer {
   get scale() { return this.canvas.width / this.sim.L; }
 
   drawField() {
-    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.hasWel ? sim.Wel : null;
+    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.hasWel ? sim.Wel : null, Vc = sim.Vcont;
     let dens = null;
     if (view === 'momentum') { sim.momentumDensity(this.kbuf); dens = this.kbuf; }
     let peak = 0;
@@ -40,7 +40,11 @@ export class Renderer {
         if (view === 'momentum') { r = b; g = b * 0.75; bl = b * 0.25; }
       }
       if (view !== 'momentum') {                  // potential tint
-        const v = V[i];
+        const v = Vc ? V[i] - Vc[i] : V[i];
+        if (Vc) {                                  // harmonic well: a contour every 2 units of V
+          const f = (Vc[i] / 2) % 1, dist = Math.min(f, 1 - f), a = Vc[i] > 0.5 ? 0.45 * Math.max(0, 1 - dist / 0.12) : 0;
+          if (a > 0) { r = r * (1 - a) + 0.45 * a; g = g * (1 - a) + 0.75 * a; bl = bl * (1 - a) + a; }
+        }
         if (Math.abs(v) > 0.02) {
           const a = Math.min(0.6, Math.abs(v) / 5 * 0.6 + 0.08);
           const tr = v > 0 ? 255 : 60, tg = v > 0 ? 110 : 190, tb = v > 0 ? 40 : 255;

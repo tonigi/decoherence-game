@@ -23,6 +23,11 @@
 > thick. The fix is a thinner, delta-like splitter, which needs edges sharper than
 > `SOFTNESS` and hence a finer grid (the 256² WebGPU path), or a larger k with the ghost
 > run at 128².
+>
+> **Third round.** M7 (harmonic well element, drawn as equipotential rings) and chapter 4:
+> **4-1 Coherent State** (σ₀ = 1/√(2ω) is the only width that does not breathe; 65 %
+> vs 31 % for the default; matches the analytic width law to ~3 %) and **4-2 Fourier
+> Lens** (focus to 1/(2ωσ) at T/4 with a finite aperture; 70 % vs 21 %).
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

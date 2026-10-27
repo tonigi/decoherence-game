@@ -34,10 +34,19 @@ export function rasterMask(sim, shape) {
 }
 
 /** Potential V(x,y) contributed by one element:
- *  rect {x,y,w,h,V,angle?}, disc {x,y,r,V}, wall {x,w,V,slits:[{y,w}]} (full height). */
+ *  rect {x,y,w,h,V,angle?}, disc {x,y,r,V}, wall {x,w,V,slits:[{y,w}]} (full height),
+ *  harmonic {x,y,omega,R}: V = omega^2 r^2 / 2 for r < R, flat (continuous) beyond. */
 export function rasterV(sim, el) {
   const { N, dx } = sim, s = softness(sim);
   const V = new Float64Array(N * N);
+  if (el.type === 'harmonic') {
+    const k = 0.5 * el.omega * el.omega, R = el.R ?? Infinity;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const r = Math.hypot((i + 0.5) * dx - el.x, (j + 0.5) * dx - el.y);
+      V[j * N + i] = k * Math.min(r, R) ** 2;
+    }
+    return V;
+  }
   for (let j = 0; j < N; j++) {
     const y = (j + 0.5) * dx;
     let open = 0;

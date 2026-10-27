@@ -78,6 +78,7 @@ export class Session {
       // `absorb` makes an element (e.g. a bomb) swallow probability: an imaginary potential
       if (el.absorb) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
       const V = rasterV(sim, el);
+      if (el.type === 'harmonic') sim.addContour(V);
       if (el.gate) {
         const i = sim.addGate(V, el.gate.open !== false);
         this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Gate', open: el.gate.open !== false });

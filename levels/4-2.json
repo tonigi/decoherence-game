@@ -1,0 +1,58 @@
+{
+ "id": "4-2",
+ "chapter": 4,
+ "title": "Fourier Lens",
+ "intro": "In a harmonic well a quarter period swaps position and momentum: a packet of width σ, at rest, has width 1/(2ωσ) a quarter period later. So a wide packet comes to a sharp focus, like light through a lens. The detector clicks at t = 5T/4. But this lens has a finite aperture: beyond radius 9 the well goes flat, and the parts of a too-wide packet out there are not focused.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 19.635,
+ "minObserveTime": 19.635,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": [
+   1,
+   0.5,
+   7
+  ]
+ },
+ "elements": [
+  {
+   "type": "harmonic",
+   "x": 20,
+   "y": 20,
+   "omega": 0.4,
+   "R": 9
+  }
+ ],
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 20,
+   "y": 20,
+   "r": 0.8
+  }
+ ],
+ "stars": [
+  0.45,
+  0.6,
+  0.67
+ ],
+ "expectThreshold": 0.5,
+ "reference": {
+  "setup": {
+   "launch": {
+    "sigma": 3.5
+   }
+  },
+  "observeAt": 19.635,
+  "events": []
+ },
+ "naive": {
+  "setup": {}
+ }
+}

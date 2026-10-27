@@ -159,3 +159,23 @@ test('absorbing elements: norm + caught is conserved exactly', () => {
   sim.step(20, [b]);
   near(b.caught, sim.caught, 1e-14, 'lock-step branch');
 });
+
+test('harmonic well: coherent state keeps its width, others breathe to 1/(2 omega sigma) at T/4', () => {
+  const w = 0.5, T = (2 * Math.PI) / w;
+  const width = (sim) => {
+    const [cx] = sim.centroid(); let m = 0, v = 0; const N = sim.N;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const p = sim.re[j * N + i] ** 2 + sim.im[j * N + i] ** 2, x = (i + 0.5) * sim.dx; m += p; v += p * (x - cx) ** 2; }
+    return Math.sqrt(v / m);
+  };
+  const run = (sigma, t) => {
+    const sim = new Sim(128, 40, DT, { absorbStrength: 0 });
+    sim.addStatic(rasterV(sim, { type: 'harmonic', x: 20, y: 20, omega: w }));
+    sim.setGaussian({ x: 23, y: 20, kx: 0, ky: 0, sigma });
+    sim.step(Math.round(t / DT));
+    return sim;
+  };
+  const coh = run(1 / Math.sqrt(2 * w), (3 * T) / 8);
+  near(width(coh), 1, 0.02, 'coherent width');
+  near(coh.centroid()[0], 20 + 3 * Math.cos((3 * Math.PI) / 4), 0.03, 'classical motion');
+  near(width(run(2.5, T / 4)), 1 / (2 * w * 2.5), 0.02, 'focused width at T/4');
+});
