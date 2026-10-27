@@ -148,10 +148,11 @@ export function* ledgerSteps(level, solution, { N = 64, maxBranches = 16, chunk 
       if (!branches.length) break;
     } else if (ev.type === 'observe') break;
   }
-  const rows = branches.map(b => sim.withState(b, () => ({ w: b.w, path: b.path, pT: s.pT(), pM: s.pM(), alive: s.alive() })));
+  // each row keeps its state, so the UI can show what that branch looks like (on `sim`)
+  const rows = branches.map(b => sim.withState(b, () => ({ w: b.w, path: b.path, pT: s.pT(), pM: s.pM(), alive: s.alive(), state: b })));
   const sum = (k) => rows.reduce((a, r) => a + r.w * r[k], 0);
   rows.sort((a, b) => b.w - a.w);
-  return { score: sum('pT'), pM: sum('pM') + bank, alive: sum('alive'), branches: rows, dropped, resampled, N };
+  return { score: sum('pT'), pM: sum('pM') + bank, alive: sum('alive'), branches: rows, dropped, resampled, N, sim };
 }
 
 /** Synchronous ledger (tests, tools/verify.js). */

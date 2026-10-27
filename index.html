@@ -36,7 +36,14 @@
       <div class="meter"><label>P<sub>M</sub> mines</label><div class="bar mine"><i id="barM"></i></div><b id="valM">0</b></div>
       <div class="meter"><label>lost (absorbed)</label><div class="bar lost"><i id="barL"></i></div><b id="valL">0</b></div>
       <div class="meter" title="Probability at |k| above 60% of the grid's Nyquist momentum. High values alias."><label>momentum budget</label><div class="bar leak"><i id="barK"></i></div><b id="valK">ok</b></div>
+      <div id="readout" class="note" title="Spreads of the packet along x and its mean energy. Heisenberg: Δx·Δkₓ ≥ ½ (ħ = 1)."></div>
       <canvas id="plot" width="420" height="150"></canvas>
+    </section>
+
+    <section id="ledgerPanel" hidden>
+      <h3>Branches</h3>
+      <div id="ledgerRows"></div>
+      <p class="note">Every detector outcome splits the run into branches, weighted by their Born probability. The skill score is their weighted P<sub>T</sub>. Click a branch to see its wave function; the dice only chose which one you are in.</p>
     </section>
 
     <section id="runControls">

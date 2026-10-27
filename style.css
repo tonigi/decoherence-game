@@ -32,5 +32,12 @@ select { background:#222a3b; color:var(--ink); border:1px solid var(--line); bor
 .slider { display:grid; grid-template-columns:70px 1fr 48px; gap:8px; align-items:center; margin:3px 0; }
 .slider input { width:100%; } .slider span { color:var(--dim); font-size:12px; } .slider output { text-align:right; font-variant-numeric:tabular-nums; font-size:12px; }
 .slider.fixed { opacity:.45; }
+#readout { margin:6px 0 2px; font-variant-numeric:tabular-nums; } #readout b { color:var(--ink); font-weight:500; }
+#ledgerRows { display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
+#ledgerRows button { display:grid; grid-template-columns:minmax(0, 1fr) 90px 60px; gap:8px; align-items:center; text-align:left; padding:4px 8px; font-size:12px; }
+#ledgerRows button.cur { border-color:var(--accent); background:#1d2a44; }
+#ledgerRows .path { font-family:ui-monospace, monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#ledgerRows .w { position:relative; height:8px; background:#0b0e15; border-radius:4px; overflow:hidden; } #ledgerRows .w i { position:absolute; inset:0 auto 0 0; background:var(--accent); }
+#ledgerRows .p { text-align:right; font-variant-numeric:tabular-nums; }
 @media (max-width: 900px) { main { grid-template-columns:minmax(0, 1fr); } }
 @media (max-width: 520px) { header { gap:8px; padding:8px 12px; } nav.picker { margin-left:0; width:100%; justify-content:flex-start; } nav.picker select { flex:1 1 0; } main { padding:12px; } }

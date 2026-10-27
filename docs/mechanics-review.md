@@ -50,6 +50,13 @@
 > monotonically with s for a well-sized detector and is flat for a small one. An
 > information-vs-disturbance level needs a two-part objective (for example the
 > eraser of M8).
+>
+> **Sixth round.** UI: a chapter-grouped level drop-down replaces the button bar, and
+> every editable setup property has a playfield handle (arrow head for k₀, a ring
+> handle for σ, edge handles for item sizes, a stalk for V or detector strength).
+> M3 done: a **Branches** panel after detector runs (run-length outcome histories,
+> Born weights, per-branch P_T; click to view that branch's wave function). M9 started:
+> live Δx·Δkₓ (≥ ½) and ⟨E⟩ readout.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

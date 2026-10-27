@@ -26,6 +26,7 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 | click (while running) | **Kick**: momentum impulse toward the cursor, limited charges |
 | arrows / WASD | **Field tilt**: uniform force while held |
 | `1`-`9` | gates toggle; detectors fire (hold the key to pulse a "hold" detector repeatedly) |
+| Branches | after a run with detector firings, the Branches panel lists the outcome histories (`Y4 N`, …) with their Born weights and P_T; click one to see its wave function |
 | `R` | back to setup, same dice. `V` cycles view (domain colouring / |ψ|² / momentum |φ(k)|²), `C` current arrows, `G` ghost preview |
 
 Win condition (hybrid): the live meter shows P_T = ∫_T |ψ|². The observation is a genuine Born-rule sample (P(hit) = P_T exactly); a hit wins, and **stars come from the skill score**, so skill is rewarded even when the dice are unkind. Without detectors the score is P_T at the moment of observation. If a detector fired, a single run's P_T is post-selected by the detector outcomes (a lucky "yes" can drop the packet onto the target), so the score is the **branch ledger** instead: P_T averaged over every detector outcome of your inputs (`src/ledger.js`). Mines are anti-targets. Probability absorbed at the boundary is a loss branch of the observation. "Expectation mode" wins iff the score ≥ the level's threshold, with no roll; it is fixed for the whole run and keeps its own stars.

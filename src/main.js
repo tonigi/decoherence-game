@@ -87,7 +87,7 @@ function resetToSetup(keepSeed) {
   if (!ui.renderer) ui.renderer = new Renderer(canvas, ui.session.sim); else ui.renderer.setSim(ui.session.sim);
   ui.phase = 'setup'; ui.playing = false; ui.history = { t: [], pT: [], pM: [] };
   ui.lastFire = {}; ui.keys.clear();
-  $('banner').hidden = true;
+  $('banner').hidden = true; $('ledgerPanel').hidden = true; ui.viewBranch = null;
   buildActions(); updatePanels(); scheduleGhost();
 }
 
@@ -192,7 +192,7 @@ function updatePanels() {
   $('btnPlay').textContent = ui.playing ? '⏸ Pause' : (ui.phase === 'setup' ? '▶ Play' : '▶ Resume');
   $('btnPlay').disabled = ui.phase === 'done';
   $('btnObserve').disabled = ui.phase === 'done' || !s.canObserve();
-  $('phaseTag').textContent = ui.phase === 'setup' ? 'setup: drag the packet and items; handles change size, width and strength' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
+  $('phaseTag').textContent = ui.viewBranch ? `viewing branch ${pathLabel(ui.viewBranch.path)} · weight ${(ui.viewBranch.w * 100).toFixed(1)}% · P_T ${(ui.viewBranch.pT * 100).toFixed(0)}%` : ui.phase === 'setup' ? 'setup: drag the packet and items; handles change size, width and strength' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
   const bits = [];
   if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges - click the field (impulse toward the cursor).`);
   if (inv.tilt) bits.push('Field tilt: hold arrow keys / WASD.');
@@ -239,6 +239,42 @@ function observe() {
   });
 }
 
+// ---------------------------------------------------------------- branch ledger panel
+/** Run-length label for an outcome history: YYYYN -> "Y4 N"; compressed components -> "mix 3". */
+function pathLabel(path) {
+  if (!path) return '(no outcome)';
+  if (path[0] === '~') return 'mix ' + path.slice(1);
+  return path.match(/(Y+|N+)/g).map(r => r[0] + (r.length > 1 ? r.length : '')).join(' ');
+}
+function buildLedgerPanel(L) {
+  const host = $('ledgerRows'); host.innerHTML = '';
+  $('ledgerPanel').hidden = !L;
+  if (!L) return;
+  const rows = L.branches.slice(0, 12), wmax = Math.max(...rows.map(b => b.w));
+  const mine = document.createElement('button'); mine.className = 'cur';
+  mine.innerHTML = `<span class="path">your run (the dice's pick)</span><span></span><span class="p">P<sub>T</sub> ${(ui.session.result.pT * 100).toFixed(0)}%</span>`;
+  mine.onclick = () => viewBranch(-1, mine);
+  host.append(mine);
+  rows.forEach((b, i) => {
+    const el = document.createElement('button');
+    el.title = (b.path[0] === '~' ? 'a component of the compressed branch ensemble' : 'detector outcomes in order: ' + b.path) + ` · weight ${(b.w * 100).toFixed(1)}%`;
+    el.innerHTML = `<span class="path">${pathLabel(b.path)}</span><span class="w"><i style="width:${(100 * b.w / wmax).toFixed(0)}%"></i></span><span class="p">${(b.pT * 100).toFixed(0)}%</span>`;
+    el.onclick = () => viewBranch(i, el);
+    host.append(el);
+  });
+  if (L.branches.length > rows.length) host.insertAdjacentHTML('beforeend', `<span class="note">… and ${L.branches.length - rows.length} lighter branches</span>`);
+}
+/** Show a ledger branch's wave function on the canvas (-1: back to your own run). */
+function viewBranch(i, el) {
+  const L = ui.session.result?.ledger; if (!L) return;
+  for (const b of document.querySelectorAll('#ledgerRows button')) b.classList.toggle('cur', b === el);
+  $('banner').hidden = i >= 0;   // the banner would cover the branch; "your run" brings it back
+  if (i < 0) { ui.renderer.setSim(ui.session.sim); ui.viewBranch = null; updatePanels(); return; }
+  const b = L.branches[i];
+  L.sim.re.set(b.state.re); L.sim.im.set(b.state.im);
+  ui.renderer.setSim(L.sim); ui.viewBranch = b; updatePanels();
+}
+
 function showResult(r) {
   const b = $('banner'), lv = ui.level;
   const txt = {
@@ -264,6 +300,7 @@ function showResult(r) {
   $('bCopy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(ui.session.solution(), null, 1)); $('bCopy').textContent = 'Copied'; };
   const key = starKey(lv.id, mode);
   if (r.hit && r.stars > (ui.stars[key] || 0)) { ui.stars[key] = r.stars; store.set('stars', ui.stars); buildNav(); }
+  buildLedgerPanel(L);
 }
 
 function doAction(n, down) {
@@ -481,7 +518,11 @@ function draw() {
   $('barT').style.width = (pT * 100) + '%'; $('valT').textContent = (pT * 100).toFixed(1) + '%';
   $('barM').style.width = (pM * 100) + '%'; $('valM').textContent = (pM * 100).toFixed(1) + '%';
   $('barL').style.width = (lost * 100) + '%'; $('valL').textContent = (lost * 100).toFixed(1) + '%';
-  if (ui.frame % 15 === 0) ui.leak = s.sim.kLeak(0.6);
+  if (ui.frame % 15 === 0) {
+    ui.leak = s.sim.kLeak(0.6);
+    const st = s.sim.stats();
+    $('readout').innerHTML = st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> (≥ ½) &nbsp; Δx = ${st.sx.toFixed(2)}, Δk<sub>x</sub> = ${st.skx.toFixed(2)} &nbsp; ⟨E⟩ = <b>${st.E.toFixed(2)}</b>` : '';
+  }
   $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
   $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';
   if (ui.frame % 3 === 0) drawPlot();

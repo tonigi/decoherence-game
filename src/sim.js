@@ -188,6 +188,27 @@ export class Sim {
     }
     return n > 0 ? [sx / n, sy / n] : [this.L / 2, this.L / 2];
   }
+  /** Readouts for the HUD: position and momentum spreads along x, and <E> = <k^2>/2 + <V>. */
+  stats() {
+    const { N, dx, re, im, scratchRe: a, scratchIm: b, Vdraw } = this, dk = (2 * Math.PI) / this.L;
+    let n = 0, mx = 0, mxx = 0, ev = 0;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const k = j * N + i, p = re[k] * re[k] + im[k] * im[k], x = (i + 0.5) * dx;
+      n += p; mx += p * x; mxx += p * x * x; ev += p * Vdraw[k];
+    }
+    a.set(re); b.set(im); this.fft.forward(a, b);
+    let m = 0, kx = 0, kxx = 0, k2 = 0;
+    for (let j = 0; j < N; j++) {
+      const ky = (j < N / 2 ? j : j - N) * dk;
+      for (let i = 0; i < N; i++) {
+        const kk = (i < N / 2 ? i : i - N) * dk, p = a[j * N + i] ** 2 + b[j * N + i] ** 2;
+        m += p; kx += p * kk; kxx += p * kk * kk; k2 += p * (kk * kk + ky * ky);
+      }
+    }
+    if (!(n > 0) || !(m > 0)) return null;
+    const sx = Math.sqrt(Math.max(0, mxx / n - (mx / n) ** 2)), skx = Math.sqrt(Math.max(0, kxx / m - (kx / m) ** 2));
+    return { sx, skx, E: 0.5 * k2 / m + ev / n };
+  }
   /** Fraction of probability with |kx| or |ky| above frac * kmax (aliasing risk). */
   kLeak(frac = 0.6) {
     const { N, re, im, scratchRe: a, scratchIm: b } = this;

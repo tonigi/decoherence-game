@@ -179,3 +179,13 @@ test('harmonic well: coherent state keeps its width, others breathe to 1/(2 omeg
   near(coh.centroid()[0], 20 + 3 * Math.cos((3 * Math.PI) / 4), 0.03, 'classical motion');
   near(width(run(2.5, T / 4)), 1 / (2 * w * 2.5), 0.02, 'focused width at T/4');
 });
+
+test('HUD stats: a Gaussian saturates Heisenberg and has E = k0^2/2 + 1/(8 sigma^2) per axis', () => {
+  const sim = new Sim(128, 40, DT), s0 = 2, k0 = 1.5;
+  sim.setGaussian({ x: 20, y: 20, kx: k0, ky: 0, sigma: s0 });
+  sim._refresh();
+  const st = sim.stats();
+  near(st.sx, s0, 1e-3, 'sigma_x'); near(st.skx, 1 / (2 * s0), 1e-3, 'sigma_k');
+  near(st.sx * st.skx, 0.5, 1e-3, 'minimum uncertainty');
+  near(st.E, 0.5 * k0 * k0 + 2 * (1 / (8 * s0 * s0)), 1e-3, '<E>');
+});
