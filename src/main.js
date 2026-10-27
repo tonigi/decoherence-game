@@ -1,6 +1,7 @@
 import { Session, defaultSetup, defaultItem, itemKeys, param, sanitizeSetup, DT } from './session.js';
 import { Renderer } from './render.js';
 import { simulateCurveAsync } from './ghost.js';
+import { ledgerAsync } from './ledger.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -38,7 +39,8 @@ function buildNav() {
       c.textContent = 'Ch ' + chap + ' · ' + (ui.index.chapters.find(x => x.id === chap)?.name || ''); nav.append(c);
     }
     const b = document.createElement('button'); b.dataset.id = id;
-    b.innerHTML = `${id} <span class="st">${'★'.repeat(ui.stars[id] || 0)}</span>`;
+    const ex = ui.stars[starKey(id, 'expect')] || 0;
+    b.innerHTML = `${id} <span class="st">${'★'.repeat(ui.stars[id] || 0)}</span>${ex ? `<span class="st ex" title="expectation mode">${'★'.repeat(ex)}</span>` : ''}`;
     b.title = lv.title; b.onclick = () => loadLevel(id);
     if (ui.level && ui.level.id === id) b.classList.add('cur');
     nav.append(b);
@@ -53,6 +55,10 @@ function loadLevel(id) {
   buildNav(); buildStarTicks(); buildLaunchSliders(); buildInventory();
   resetToSetup();
 }
+
+// Born-mode and expectation-mode stars are kept apart: expectation mode removes
+// the final roll, so its stars are not comparable.
+const starKey = (id, mode) => (mode === 'expect' ? id + '@expect' : id);
 
 function newSeed() { return (Math.random() * 2 ** 32) >>> 0; }
 
@@ -152,6 +158,7 @@ function buildStarTicks() {
 function updatePanels() {
   const s = ui.session, lv = ui.level, inv = lv.inventory || {};
   $('setupPanel').hidden = ui.phase !== 'setup';
+  $('optExpect').disabled = ui.phase !== 'setup';
   for (const b of document.querySelectorAll('#inventory button')) {
     const spec = lv.inventory.items.find(x => x.id === b.dataset.spec);
     const left = spec.count - countPlaced(spec.id);
@@ -196,7 +203,16 @@ function observe() {
   const r = ui.session.observe();
   if (!r) return;
   ui.phase = 'done'; ui.playing = false;
-  showResult(r); updatePanels();
+  updatePanels();
+  if (!r.pending) { showResult(r); return; }
+  // detectors fired: score on the branch-averaged P_T (src/ledger.js)
+  const sess = ui.session, b = $('banner');
+  b.className = 'pending'; b.hidden = false;
+  b.innerHTML = '<h2>Scoring…</h2><p>Following every detector outcome to compute the skill score.</p>';
+  ledgerAsync(ui.level, sess.solution(), {
+    shouldCancel: () => ui.session !== sess,
+    onDone: (L) => { sess.scoreWith(L.score, L); showResult(sess.result); },
+  });
 }
 
 function showResult(r) {
@@ -207,17 +223,22 @@ function showResult(r) {
   }[r.outcome];
   b.className = r.hit ? 'win' : 'lose'; b.hidden = false;
   const idx = ui.index.levels.indexOf(lv.id), next = ui.index.levels[idx + 1];
-  const expectNote = ui.mode === 'expect' ? ` (expectation mode: P<sub>T</sub> ${r.pT >= (lv.expectThreshold ?? 0.5) ? '≥' : '<'} ${lv.expectThreshold ?? 0.5})` : '';
+  const mode = ui.session.mode, L = r.ledger;
+  const expectNote = mode === 'expect' ? ` (expectation mode: score ${r.score >= (lv.expectThreshold ?? 0.5) ? '≥' : '<'} ${((lv.expectThreshold ?? 0.5) * 100).toFixed(0)}%)` : '';
+  const ledgerNote = L ? `<p>Detectors fired, so the stars come from the <b>skill score ${(r.score * 100).toFixed(1)}%</b>: P<sub>T</sub> averaged over all
+    ${L.branches.length} outcome branches of your inputs (${L.branches.slice(0, 4).map(q => `${q.path}: ${(q.w * 100).toFixed(0)}% × ${(q.pT * 100).toFixed(0)}%`).join(', ')}${L.branches.length > 4 ? ', …' : ''}${L.dropped > 1e-3 ? `; ${(L.dropped * 100).toFixed(1)}% weight pruned and scored 0` : ''}).
+    Your own branch's P<sub>T</sub> was lucky or unlucky; the average is not.</p>` : '';
   b.innerHTML = `<h2>${txt} ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</h2>
     <p>P<sub>T</sub> at observation = <b>${(r.pT * 100).toFixed(1)}%</b>, P<sub>M</sub> = ${(r.pM * 100).toFixed(1)}%, absorbed = ${(r.lost * 100).toFixed(1)}%${expectNote}.
-    The stars come from P<sub>T</sub> at the moment you observed, so skill is rewarded even when the dice are unkind.</p>
+    ${L ? '' : 'The stars come from P<sub>T</sub> at the moment you observed, so skill is rewarded even when the dice are unkind.'}</p>${ledgerNote}
     <div class="row"><button id="bRetry" class="primary">Retry (new dice)</button><button id="bSetup">Back to setup</button>
     ${next && r.hit ? '<button id="bNext">Next level →</button>' : ''}<button id="bCopy">Copy replay JSON</button></div>`;
   $('bRetry').onclick = () => { resetToSetup(); play(); };
   $('bSetup').onclick = () => resetToSetup();
   if ($('bNext')) $('bNext').onclick = () => loadLevel(next);
   $('bCopy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(ui.session.solution(), null, 1)); $('bCopy').textContent = 'Copied'; };
-  if (r.hit && r.stars > (ui.stars[lv.id] || 0)) { ui.stars[lv.id] = r.stars; store.set('stars', ui.stars); buildNav(); }
+  const key = starKey(lv.id, mode);
+  if (r.hit && r.stars > (ui.stars[key] || 0)) { ui.stars[key] = r.stars; store.set('stars', ui.stars); buildNav(); }
 }
 
 function doAction(n, down) {
@@ -311,7 +332,8 @@ $('btnPlay').onclick = play;
 $('btnObserve').onclick = observe;
 $('btnReset').onclick = () => resetToSetup(true);
 $('speed').onchange = (e) => { ui.speed = +e.target.value; };
-$('optExpect').onchange = (e) => { ui.mode = e.target.checked ? 'expect' : 'born'; if (ui.phase === 'setup') resetToSetup(true); else ui.session.mode = ui.mode; };
+// the mode is fixed for the whole run (the checkbox is disabled outside setup)
+$('optExpect').onchange = (e) => { if (ui.phase !== 'setup') { e.target.checked = ui.mode === 'expect'; return; } ui.mode = e.target.checked ? 'expect' : 'born'; resetToSetup(true); };
 $('view_mode').onchange = () => { ui.renderer.view = $('view_mode').value; };
 $('optCurrent').onchange = (e) => { ui.renderer.showCurrent = e.target.checked; };
 $('optGhost').onchange = () => { scheduleGhost(); };

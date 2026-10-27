@@ -159,36 +159,50 @@ export class Session {
   canObserve() { return !this.result && this.t >= (this.level.minObserveTime || 0); }
 
   /** Final position measurement. Born mode samples |psi|^2 (u >= norm means the
-   *  particle was already absorbed); expect mode is deterministic on P_T. */
+   *  particle was already absorbed); expect mode is deterministic on the score.
+   *  The score is P_T, except after detector firings: then it is the ledger's
+   *  branch-averaged P_T (src/ledger.js), the result is `pending` and the caller
+   *  completes it with scoreWith(). */
   observe() {
     if (!this.canObserve()) return null;
     const sim = this.sim, S = sim.norm(), pT = this.pT(), pM = this.pM();
-    let outcome, sample = null;
-    if (this.mode === 'expect') {
-      outcome = pT >= (this.level.expectThreshold ?? 0.5) ? 'hit' : 'miss';
-    } else {
+    let outcome = null, sample = null;
+    const pending = this.events.some(e => e.type === 'detect');
+    if (this.mode !== 'expect') {
       const u = this.rng();
       if (u >= S) outcome = 'lost';
       else {
         const idx = sim.sampleCell(u);
         const N = sim.N;
         sample = { x: ((idx % N) + 0.5) * sim.dx, y: (Math.floor(idx / N) + 0.5) * sim.dx };
-        outcome = this.mineMask[idx] > 0.5 ? 'mine' : this.targetMask[idx] > 0.5 ? 'hit' : 'miss';
+        // the masks are smooth, so a cell is on a mine / target with probability
+        // mask[idx]: this makes P(hit) = P_T and P(mine) = P_M exactly
+        const v = this.rng(), m = this.mineMask[idx];
+        outcome = v < m ? 'mine' : v < m + Math.min(this.targetMask[idx], 1 - m) ? 'hit' : 'miss';
         sim.collapseTo(sample.x, sample.y, SIGMA_M);
       }
     }
-    const th = this.level.stars || [0.3, 0.5, 0.7];
-    const stars = outcome === 'hit' ? Math.max(1, th.filter(v => pT >= v).length) : 0;
     this._log({ type: 'observe' });
-    this.result = { outcome, hit: outcome === 'hit', pT, pM, lost: 1 - S, sample, stars, step: this.stepCount };
+    this.result = { outcome, hit: outcome === 'hit', pT, pM, lost: 1 - S, sample, stars: 0, step: this.stepCount, score: null, pending };
+    if (!pending) this.scoreWith(pT);
     return this.result;
+  }
+
+  /** Rate the run: stars from `score`; in expect mode it also decides the outcome. */
+  scoreWith(score, ledger = null) {
+    const r = this.result;
+    if (this.mode === 'expect') { r.outcome = score >= (this.level.expectThreshold ?? 0.5) ? 'hit' : 'miss'; r.hit = r.outcome === 'hit'; }
+    const th = this.level.stars || [0.3, 0.5, 0.7];
+    r.score = score; r.ledger = ledger; r.pending = false;
+    r.stars = r.hit ? Math.max(1, th.filter(v => score >= v).length) : 0;
+    return r;
   }
 
   /** Serialisable record: enough to replay deterministically (see tools/verify.js). */
   solution() {
     return {
       level: this.level.id, seed: this.seed, mode: this.mode, setup: this.setup,
-      events: this.events, outcome: this.result && { outcome: this.result.outcome, pT: this.result.pT, stars: this.result.stars },
+      events: this.events, outcome: this.result && { outcome: this.result.outcome, pT: this.result.pT, score: this.result.score, stars: this.result.stars },
     };
   }
 

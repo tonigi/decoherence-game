@@ -58,7 +58,7 @@
      "id": "det",
      "x": 20,
      "y": 20,
-     "r": 3.5
+     "r": 5
     }
    ]
   },
@@ -69,14 +69,26 @@
     "type": "detect",
     "i": 0,
     "every": 5,
-    "until": 240
+    "until": 235
    }
   ]
  },
  "stars": [
-  0.25,
-  0.4,
+  0.3,
+  0.42,
   0.5
  ],
- "expectThreshold": 0.35
+ "expectThreshold": 0.4,
+ "naive": {
+  "setup": {
+   "placed": [
+    {
+     "id": "det",
+     "x": 20,
+     "y": 20,
+     "r": 5
+    }
+   ]
+  }
+ }
 }

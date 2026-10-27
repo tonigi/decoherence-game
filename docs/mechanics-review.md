@@ -1,5 +1,14 @@
 # Mechanics review and proposals
 
+> **Status (first round of fixes done).** §1.1 5-1 and 3-2 rebuilt on a Mach–Zehnder
+> (rotated rects, M1). §1.2 detector runs are scored by the branch ledger (`src/ledger.js`).
+> §1.3 expectation mode is locked per run and has its own stars. §1.4 1-1 is now
+> "Rendezvous" (fixed observation time, interior optimum). §1.5 fixed `SOFTNESS` = 0.45
+> at all resolutions. §1.6 hit/mine sampling is exact. §1.7 `naive` check in `verify.js`.
+> 5-2 recalibrated (its old thresholds came from 16 lucky dice; the true expected score of
+> the old reference was ≈ 0.35, below its 2-star line). Still open: 3-1 (exempted from
+> the naive check; see §3), and everything in §2–3 beyond M1.
+
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.
 

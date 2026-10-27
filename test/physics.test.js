@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FFT2 } from '../src/fft.js';
 import { Sim } from '../src/sim.js';
-import { rasterV, rasterMask } from '../src/shapes.js';
+import { rasterV, rasterMask, SOFTNESS } from '../src/shapes.js';
 import { DT } from '../src/session.js';
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b} (tol ${tol})`);
@@ -84,8 +84,8 @@ test('tunnelling probability agrees with exact 1D transmission through the raste
   const sim = new Sim(128, 40, DT);
   sim.addStatic(rasterV(sim, { type: 'rect', x: 20, y: 20, w: a, h: 40, V: V0 }));
   const row = rasterV(sim, { type: 'rect', x: 20, y: 20, w: a, h: 40, V: V0 });
-  // continuum profile: same tanh edge as the rasteriser (softness 0.35 at this resolution)
-  const prof = (x) => V0 * 0.5 * (1 + Math.tanh((a / 2 - Math.abs(x - 20)) / 0.35));
+  // continuum profile: same tanh edge as the rasteriser
+  const prof = (x) => V0 * 0.5 * (1 + Math.tanh((a / 2 - Math.abs(x - 20)) / SOFTNESS));
   assert.ok(Math.abs(prof(sim.dx * (64 + 0.5)) - row[64 * 128 + 64]) < 1e-9);
   sim.setGaussian({ x: 10, y: 20, kx: k0, ky: 0, sigma });
   sim.step(Math.round(9 / DT));
@@ -110,4 +110,28 @@ test('momentum ceiling: leak detector flags near-Nyquist content', () => {
   assert.ok(sim.kLeak(0.6) < 1e-3);
   sim.setGaussian({ x: 20, y: 20, kx: 0.9 * sim.kmax, ky: 0, sigma: 2 });
   assert.ok(sim.kLeak(0.6) > 0.9);
+});
+
+test('rotated rects: 90 degrees swaps w and h; 45-degree splitter conserves probability', () => {
+  const sim = new Sim(64, 40, DT);
+  const a = rasterMask(sim, { shape: 'rect', x: 20, y: 18, w: 3, h: 9, angle: 90 });
+  const b = rasterMask(sim, { shape: 'rect', x: 20, y: 18, w: 9, h: 3 });
+  for (let i = 0; i < a.length; i++) near(a[i], b[i], 1e-9, 'mask ' + i);
+  const u = new Sim(128, 40, DT, { absorbStrength: 0 });
+  u.addStatic(rasterV(u, { type: 'rect', x: 16, y: 14, w: 0.4, h: 13, V: 4.2, angle: -45 }));
+  u.setGaussian({ x: 8, y: 14, kx: 3, ky: 0, sigma: 1.5 });
+  u.step(100);
+  near(u.norm(), 1, 1e-10, 'norm');
+});
+
+test('ghost resolution sees the same barrier: tunnelling at 64^2 within 3% of 128^2', () => {
+  const T = (N) => {
+    const sim = new Sim(N, 40, DT);
+    sim.addStatic(rasterV(sim, { type: 'rect', x: 20, y: 20, w: 1, h: 40, V: 3 }));
+    sim.setGaussian({ x: 9, y: 20, kx: 2.2, ky: 0, sigma: 2.2 });
+    sim.step(Math.round(8 / DT));
+    return sim.mass(rasterMask(sim, { shape: 'rect', x: 28, y: 20, w: 14, h: 40 }));
+  };
+  const hi = T(128), lo = T(64);
+  near(lo, hi, 0.03 * hi, 'transmission');
 });

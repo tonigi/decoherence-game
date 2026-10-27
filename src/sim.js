@@ -102,24 +102,38 @@ export class Sim {
     this.dirty = false;
   }
 
-  _mul(c, s) {
-    const re = this.re, im = this.im;
+  _mul(c, s, re = this.re, im = this.im) {
     for (let i = 0; i < re.length; i++) {
       const r = re[i], m = im[i];
       re[i] = r * c[i] - m * s[i]; im[i] = r * s[i] + m * c[i];
     }
   }
 
-  step(n = 1) {
-    const { re, im, fft } = this;
+  _advance(re, im) {
+    this._mul(this.cH, this.sH, re, im);
+    this.fft.pass(re, im, false);
+    this._mul(this.kc, this.ks, re, im);
+    this.fft.pass(re, im, true);
+    this._mul(this.cH, this.sH, re, im);
+  }
+
+  /** Advance psi by n steps. `others` are extra {re, im} states (measurement
+   *  branches) stepped in lock-step under the same Hamiltonian, so gate ramps
+   *  and tilt stay common to all of them. */
+  step(n = 1, others = []) {
     for (let s = 0; s < n; s++) {
       this._refresh();
-      this._mul(this.cH, this.sH);
-      fft.pass(re, im, false);
-      this._mul(this.kc, this.ks);
-      fft.pass(re, im, true);
-      this._mul(this.cH, this.sH);
+      this._advance(this.re, this.im);
+      for (const o of others) this._advance(o.re, o.im);
     }
+  }
+
+  /** Run fn with psi temporarily swapped for state {re, im}, so every observable
+   *  and operation below can act on a measurement branch. */
+  withState(st, fn) {
+    const re = this.re, im = this.im;
+    this.re = st.re; this.im = st.im;
+    try { return fn(this); } finally { this.re = re; this.im = im; }
   }
 
   // ---- observables -------------------------------------------------------

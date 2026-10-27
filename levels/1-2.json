@@ -2,7 +2,7 @@
  "id": "1-2",
  "chapter": 1,
  "title": "Between the Mines",
- "intro": "Aim the packet with the arrow. Mines flank the target: if the measurement lands on one, you lose. Dispersion widens the packet faster than you expect, so a tighter launch is not always safer.",
+ "intro": "From now on you choose when to observe: press Observe (Enter) when the green meter peaks. Aim the packet with the arrow. Mines flank the target: if the measurement lands on one, you lose. Dispersion widens the packet faster than you expect, so a tighter launch is not always safer.",
  "grid": {
   "N": 128,
   "L": 40

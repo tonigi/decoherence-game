@@ -2,7 +2,7 @@
  "id": "3-1",
  "chapter": 3,
  "title": "Two Slits",
- "intro": "Both slits are open, so the packet goes through both and interferes with itself. Bright fringes are where the two paths add; dark fringes are where they cancel. The mines sit on dark fringes. Tune the wavelength so the fringes land where the mines are, then observe at the bright centre.",
+ "intro": "Both slits are open, so the packet goes through both and interferes with itself. Bright fringes are where the two paths add; dark fringes are where they cancel. The mines sit near dark fringes. Faster packets spread less on the way, but the fringe pattern also fans out with time (spacing ≈ 2πt / slit separation), so watch where the dark bands are when you observe.",
  "grid": {
   "N": 128,
   "L": 40
@@ -79,5 +79,7 @@
   },
   "observeAt": 9.2,
   "events": []
- }
+ },
+ "naive": false,
+ "naiveSkip": "introductory level: in 2D, slit diffraction spreads P_T thinly whatever you do; the Mach–Zehnder levels (3-2, 5-1) carry the interference lessons"
 }

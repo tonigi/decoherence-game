@@ -1,25 +1,25 @@
 {
  "id": "1-1",
  "chapter": 1,
- "title": "Free Flight",
- "intro": "A wavepacket spreads as it travels. Choose its width and speed, press Play, and Observe when the green meter peaks. A narrow packet starts sharp but disperses fastest; a wide one barely spreads but is already big. Somewhere in between is best.",
+ "title": "Rendezvous",
+ "intro": "The world measures the particle at t = 10 sharp, so the packet has to be over the target then. Pick the speed so it arrives on time (the target is 24 units away), then its width. A free packet spreads as σ(t) = σ₀·√(1 + (t / 2σ₀²)²): start narrow and it spreads fast; start wide and it is already big. Somewhere in between is best. Press Play and watch the meter.",
  "grid": {
   "N": 128,
   "L": 40
  },
- "tmax": 25,
+ "tmax": 10,
  "launch": {
   "x": 7,
   "y": 20,
   "k": [
    1.6,
-   1,
-   2.2
+   0.5,
+   3
   ],
   "angle": 0,
   "sigma": [
    1.2,
-   0.8,
+   0.6,
    4
   ]
  },
@@ -40,11 +40,15 @@
  "reference": {
   "setup": {
    "launch": {
-    "k": 2.2,
-    "sigma": 2.35
+    "k": 2.4,
+    "sigma": 2.24
    }
   },
-  "observeAt": 10.6,
+  "observeAt": 10,
   "events": []
+ },
+ "minObserveTime": 10,
+ "naive": {
+  "setup": {}
  }
 }

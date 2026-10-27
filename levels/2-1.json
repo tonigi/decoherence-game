@@ -42,11 +42,11 @@
   }
  ],
  "stars": [
-  0.1,
-  0.18,
-  0.24
+  0.14,
+  0.22,
+  0.27
  ],
- "expectThreshold": 0.15,
+ "expectThreshold": 0.18,
  "reference": {
   "setup": {
    "launch": {

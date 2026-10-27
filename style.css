@@ -6,7 +6,7 @@ h1 { margin:0; font-size:20px; letter-spacing:.5px; } h1 small { color:var(--dim
 h2 { margin:0 0 6px; font-size:17px; } h3 { margin:0 0 6px; font-size:13px; text-transform:uppercase; color:var(--dim); letter-spacing:.08em; }
 nav { display:flex; gap:6px; flex-wrap:wrap; }
 nav button { background:var(--panel); border:1px solid var(--line); color:var(--ink); padding:4px 9px; border-radius:6px; cursor:pointer; font-size:12px; }
-nav button.cur { border-color:var(--accent); } nav button .st { color:#ffd23f; }
+nav button.cur { border-color:var(--accent); } nav button .st { color:#ffd23f; } nav button .st.ex { color:#8b93a7; margin-left:3px; }
 nav .chap { color:var(--dim); font-size:11px; align-self:center; margin-left:8px; }
 main { display:grid; grid-template-columns:minmax(320px, 800px) minmax(300px, 440px); gap:16px; padding:16px; justify-content:center; align-items:start; }
 #stage { position:relative; }
@@ -14,7 +14,7 @@ main { display:grid; grid-template-columns:minmax(320px, 800px) minmax(300px, 44
 #hud { position:absolute; left:10px; bottom:10px; display:flex; gap:10px; font-size:12px; }
 #hud span { background:rgba(0,0,0,.6); padding:2px 8px; border-radius:10px; }
 #banner { position:absolute; inset:auto 12px 44px 12px; background:rgba(13,16,23,.93); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
-#banner h2 { font-size:20px; } #banner.win { border-color:var(--good); } #banner.lose { border-color:var(--bad); }
+#banner h2 { font-size:20px; } #banner.win { border-color:var(--good); } #banner.lose { border-color:var(--bad); } #banner.pending { border-color:var(--accent); }
 aside section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; }
 p { margin:0 0 6px; } .note { color:var(--dim); font-size:12px; }
 .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0; }
