@@ -34,7 +34,7 @@ export function* ledgerSteps(level, solution, { N = 64, maxBranches = 32, chunk 
   const rng = mulberry32(seed);
   const s = new Session(level, solution.setup, { N, seed: 1 });
   const sim = s.sim;
-  let branches = [{ re: sim.re.slice(), im: sim.im.slice(), w: 1, path: '' }];
+  let branches = [{ re: sim.re.slice(), im: sim.im.slice(), caught: 0, w: 1, path: '' }];
   let dropped = 0, resampled = false;
   const advanceTo = function* (step) {
     while (s.stepCount < step) {
@@ -54,12 +54,12 @@ export function* ledgerSteps(level, solution, { N = 64, maxBranches = 32, chunk 
       for (const b of branches) {
         const p = sim.withState(b, () => sim.mass2(mask));
         if (p > 1e-12) {
-          const y = { re: b.re.slice(), im: b.im.slice(), w: b.w * p, path: b.path + 'Y' };
+          const y = { re: b.re.slice(), im: b.im.slice(), caught: 0, w: b.w * p, path: b.path + 'Y' };
           sim.withState(y, () => sim.applyMask(mask, 1 / Math.sqrt(p)));
           next.push(y);
         }
         if (p < 1 - 1e-12) {
-          sim.withState(b, () => sim.applyComplement(mask, 1 / Math.sqrt(1 - p)));
+          sim.withState(b, () => { sim.applyComplement(mask, 1 / Math.sqrt(1 - p)); sim.conditionCaught(false, p); });
           b.w *= 1 - p; b.path += 'N'; next.push(b);
         }
       }

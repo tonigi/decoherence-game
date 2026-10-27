@@ -191,3 +191,28 @@ test('detector runs are scored by the ledger, so a lucky post-selection earns no
   assert.ok(L.score < lv.stars[0], 'branch-averaged score ' + L.score);
   assert.equal(r.outcome, 'miss'); assert.equal(r.stars, 0);
 });
+
+test('momentum levels: the Born sample is drawn from |phi(k)|^2', () => {
+  const lv = load('1-4'), setup = sanitizeSetup(lv, { launch: { sigma: 2 } });
+  const base = new Session(lv, setup, { N: 64 }); base.step(160);
+  const pT = base.pT(), M = 2000; let hit = 0;
+  const re = base.sim.re.slice(), im = base.sim.im.slice();
+  for (let seed = 1; seed <= M; seed++) {
+    base.sim.re.set(re); base.sim.im.set(im); base.result = null; base.rng = mulberry32(seed);
+    if (base.observe().outcome === 'hit') hit++;
+  }
+  assert.ok(pT > 0.2 && pT < 0.6, 'pT ' + pT);
+  near(hit / M, pT, 4 * Math.sqrt(pT * (1 - pT) / M), 'hit frequency');
+});
+
+test('a bomb (absorbing element) counts as a mine and as a loss branch', () => {
+  const lv = load('1-1');
+  lv.elements = [{ type: 'rect', x: 20, y: 20, w: 4, h: 12, V: 0, absorb: 3 }];
+  const s = new Session(lv, defaultSetup(lv), { N: 64 }); s.step(200);
+  assert.ok(s.sim.caught > 0.5);
+  near(s.pM(), s.sim.caught, 1e-12, 'no mines: P_M is what the bomb caught');
+  near(s.alive() + s.sim.caught + s.lost(), 1, 1e-12, 'bookkeeping');
+  let boom = 0; const M = 400;
+  for (let seed = 1; seed <= M; seed++) { const t = new Session(lv, defaultSetup(lv), { N: 64, seed }); t.step(200); if (t.observe().outcome === 'boom') boom++; }
+  near(boom / M, s.sim.caught, 0.08, 'boom frequency');
+});

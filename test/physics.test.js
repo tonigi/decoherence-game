@@ -135,3 +135,27 @@ test('ghost resolution sees the same barrier: tunnelling at 64^2 within 3% of 12
   const hi = T(128), lo = T(64);
   near(lo, hi, 0.03 * hi, 'transmission');
 });
+
+test('momentum density obeys Parseval and k-masks sit at the right momentum', async () => {
+  const { rasterKMask } = await import('../src/shapes.js');
+  const sim = new Sim(64, 40, DT);
+  sim.setGaussian({ x: 20, y: 20, kx: 1.5, ky: -0.5, sigma: 3 });
+  near(sim.kMass(new Float64Array(64 * 64).fill(1)), sim.norm(), 1e-10, 'Parseval');
+  // a Gaussian of width sigma has sigma_k = 1/(2 sigma) per axis: P(|k - k0| < r) = 1 - exp(-r^2 / (2 sigma_k^2))
+  const r = 0.4, sk = 1 / 6, want = 1 - Math.exp(-(r * r) / (2 * sk * sk));
+  near(sim.kMass(rasterKMask(sim, { shape: 'circle', x: 1.5, y: -0.5, r })), want, 0.03, 'disc around k0');
+  assert.ok(sim.kMass(rasterKMask(sim, { shape: 'circle', x: -1.5, y: 0.5, r })) < 1e-6, 'nothing at -k0');
+});
+
+test('absorbing elements: norm + caught is conserved exactly', () => {
+  const sim = new Sim(64, 40, DT, { absorbStrength: 0 });
+  sim.addAbsorber(rasterV(sim, { type: 'rect', x: 24, y: 20, w: 4, h: 6, V: 2 }));
+  sim.setGaussian({ x: 14, y: 20, kx: 2, ky: 0, sigma: 2 });
+  sim.step(200);
+  assert.ok(sim.caught > 0.3, 'caught ' + sim.caught);
+  near(sim.norm() + sim.caught, 1, 1e-10, 'probability bookkeeping');
+  // branches carry their own record
+  const b = { re: sim.re.slice(), im: sim.im.slice(), caught: sim.caught };
+  sim.step(20, [b]);
+  near(b.caught, sim.caught, 1e-14, 'lock-step branch');
+});

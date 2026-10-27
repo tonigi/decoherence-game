@@ -1,7 +1,7 @@
 // Game core: one playthrough of a level. DOM-free so the same code runs in the
 // browser, in node tests, and in tools/verify.js (deterministic replay).
 import { Sim } from './sim.js';
-import { rasterMask, rasterV } from './shapes.js';
+import { rasterMask, rasterV, rasterKMask } from './shapes.js';
 import { mulberry32 } from './rng.js';
 
 export const DT = 0.05;
@@ -11,9 +11,10 @@ export const SIGMA_M = 1.0; // position-measurement collapse width
 export function param(p) { return Array.isArray(p) ? { v: p[0], min: p[1], max: p[2] } : { v: p, min: p, max: p }; }
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const LAUNCH_KEYS = ['x', 'y', 'k', 'angle', 'sigma'];
-export const ITEM_KEYS = { rect: ['w', 'h', 'V'], detector_rect: ['w', 'h'], detector_circle: ['r'] };
+export const ITEM_KEYS = { rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'] };
 export function itemKeys(spec) {
-  return spec.kind === 'detector' ? ITEM_KEYS['detector_' + (spec.shape || 'rect')] : ITEM_KEYS.rect;
+  if (spec.kind === 'detector') return ITEM_KEYS['detector_' + (spec.shape || 'rect')];
+  return spec.kind === 'absorber' ? ITEM_KEYS.absorber : ITEM_KEYS.rect;
 }
 
 export function defaultSetup(level) {
@@ -74,6 +75,8 @@ export class Session {
     const sim = this.sim;
     this.gates = [];
     for (const el of level.elements || []) {
+      // `absorb` makes an element (e.g. a bomb) swallow probability: an imaginary potential
+      if (el.absorb) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
       const V = rasterV(sim, el);
       if (el.gate) {
         const i = sim.addGate(V, el.gate.open !== false);
@@ -90,10 +93,15 @@ export class Session {
       if (spec.kind === 'detector') {
         const shape = spec.shape === 'circle' ? { shape: 'circle', x: it.x, y: it.y, r: it.r } : { shape: 'rect', x: it.x, y: it.y, w: it.w, h: it.h };
         addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold);
-      } else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));
+      } else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
+      else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));
     }
-    this.targetMask = unionMask(sim, level.targets || []);
-    this.mineMask = unionMask(sim, level.mines || []);
+    // level.observe === 'momentum': the final measurement is of momentum, and
+    // targets / mines are regions of k-space ({x: kx, y: ky, ...})
+    this.kSpace = level.observe === 'momentum';
+    const raster = this.kSpace ? rasterKMask : rasterMask;
+    this.targetMask = unionMask(sim, level.targets || [], raster);
+    this.mineMask = unionMask(sim, level.mines || [], raster);
 
     const l = this.setup.launch, a = (l.angle * Math.PI) / 180;
     sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma });
@@ -102,9 +110,13 @@ export class Session {
 
   get t() { return this.stepCount * DT; }
   get finished() { return !!this.result; }
-  pT() { return this.sim.mass(this.targetMask); }
-  pM() { return this.sim.mass(this.mineMask); }
+  _mass(m) { return this.kSpace ? this.sim.kMass(m) : this.sim.mass(m); }
+  pT() { return this._mass(this.targetMask); }
+  /** Mines include probability already swallowed by absorbing elements (bombs). */
+  pM() { return this._mass(this.mineMask) + this.sim.caught; }
   alive() { return this.sim.norm(); }
+  /** Probability lost at the boundary absorber. */
+  lost() { return Math.max(0, 1 - this.sim.norm() - this.sim.caught); }
 
   step(n) {
     if (this.result) return;
@@ -152,6 +164,7 @@ export class Session {
     const yes = u < pYes || 1 - pYes < 1e-9;
     if (yes) { sim.applyMask(d.mask, 1 / Math.sqrt(pYes)); }
     else sim.applyComplement(d.mask, 1 / Math.sqrt(1 - pYes));
+    sim.conditionCaught(yes, pYes);
     this._log({ type: 'detect', i, yes });
     return { yes, pYes };
   }
@@ -170,8 +183,15 @@ export class Session {
     const pending = this.events.some(e => e.type === 'detect');
     if (this.mode !== 'expect') {
       const u = this.rng();
-      if (u >= S) outcome = 'lost';
-      else {
+      if (u >= S) outcome = u < S + sim.caught ? 'boom' : 'lost';
+      else if (this.kSpace) {
+        // momentum measurement: sample |phi(k)|^2 on the shifted k grid
+        const dens = sim.kDensity(new Float64Array(sim.N * sim.N)), N = sim.N, dk = (2 * Math.PI) / sim.L;
+        let idx = 0; for (let acc = 0; idx < dens.length - 1; idx++) { acc += dens[idx]; if (acc > u) break; }
+        sample = { kx: ((idx % N) - N / 2) * dk, ky: (Math.floor(idx / N) - N / 2) * dk, space: 'k' };
+        const v = this.rng(), m = this.mineMask[idx];
+        outcome = v < m ? 'mine' : v < m + Math.min(this.targetMask[idx], 1 - m) ? 'hit' : 'miss';
+      } else {
         const idx = sim.sampleCell(u);
         const N = sim.N;
         sample = { x: ((idx % N) + 0.5) * sim.dx, y: (Math.floor(idx / N) + 0.5) * sim.dx };
@@ -183,7 +203,7 @@ export class Session {
       }
     }
     this._log({ type: 'observe' });
-    this.result = { outcome, hit: outcome === 'hit', pT, pM, lost: 1 - S, sample, stars: 0, step: this.stepCount, score: null, pending };
+    this.result = { outcome, hit: outcome === 'hit', pT, pM, lost: this.lost(), sample, stars: 0, step: this.stepCount, score: null, pending };
     if (!pending) this.scoreWith(pT);
     return this.result;
   }
@@ -235,10 +255,10 @@ export function replay(level, solution, opts = {}) {
   return s;
 }
 
-function unionMask(sim, shapes) {
+function unionMask(sim, shapes, raster = rasterMask) {
   const out = new Float64Array(sim.N * sim.N);
   for (const sh of shapes) {
-    const m = rasterMask(sim, sh);
+    const m = raster(sim, sh);
     for (let i = 0; i < out.length; i++) if (m[i] > out[i]) out[i] = m[i];
   }
   return out;

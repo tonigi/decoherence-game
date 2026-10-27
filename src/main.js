@@ -54,6 +54,11 @@ function loadLevel(id) {
   $('lvlIntro').textContent = ui.level.intro;
   buildNav(); buildStarTicks(); buildLaunchSliders(); buildInventory();
   resetToSetup();
+  // momentum-measurement levels open in the (zoomed) momentum view
+  ui.renderer.kView = ui.level.kView;
+  const kLevel = ui.level.observe === 'momentum';
+  if (kLevel || ui.autoK) { $('view_mode').value = kLevel ? 'momentum' : 'phase'; ui.renderer.view = $('view_mode').value; }
+  ui.autoK = kLevel;
 }
 
 // Born-mode and expectation-mode stars are kept apart: expectation mode removes
@@ -220,6 +225,7 @@ function showResult(r) {
   const txt = {
     hit: r.stars >= 3 ? 'Direct hit!' : 'Hit!', miss: 'Missed - the particle was found elsewhere.',
     mine: 'Boom - the measurement found the particle on a mine.', lost: 'Lost - the particle had already been absorbed at the boundary.',
+    boom: 'Boom - the particle had already been absorbed by the bomb.',
   }[r.outcome];
   b.className = r.hit ? 'win' : 'lose'; b.hidden = false;
   const idx = ui.index.levels.indexOf(lv.id), next = ui.index.levels[idx + 1];
@@ -387,15 +393,17 @@ function draw() {
   const s = ui.session; if (!s) return;
   ui.renderer.draw(s, ui);
   $('clock').textContent = `t = ${s.t.toFixed(1)} / ${ui.level.tmax}`;
-  const pT = s.pT(), pM = s.pM(), alive = s.alive();
+  const pT = s.pT(), pM = s.pM(), lost = s.lost();
   $('barT').style.width = (pT * 100) + '%'; $('valT').textContent = (pT * 100).toFixed(1) + '%';
   $('barM').style.width = (pM * 100) + '%'; $('valM').textContent = (pM * 100).toFixed(1) + '%';
-  $('barL').style.width = (Math.max(0, 1 - alive) * 100) + '%'; $('valL').textContent = (Math.max(0, 1 - alive) * 100).toFixed(1) + '%';
+  $('barL').style.width = (lost * 100) + '%'; $('valL').textContent = (lost * 100).toFixed(1) + '%';
   if (ui.frame % 15 === 0) ui.leak = s.sim.kLeak(0.6);
   $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
   $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';
   if (ui.frame % 3 === 0) drawPlot();
 }
+
+const hasMines = () => (ui.level.mines || []).length > 0 || ui.session.sim.hasWel;
 
 function drawPlot() {
   const c = $('plot'), g = c.getContext('2d'), W = c.width, H = c.height, tmax = ui.level.tmax;
@@ -412,8 +420,8 @@ function drawPlot() {
   for (const v of ui.level.stars || []) { if (v <= ymax) { g.beginPath(); g.moveTo(28, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); } }
   g.setLineDash([]);
   const line = (ts, vs, color, w = 2) => { if (!ts || !ts.length) return; g.strokeStyle = color; g.lineWidth = w; g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vs[i])) : g.moveTo(X(t), Y(vs[i])))); g.stroke(); };
-  if (gh) { line(gh.t, gh.pT, 'rgba(76,255,124,0.3)', 3); if ((ui.level.mines || []).length) line(gh.t, gh.pM, 'rgba(255,74,74,0.3)', 3); }
-  line(h.t, h.pT, '#4cff7c'); if ((ui.level.mines || []).length) line(h.t, h.pM, '#ff4a4a');
+  if (gh) { line(gh.t, gh.pT, 'rgba(76,255,124,0.3)', 3); if (hasMines()) line(gh.t, gh.pM, 'rgba(255,74,74,0.3)', 3); }
+  line(h.t, h.pT, '#4cff7c'); if (hasMines()) line(h.t, h.pM, '#ff4a4a');
   g.strokeStyle = '#fff6'; g.beginPath(); g.moveTo(X(ui.session.t), 4); g.lineTo(X(ui.session.t), H - 16); g.stroke();
   if (ui.level.minObserveTime) { g.fillStyle = '#ffffff10'; g.fillRect(28, 4, X(ui.level.minObserveTime) - 28, H - 20); }
 }

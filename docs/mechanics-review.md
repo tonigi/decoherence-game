@@ -8,6 +8,21 @@
 > 5-2 recalibrated (its old thresholds came from 16 lucky dice; the true expected score of
 > the old reference was ≈ 0.35, below its 2-star line). Still open: 3-1 (exempted from
 > the naive check; see §3), and everything in §2–3 beyond M1.
+>
+> **Second round.** M2 done: `"observe": "momentum"` levels with k-space targets, a
+> zoomed momentum view, and level **1-4 Sharp Momentum** (σ = 1 gives 12 %, the optimum
+> σ ≈ 5 gives 82 %). Absorbing elements (`absorb: W`, exact bookkeeping of the swallowed
+> probability, which counts as a mine and as a "boom" outcome) are in for the bomb tester,
+> but **3-5 Bomb Tester is blocked**: the dark port of the 45° Mach–Zehnder leaks about
+> 8–10 % (visibility ≈ 0.6–0.7), so blocking an arm only raises it from 0.10 to 0.13.
+> The diagnosis: the two paths meet with the right phase (≈ 174°) but only about 70 %
+> mode overlap, because the splitter is strongly energy-dependent (T rises from 0.39 to
+> 0.59 between k = 2.7 and 3.3). Reflection therefore picks out slower, more oblique
+> components, and the reflected packet lags by about 0.7 and sits about 1.1 off-axis.
+> The dt-convergence check is clean, so this is the physics of a barrier about one unit
+> thick. The fix is a thinner, delta-like splitter, which needs edges sharper than
+> `SOFTNESS` and hence a finer grid (the 256² WebGPU path), or a larger k with the ghost
+> run at 128².
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

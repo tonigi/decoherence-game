@@ -20,7 +20,7 @@ export class Renderer {
   get scale() { return this.canvas.width / this.sim.L; }
 
   drawField() {
-    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw;
+    const { sim, img, view } = this, N = sim.N, d = img.data, re = sim.re, im = sim.im, V = sim.Vdraw, Wel = sim.hasWel ? sim.Wel : null;
     let dens = null;
     if (view === 'momentum') { sim.momentumDensity(this.kbuf); dens = this.kbuf; }
     let peak = 0;
@@ -46,13 +46,32 @@ export class Renderer {
           const tr = v > 0 ? 255 : 60, tg = v > 0 ? 110 : 190, tb = v > 0 ? 40 : 255;
           r = r * (1 - a) + tr * a / 255; g = g * (1 - a) + tg * a / 255; bl = bl * (1 - a) + tb * a / 255;
         }
+        if (Wel && Wel[i] > 0.02) {               // absorbing element (bomb): purple
+          const a = Math.min(0.55, Wel[i] / 4 * 0.5 + 0.1);
+          r = r * (1 - a) + 0.75 * a; g = g * (1 - a) + 0.2 * a; bl = bl * (1 - a) + 0.95 * a;
+        }
       }
       const k = 4 * i;
       d[k] = r * 255; d[k + 1] = g * 255; d[k + 2] = bl * 255; d[k + 3] = 255;
     }
     this.octx.putImageData(img, 0, 0);
     this.ctx.imageSmoothingEnabled = true; this.ctx.imageSmoothingQuality = 'high';
-    this.ctx.drawImage(this.off, 0, 0, this.canvas.width, this.canvas.height);
+    if (view === 'momentum') { const c = this.kCrop(); this.ctx.drawImage(this.off, c.i0, c.i0, c.w, c.w, 0, 0, this.canvas.width, this.canvas.height); }
+    else this.ctx.drawImage(this.off, 0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  /** Momentum view shows |k| <= kView (level.kView, default the whole grid). */
+  kCrop() {
+    const N = this.sim.N, dk = (2 * Math.PI) / this.sim.L, kv = Math.min(this.kView || Infinity, (N / 2) * dk);
+    const w = Math.max(4, Math.round((2 * kv) / dk)), i0 = N / 2 - w / 2;
+    return { i0, w, dk, kv: (w / 2) * dk };
+  }
+  /** Coordinate maps for overlays: position space, or k-space in the momentum view. */
+  mapping(k) {
+    if (!k) { const S = this.scale; return { x: (v) => v * S, y: (v) => v * S, s: S }; }
+    const c = this.kCrop(), N = this.sim.N, f = this.canvas.width / c.w;
+    const X = (v) => (v / c.dk + N / 2 + 0.5 - c.i0) * f;
+    return { x: X, y: X, s: f / c.dk };
   }
 
   drawCurrent() {
@@ -74,21 +93,35 @@ export class Renderer {
     }
   }
 
-  shapePath(sh) {
-    const ctx = this.ctx, S = this.scale; ctx.beginPath();
-    if (sh.shape === 'circle') ctx.arc(sh.x * S, sh.y * S, sh.r * S, 0, 2 * Math.PI);
-    else ctx.rect((sh.x - sh.w / 2) * S, (sh.y - sh.h / 2) * S, sh.w * S, sh.h * S);
+  shapePath(sh, M = this.mapping(false)) {
+    const ctx = this.ctx; ctx.beginPath();
+    if (sh.shape === 'circle') ctx.arc(M.x(sh.x), M.y(sh.y), sh.r * M.s, 0, 2 * Math.PI);
+    else {
+      const a = ((sh.angle || 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a), hw = sh.w / 2, hh = sh.h / 2;
+      [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].forEach(([u, v], n) => {
+        const px = M.x(sh.x + c * u - s * v), py = M.y(sh.y + s * u + c * v);
+        n ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      });
+      ctx.closePath();
+    }
+  }
+
+  /** Targets and mines, in whichever space the level measures. */
+  drawRegions(lv, M) {
+    const ctx = this.ctx;
+    for (const t of lv.targets || []) { this.shapePath(t, M); ctx.fillStyle = 'rgba(80,255,120,0.12)'; ctx.fill(); ctx.strokeStyle = '#4cff7c'; ctx.lineWidth = 2; ctx.stroke(); }
+    for (const m of lv.mines || []) {
+      this.shapePath(m, M); ctx.fillStyle = 'rgba(255,60,60,0.15)'; ctx.fill(); ctx.strokeStyle = '#ff4a4a'; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.stroke();
+      const rx = 0.5 * (m.r ?? m.w / 2), ry = 0.5 * (m.r ?? m.h / 2);
+      ctx.beginPath(); ctx.moveTo(M.x(m.x - rx), M.y(m.y - ry)); ctx.lineTo(M.x(m.x + rx), M.y(m.y + ry));
+      ctx.moveTo(M.x(m.x + rx), M.y(m.y - ry)); ctx.lineTo(M.x(m.x - rx), M.y(m.y + ry)); ctx.stroke();
+    }
   }
 
   drawOverlays(session, ui) {
     const ctx = this.ctx, S = this.scale, lv = session.level;
     ctx.save();
-    for (const t of lv.targets || []) { this.shapePath(t); ctx.fillStyle = 'rgba(80,255,120,0.12)'; ctx.fill(); ctx.strokeStyle = '#4cff7c'; ctx.lineWidth = 2; ctx.stroke(); }
-    for (const m of lv.mines || []) {
-      this.shapePath(m); ctx.fillStyle = 'rgba(255,60,60,0.15)'; ctx.fill(); ctx.strokeStyle = '#ff4a4a'; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo((m.x - 0.5 * (m.r ?? m.w / 2)) * S, (m.y - 0.5 * (m.r ?? m.h / 2)) * S); ctx.lineTo((m.x + 0.5 * (m.r ?? m.w / 2)) * S, (m.y + 0.5 * (m.r ?? m.h / 2)) * S);
-      ctx.moveTo((m.x + 0.5 * (m.r ?? m.w / 2)) * S, (m.y - 0.5 * (m.r ?? m.h / 2)) * S); ctx.lineTo((m.x - 0.5 * (m.r ?? m.w / 2)) * S, (m.y + 0.5 * (m.r ?? m.h / 2)) * S); ctx.stroke();
-    }
+    if (!session.kSpace) this.drawRegions(lv, this.mapping(false));
     ctx.setLineDash([6, 4]); ctx.lineWidth = 2;
     const acts = session.actions();
     session.detectors.forEach((d, i) => {
@@ -116,7 +149,7 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(x, y, l.sigma * 2 * S, 0, 2 * Math.PI); ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
     }
-    if (session.result?.sample) {
+    if (session.result?.sample && !session.kSpace) {
       const s = session.result.sample;
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(s.x * S, s.y * S, 10, 0, 2 * Math.PI);
       ctx.moveTo(s.x * S - 16, s.y * S); ctx.lineTo(s.x * S + 16, s.y * S); ctx.moveTo(s.x * S, s.y * S - 16); ctx.lineTo(s.x * S, s.y * S + 16); ctx.stroke();
@@ -127,8 +160,21 @@ export class Renderer {
   draw(session, ui) {
     this.drawField();
     if (this.showCurrent && this.view !== 'momentum') this.drawCurrent();
-    if (this.view !== 'momentum') this.drawOverlays(session, ui);
-    else { this.ctx.fillStyle = '#fff'; this.ctx.font = '14px system-ui'; this.ctx.fillText('momentum space |φ(k)|²  (kx → , ky ↓, centre = 0)', 12, 22); }
+    if (this.view !== 'momentum') { this.drawOverlays(session, ui); return; }
+    const ctx = this.ctx, c = this.kCrop();
+    if (session.kSpace) {
+      const M = this.mapping(true);
+      ctx.save(); this.drawRegions(session.level, M);
+      const s = session.result?.sample;
+      if (s && s.space === 'k') {
+        const x = M.x(s.kx), y = M.y(s.ky);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 10, 0, 2 * Math.PI);
+        ctx.moveTo(x - 16, y); ctx.lineTo(x + 16, y); ctx.moveTo(x, y - 16); ctx.lineTo(x, y + 16); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.fillStyle = '#fff'; ctx.font = '14px system-ui';
+    ctx.fillText(`momentum space |φ(k)|²  (kx → , ky ↓, centre = 0, |k| ≤ ${c.kv.toFixed(1)})`, 12, 22);
   }
 }
 

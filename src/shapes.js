@@ -62,3 +62,20 @@ function rectP(r, x, y, s) {
   const [u, v] = local(r, x, y);
   return edge(r.w / 2 - Math.abs(u), s) * edge(r.h / 2 - Math.abs(v), s);
 }
+
+// Momentum-space masks live on the fft-shifted k grid of Sim.momentumDensity:
+// cell I has k = (I - N/2) * dk with dk = 2 pi / L, the same at every N.
+export const K_SOFTNESS = 0.08;
+export function rasterKMask(sim, shape) {
+  const { N } = sim, dk = (2 * Math.PI) / sim.L, s = K_SOFTNESS;
+  const m = new Float64Array(N * N);
+  const circle = shape.shape === 'circle';
+  for (let J = 0; J < N; J++) {
+    const ky = (J - N / 2) * dk;
+    for (let I = 0; I < N; I++) {
+      const kx = (I - N / 2) * dk;
+      m[J * N + I] = circle ? edge(shape.r - Math.hypot(kx - shape.x, ky - shape.y), s) : rectP(shape, kx, ky, s);
+    }
+  }
+  return m;
+}
