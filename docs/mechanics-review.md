@@ -37,6 +37,19 @@
 > reflecting shutter mostly pumps energy into the wave (raising V under it) and traps it
 > in a cavity. An absorbing chopper is clean "diffraction in time", but chopping throws
 > away most of the packet: best P_T ≈ 3 % against 1.7 % with the shutter simply open.
+>
+> **Fifth round.** M6 weak detectors (`strength` s: M_yes = √s·m). While testing them
+> the ledger's resampling turned out to be the weak point: it was unbiased but had a
+> large spread (σ ≈ 9 points at K = 16, 8 pulses), and a cut-search bug silently dropped
+> weight when branch weights were nearly equal. It is replaced by a deterministic
+> **density-matrix compression**: beyond K = 16 branches the ensemble is replaced by the
+> K leading eigenvectors of ρ = Σ w|ψ⟩⟨ψ|. That is the best rank-K approximation, and
+> the discarded eigenvalue weight bounds the error. It matches the exact 256-branch tree
+> to 0.01 % and Monte Carlo within error bars, at about 2 s for a 48-pulse Zeno run.
+> No level uses weak detectors yet: with a single P_T objective, Zeno's score rises
+> monotonically with s for a well-sized detector and is flat for a small one. An
+> information-vs-disturbance level needs a two-part objective (for example the
+> eraser of M8).
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

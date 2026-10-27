@@ -164,16 +164,37 @@ test('ledger: without detectors the score is P_T; with one shot it is the exact 
   near(L2.score, want, 1e-9, 'branch average');
 });
 
-test('ledger: roulette resampling is unbiased against the exact tree', () => {
-  const lv = load('5-2'), setup = sanitizeSetup(lv, lv.reference.setup);
-  const events = []; for (let k = 0; k < 7; k++) events.push({ step: 5 * k, type: 'detect', i: 0 }); events.push({ step: 60, type: 'observe' });
-  const exact = ledger(lv, { setup, events }, { maxBranches: 1e6 });
-  assert.equal(exact.branches.length, 128);
-  let m = 0; const S = 8;
-  for (let seed = 1; seed <= S; seed++) { const L = ledger(lv, { setup, events }, { maxBranches: 8, seed }); assert.ok(L.branches.length <= 16); m += L.score / S; }
-  near(m, exact.score, 0.03, 'resampled mean');
-  // deterministic for a given input sequence
-  assert.equal(ledger(lv, { setup, events }, { maxBranches: 8 }).score, ledger(lv, { setup, events }, { maxBranches: 8 }).score);
+test('ledger: density-matrix compression reproduces the exact tree, strong and weak detectors', () => {
+  for (const strength of [1, 0.5]) {
+    const lv = load('5-2'); lv.inventory.items[0].strength = [1, 0.05, 1];
+    const setup = sanitizeSetup(lv, { placed: [{ id: 'det', x: 20, y: 20, r: 3.5, strength }] });
+    const events = []; for (let k = 0; k < 7; k++) events.push({ step: 5 * k, type: 'detect', i: 0 }); events.push({ step: 60, type: 'observe' });
+    const exact = ledger(lv, { setup, events }, { maxBranches: 1e6 });
+    assert.equal(exact.branches.length, 128);
+    near(exact.branches.reduce((a, b) => a + b.w, 0), 1, 1e-9, 'exact weights');
+    const L = ledger(lv, { setup, events }, { maxBranches: 8 });
+    assert.ok(L.resampled && L.branches.length <= 8);
+    // the error is bounded by the discarded eigenvalue weight
+    assert.ok(Math.abs(L.score - exact.score) <= L.dropped + 1e-6, `s=${strength}: ${L.score} vs ${exact.score}, dropped ${L.dropped}`);
+    near(L.score, exact.score, 0.01, 's=' + strength);
+    assert.equal(L.score, ledger(lv, { setup, events }, { maxBranches: 8 }).score, 'deterministic');
+  }
+});
+
+test('Jacobi eigen-decomposition and compression of an exactly rank-2 ensemble', async () => {
+  const { jacobiEigen, compress } = await import('../src/ledger.js');
+  const { values } = jacobiEigen([2, 1, 0, 1, 2, 0, 0, 0, 5], 3);
+  assert.deepEqual(values.map(v => Math.round(v * 1e9) / 1e9).sort(), [1, 3, 5]);
+  // four states that are combinations of two orthonormal ones: rank 2, nothing dropped
+  const n = 16, u = { re: new Float64Array(n), im: new Float64Array(n) }, v = { re: new Float64Array(n), im: new Float64Array(n) };
+  u.re[0] = 1; v.im[3] = 1;
+  const mix = (a, b, w) => ({ re: u.re.map((x, i) => a * x + b * v.re[i]), im: u.im.map((x, i) => a * x + b * v.im[i]), w, caught: 0 });
+  const st = [mix(1, 0, 0.4), mix(0.6, 0.8, 0.3), mix(0, 1, 0.2), mix(0.8, -0.6, 0.1)];
+  const P = new Float64Array(n); P[0] = 1; // projector on u
+  const expect = st.reduce((a, s) => a + s.w * (s.re[0] ** 2 + s.im[0] ** 2), 0);
+  const c = compress(st, 2);
+  assert.equal(c.states.length, 2); near(c.dropped, 0, 1e-9, 'dropped');
+  near(c.states.reduce((a, s) => a + s.w * (s.re[0] ** 2 + s.im[0] ** 2), 0), expect, 1e-9, '<P> preserved');
 });
 
 test('detector runs are scored by the ledger, so a lucky post-selection earns nothing', () => {

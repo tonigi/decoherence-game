@@ -125,7 +125,7 @@ function buildItemPanel() {
   const host = $('itemPanel'); host.innerHTML = '';
   const it = ui.setup.placed[ui.selected]; if (!it || ui.phase !== 'setup') return;
   const spec = ui.level.inventory.items.find(s => s.id === it.id);
-  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius' };
+  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength' };
   host.innerHTML = `<h3>${spec.label}</h3>`;
   for (const k of itemKeys(spec)) {
     const p = param(spec[k]);
@@ -232,7 +232,7 @@ function showResult(r) {
   const mode = ui.session.mode, L = r.ledger;
   const expectNote = mode === 'expect' ? ` (expectation mode: score ${r.score >= (lv.expectThreshold ?? 0.5) ? '≥' : '<'} ${((lv.expectThreshold ?? 0.5) * 100).toFixed(0)}%)` : '';
   const ledgerNote = L ? `<p>Detectors fired, so the stars come from the <b>skill score ${(r.score * 100).toFixed(1)}%</b>: P<sub>T</sub> averaged over all
-    ${L.branches.length} outcome branches of your inputs (${L.branches.slice(0, 4).map(q => `${q.path}: ${(q.w * 100).toFixed(0)}% × ${(q.pT * 100).toFixed(0)}%`).join(', ')}${L.branches.length > 4 ? ', …' : ''}${L.dropped > 1e-3 ? `; ${(L.dropped * 100).toFixed(1)}% weight pruned and scored 0` : ''}).
+    ${L.branches.length} outcome branches of your inputs (${L.branches.slice(0, 4).map(q => `${q.path}: ${(q.w * 100).toFixed(0)}% × ${(q.pT * 100).toFixed(0)}%`).join(', ')}${L.branches.length > 4 ? ', …' : ''}${L.resampled ? `; the branch tree was compressed to its ${L.branches.length} leading density-matrix components, error ≤ ${(L.dropped * 100).toFixed(1)}%` : ''}).
     Your own branch's P<sub>T</sub> was lucky or unlucky; the average is not.</p>` : '';
   b.innerHTML = `<h2>${txt} ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</h2>
     <p>P<sub>T</sub> at observation = <b>${(r.pT * 100).toFixed(1)}%</b>, P<sub>M</sub> = ${(r.pM * 100).toFixed(1)}%, absorbed = ${(r.lost * 100).toFixed(1)}%${expectNote}.

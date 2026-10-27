@@ -13,7 +13,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const LAUNCH_KEYS = ['x', 'y', 'k', 'angle', 'sigma'];
 export const ITEM_KEYS = { rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'] };
 export function itemKeys(spec) {
-  if (spec.kind === 'detector') return ITEM_KEYS['detector_' + (spec.shape || 'rect')];
+  if (spec.kind === 'detector') return [...ITEM_KEYS['detector_' + (spec.shape || 'rect')], ...(spec.strength !== undefined ? ['strength'] : [])];
   return spec.kind === 'absorber' ? ITEM_KEYS.absorber : ITEM_KEYS.rect;
 }
 
@@ -87,15 +87,19 @@ export class Session {
       } else if (V) sim.addStatic(V);
     }
     this.detectors = [];
-    const addDetector = (shape, shots, label, cooldown, hold) => this.detectors.push({
-      shape, mask: rasterMask(sim, shape), shots, label, cooldown: cooldown || 0, hold: !!hold, fired: 0,
-    });
-    for (const d of level.detectors || []) addDetector(d, d.shots ?? 1, d.label || 'Detector', d.cooldown, d.hold);
+    // A detector of strength s (0..1] is a weak measurement: Kraus operators
+    // M_yes = sqrt(s) m, M_no = sqrt(1 - s m^2), i.e. the mask scaled by sqrt(s).
+    const addDetector = (shape, shots, label, cooldown, hold, strength = 1) => {
+      const mask = rasterMask(sim, shape), f = Math.sqrt(Math.min(1, Math.max(0, strength)));
+      if (f < 1) for (let i = 0; i < mask.length; i++) mask[i] *= f;
+      this.detectors.push({ shape, mask, shots, label, cooldown: cooldown || 0, hold: !!hold, fired: 0, strength });
+    };
+    for (const d of level.detectors || []) addDetector(d, d.shots ?? 1, d.label || 'Detector', d.cooldown, d.hold, d.strength ?? 1);
     for (const it of this.setup.placed) {
       const spec = level.inventory.items.find(s => s.id === it.id);
       if (spec.kind === 'detector') {
         const shape = spec.shape === 'circle' ? { shape: 'circle', x: it.x, y: it.y, r: it.r } : { shape: 'rect', x: it.x, y: it.y, w: it.w, h: it.h };
-        addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold);
+        addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold, it.strength ?? 1);
       } else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
       else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));
     }
