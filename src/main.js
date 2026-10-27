@@ -2,6 +2,7 @@ import { Session, defaultSetup, defaultItem, itemKeys, launchKeys, param, saniti
 import { Renderer, dialPos } from './render.js';
 import { simulateCurveAsync } from './ghost.js';
 import { ledgerAsync } from './ledger.js';
+import { Sonifier } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -17,6 +18,7 @@ const ui = {
   keys: new Set(), lastFire: {}, frame: 0, leak: 0, stars: store.get('stars', {}),
   rebuildPending: false, drag: null,
 };
+const audio = new Sonifier();
 
 // ---------------------------------------------------------------- loading
 async function init() {
@@ -304,16 +306,18 @@ function showResult(r) {
   const key = starKey(lv.id, mode);
   if (r.hit && r.stars > (ui.stars[key] || 0)) { ui.stars[key] = r.stars; store.set('stars', ui.stars); buildNav(); }
   buildLedgerPanel(L);
+  audio.result(r, lv.grid.L);
 }
 
 function doAction(n, down) {
   const a = ui.session.actions()[n]; if (!a) return;
   if (ui.phase === 'setup') { resetFromSetup(); ui.phase = 'run'; ui.playing = true; updatePanels(); }
   if (ui.phase !== 'run') return;
-  if (a.type === 'gate') { if (down) ui.session.toggleGate(a.i); }
+  if (a.type === 'gate') { if (down) { ui.session.toggleGate(a.i); audio.gate(ui.session.gates[a.i].open); } }
   else if (down) {
     const d = ui.session.detectors[a.i];
-    ui.session.fireDetector(a.i); ui.lastFire[a.i] = ui.session.stepCount;
+    const r = ui.session.fireDetector(a.i); ui.lastFire[a.i] = ui.session.stepCount;
+    if (r) audio.detector(r.yes);
     if (d.hold) ui.keys.add('act' + n);
     updatePanels();
   }
@@ -342,6 +346,7 @@ addEventListener('keydown', (e) => {
   }
   if (key === 'c') { $('optCurrent').click(); return; }
   if (key === 'g') { $('optGhost').click(); return; }
+  if (key === 'm') { $('optSound').click(); return; }
   if (key === 'Delete' || key === 'Backspace') { if (ui.phase === 'setup') removeSelected(); return; }
   if (/^[1-9]$/.test(key)) { doAction(+key - 1, true); return; }
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(key)) {
@@ -440,7 +445,8 @@ canvas.addEventListener('pointerdown', (e) => {
   const p = pointer(e);
   if (ui.phase === 'run' && ui.playing) {
     const [cx, cy] = ui.session.sim.centroid();
-    ui.session.kick(p.x - cx, p.y - cy); updatePanels(); return;
+    if (ui.session.kick(p.x - cx, p.y - cy)) audio.kick();
+    updatePanels(); return;
   }
   if (ui.phase !== 'setup') return;
   const h = handleAt(p), i = h ? -1 : itemAt(p);
@@ -478,6 +484,10 @@ $('optExpect').onchange = (e) => { if (ui.phase !== 'setup') { e.target.checked 
 $('view_mode').onchange = () => { ui.renderer.view = $('view_mode').value; };
 $('optCurrent').onchange = (e) => { ui.renderer.showCurrent = e.target.checked; };
 $('optGhost').onchange = () => { scheduleGhost(); };
+audio.enabled = $('optSound').checked = store.get('sound', true);
+$('optSound').onchange = (e) => { store.set('sound', e.target.checked); audio.setEnabled(e.target.checked); };
+// browsers start audio only after a user gesture
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => audio.unlock(), { capture: true });
 
 // ---------------------------------------------------------------- ghost preview
 let ghostTimer = 0;
@@ -501,7 +511,7 @@ function advance(budget) {
       if (!key.startsWith('act')) continue;
       const a = acts[+key.slice(3)]; if (!a || a.type !== 'detector') continue;
       const d = s.detectors[a.i], cd = d.cooldown || 1, last = ui.lastFire[a.i] ?? -1e9;
-      if (s.stepCount - last >= cd) { s.fireDetector(a.i); ui.lastFire[a.i] = s.stepCount; }
+      if (s.stepCount - last >= cd) { const r = s.fireDetector(a.i); ui.lastFire[a.i] = s.stepCount; if (r) audio.detector(r.yes); }
       n = Math.min(n, Math.max(1, ui.lastFire[a.i] + cd - s.stepCount));
     }
     s.step(n); budget -= n;
@@ -521,6 +531,7 @@ function loop() {
     updatePanels();
   }
   draw();
+  if (ui.frame % 4 === 0) audio.update(ui.session, ui.phase, ui.playing);
   requestAnimationFrame(loop);
 }
 

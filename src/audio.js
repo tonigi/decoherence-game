@@ -1,0 +1,209 @@
+// Sonification: the wavefunction played as an additive pad.
+//
+// The screen is cut into horizontal bands, each tuned to a degree of a
+// just-intoned major pentatonic (top = high). Each band's voice has amplitude
+// sqrt(P_band), so the total acoustic power is sum P_band = norm: unitary
+// evolution keeps the loudness constant and absorption fades it. A band's pan
+// follows the mean x of its probability. RMS momentum opens the filter.
+// On top of the pad, the Born rule itself plays the melody: every beat a
+// position is sampled from |psi|^2 and rung as a bell at that band's pitch.
+// P_T adds a high halo, P_M a slowly beating low drone.
+
+const RATIOS = [1, 9 / 8, 5 / 4, 3 / 2, 5 / 3];   // just major pentatonic
+export const BANDS = 16;
+export const ROOT = 110;                            // A2
+
+/** Frequency of band b (b = 0 is the top row of the grid). */
+export function bandFreq(b, bands = BANDS) {
+  const d = bands - 1 - b;
+  return ROOT * 2 ** Math.floor(d / 5) * RATIOS[d % 5];
+}
+
+/** Band weights, per-band mean x (0..1), norm and RMS momentum of the state. */
+export function analyse(sim, bands = BANDS) {
+  const { N, dx } = sim;
+  const weights = new Float64Array(bands), pan = new Float64Array(bands);
+  let norm = 0, grad = 0;
+  for (const [re, im] of sim.comps()) for (let j = 0; j < N; j++) {
+    const b = Math.min(bands - 1, Math.floor((j * bands) / N)), jd = ((j + 1) % N) * N;
+    for (let i = 0; i < N; i++) {
+      const k = j * N + i, p = re[k] * re[k] + im[k] * im[k];
+      weights[b] += p; pan[b] += p * (i + 0.5) / N; norm += p;
+      const kr = j * N + ((i + 1) % N), kd = jd + i;
+      grad += (re[kr] - re[k]) ** 2 + (im[kr] - im[k]) ** 2 + (re[kd] - re[k]) ** 2 + (im[kd] - im[k]) ** 2;
+    }
+  }
+  for (let b = 0; b < bands; b++) pan[b] = weights[b] > 0 ? pan[b] / weights[b] : 0.5;
+  // forward differences see 2 sin(k dx / 2) / dx; undo that for a plane-wave-exact estimate
+  const kd = norm > 1e-12 ? Math.sqrt(grad / norm) / dx : 0;
+  const kRms = (2 / dx) * Math.asin(Math.min(1, (kd * dx) / 2));
+  return { weights, pan, norm, kRms };
+}
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+function impulse(ctx, seconds) {
+  const n = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c); let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      lp += 0.35 * (Math.random() * 2 - 1 - lp);          // darken the tail a little
+      d[i] = lp * (1 - t) ** 2.5 * Math.min(1, i / (0.03 * ctx.sampleRate));
+    }
+  }
+  return buf;
+}
+
+export class Sonifier {
+  constructor() {
+    this.ctx = null; this.enabled = true;
+    this.nextSparkle = 0; this.lastNo = 0; this.doneAt = null;
+  }
+
+  /** Call from a user gesture: browsers only start audio after one. */
+  unlock() {
+    if (!this.enabled) return;
+    if (!this.ctx && !this._init()) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  setEnabled(on) {
+    this.enabled = on;
+    if (on) this.unlock();
+    if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.1);
+  }
+
+  get live() { return this.enabled && this.ctx && this.ctx.state === 'running'; }
+
+  _init() {
+    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+    if (!AC) return false;
+    const ctx = this.ctx = new AC();
+    const gain = (v, ...to) => { const g = ctx.createGain(); g.gain.value = v; for (const n of to) g.connect(n); return g; };
+
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.ratio.value = 3; comp.connect(ctx.destination);
+    this.master = gain(0, comp);
+    this.master.gain.setTargetAtTime(0.8, ctx.currentTime, 0.5);
+
+    const reverb = ctx.createConvolver(); reverb.buffer = impulse(ctx, 5);
+    reverb.connect(gain(0.55, this.master));
+    const delay = ctx.createDelay(2); delay.delayTime.value = 0.42;
+    const fbTone = ctx.createBiquadFilter(); fbTone.type = 'lowpass'; fbTone.frequency.value = 2200;
+    delay.connect(fbTone); fbTone.connect(gain(0.4, delay)); delay.connect(gain(0.25, this.master, reverb));
+
+    // pad: voices -> tone filter -> dry + reverb + delay
+    this.tone = ctx.createBiquadFilter(); this.tone.type = 'lowpass'; this.tone.Q.value = 0.4; this.tone.frequency.value = 1200;
+    this.tone.connect(gain(0.5, this.master)); this.tone.connect(gain(0.8, reverb)); this.tone.connect(gain(0.3, delay));
+    const bus = gain(1, this.tone);
+    // one-shots (bells, chimes): mostly wet
+    this.fx = gain(1); this.fx.connect(gain(0.45, this.master)); this.fx.connect(gain(1, reverb)); this.fx.connect(gain(0.5, delay));
+
+    const drift = (param, cents) => {   // slow random detune, so the pad breathes
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05 + Math.random() * 0.15;
+      lfo.connect(gain(cents, param)); lfo.start();
+    };
+    const t0 = ctx.currentTime;
+    this.voices = [];
+    for (let b = 0; b < BANDS; b++) {
+      const f = bandFreq(b), g = gain(0), pan = ctx.createStereoPanner();
+      g.connect(pan); pan.connect(bus);
+      const s = ctx.createOscillator(); s.frequency.value = f; drift(s.detune, 4); s.connect(g); s.start(t0);
+      const tri = ctx.createOscillator(); tri.type = 'triangle'; tri.frequency.value = f; tri.detune.value = 7; drift(tri.detune, 5);
+      tri.connect(gain(0.3, g)); tri.start(t0);
+      this.voices.push({ g, pan });
+    }
+    // halo over the target: high fifth with a slow shimmer
+    this.halo = gain(0, bus);
+    for (const [f, a] of [[ROOT * 8, 0.6], [ROOT * 12, 0.4], [ROOT * 16, 0.25]]) {
+      const o = ctx.createOscillator(); o.frequency.value = f; drift(o.detune, 8);
+      const trem = gain(a, this.halo); o.connect(trem); o.start(t0);
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 3 + Math.random() * 2; lfo.connect(gain(a * 0.4, trem.gain)); lfo.start(t0);
+    }
+    // shadow under the mines: low root and fifth, detuned to beat slowly
+    this.shadow = gain(0, bus);
+    for (const [f, a] of [[ROOT / 2, 0.7], [ROOT / 2 * 1.013, 0.7], [ROOT * 3 / 4, 0.4]]) {
+      const o = ctx.createOscillator(); o.frequency.value = f; o.connect(gain(a, this.shadow)); o.start(t0);
+    }
+    return true;
+  }
+
+  /** Track the current state; call a few times per second. */
+  update(session, phase, playing) {
+    if (!this.live) return;
+    const ctx = this.ctx, now = ctx.currentTime, sim = session.sim;
+    const a = analyse(sim);
+    if (phase !== 'done') this.doneAt = null;
+    else if (this.doneAt === null) this.doneAt = now;
+    const level = phase === 'setup' ? 0.35 : phase === 'run' ? (playing ? 1 : 0.5) : 0.9 * Math.exp(-(now - this.doneAt) / 6);
+    const tau = phase === 'done' ? 0.6 : 0.15;
+    a.weights.forEach((w, b) => {
+      const v = this.voices[b];
+      v.g.gain.setTargetAtTime(0.2 * level * Math.sqrt(w), now, tau);
+      v.pan.pan.setTargetAtTime(clamp((a.pan[b] - 0.5) * 1.6, -1, 1), now, 0.2);
+    });
+    this.tone.frequency.setTargetAtTime(clamp(600 + 320 * a.kRms, 400, 5000), now, 0.3);
+    this.halo.gain.setTargetAtTime(0.1 * level * session.pT(), now, 0.3);
+    this.shadow.gain.setTargetAtTime(0.22 * level * session.pM(), now, 0.3);
+
+    // the Born-rule melody: sample |psi|^2, ring the sampled band an octave up
+    if (phase !== 'run' || !playing) { this.nextSparkle = 0; return; }
+    if (now < this.nextSparkle) return;
+    const beat = clamp(0.95 - 0.1 * a.kRms, 0.25, 0.95);
+    this.nextSparkle = (this.nextSparkle || now) + Math.round(beat * 8 * (Math.random() < 0.25 ? 2 : 1)) / 8;
+    if (this.nextSparkle < now) this.nextSparkle = now + beat;
+    const u = Math.random();
+    if (u >= a.norm) return;                         // absorbed branch: a rest
+    const idx = sim.sampleCell(u); if (idx < 0) return;
+    const j = Math.floor(idx / sim.N), i = idx % sim.N;
+    const b = Math.min(BANDS - 1, Math.floor((j * BANDS) / sim.N));
+    this.bell(bandFreq(b) * 2, (i / sim.N - 0.5) * 1.6, 0.13 * Math.sqrt(a.norm), now + 0.01, 3);
+  }
+
+  bell(f, pan = 0, amp = 0.1, when = this.ctx.currentTime, dur = 2.5) {
+    const ctx = this.ctx, env = ctx.createGain(), p = ctx.createStereoPanner();
+    p.pan.value = clamp(pan, -1, 1); env.connect(p); p.connect(this.fx);
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(amp, when + 0.02);
+    env.gain.exponentialRampToValueAtTime(1e-4, when + dur);
+    for (const [m, a] of [[1, 1], [2, 0.25], [3, 0.08]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f * m; g.gain.value = a; o.connect(g); g.connect(env);
+      o.start(when); o.stop(when + dur + 0.05);
+    }
+    return env;
+  }
+
+  // ---- game events ---------------------------------------------------------
+  kick() {
+    if (!this.live) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    [4, 5, 6].forEach((m, n) => this.bell(ROOT * m * 1.5, 0, 0.05, now + n * 0.06, 1.5));
+  }
+  gate(open) {
+    if (!this.live) return;
+    this.bell(ROOT * (open ? 4 : 3), 0, 0.07, this.ctx.currentTime, 2);
+  }
+  detector(yes) {
+    if (!this.live) return;
+    const now = this.ctx.currentTime;
+    if (yes) { this.bell(ROOT * 6, 0, 0.09, now, 3.5); this.bell(ROOT * 15 / 2, 0, 0.06, now + 0.08, 3.5); }
+    else if (now - this.lastNo > 0.25) { this.lastNo = now; this.bell(ROOT * 2, 0, 0.05, now, 1.2); }
+  }
+  result(r, L) {
+    if (!this.live) return;
+    const now = this.ctx.currentTime + 0.05;
+    const pan = r.sample?.x !== undefined ? clamp((r.sample.x / L - 0.5) * 1.6, -1, 1) : 0;
+    if (r.outcome === 'hit') {
+      const notes = [1, 5 / 4, 3 / 2, 2, 5 / 2, 3, 4, 5].slice(0, 4 + r.stars + (r.stars > 2 ? 1 : 0));
+      notes.forEach((m, n) => this.bell(ROOT * 2 * m, pan * (1 - n / notes.length), 0.1, now + n * 0.11, 5));
+    } else if (r.outcome === 'mine' || r.outcome === 'boom') {
+      [1 / 2, 3 / 4, 1].forEach((m, n) => this.bell(ROOT * m, pan, 0.14, now + n * 0.02, 6));
+    } else if (r.outcome === 'lost') {
+      this.bell(ROOT, 0, 0.08, now, 6);
+    } else {
+      [3, 5 / 2, 9 / 4, 3 / 2].forEach((m, n) => this.bell(ROOT * m, pan, 0.08, now + n * 0.22, 4.5));
+    }
+  }
+}

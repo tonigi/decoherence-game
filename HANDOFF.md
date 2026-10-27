@@ -49,6 +49,7 @@ is open, and how to work on it without breaking anything.
 | `ledger.js` | skill score for runs with detector firings: replays the open-loop inputs, splits every branch at each firing, compresses beyond 16 branches to the leading eigenvectors of ρ (deterministic; the error is bounded by the reported `dropped`). Returns the branch states plus its 64² `Sim` for the Branches panel. |
 | `ghost.js` | low-res (64²) forward preview of P_T(t) for the current setup. |
 | `render.js` | canvas: domain colouring / \|ψ\|² / zoomed momentum view, potential tint, absorber tint, harmonic contours, overlays (rotated shapes, k-space regions), setup handles. |
+| `audio.js` | Web Audio sonification: `analyse(sim)` (band weights, pan, RMS k; pure, tested) drives a pentatonic pad; Born-rule-sampled bells; event chimes. Uses `Math.random` only, outside the session. |
 | `main.js` | UI: level picker, sliders, inventory, playfield handles, input, run loop, result banner, Branches panel, HUD readouts. |
 
 `tools/verify.js` checks every level (and `--replay file.json` re-verifies a saved run).
