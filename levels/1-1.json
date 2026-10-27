@@ -1,0 +1,50 @@
+{
+ "id": "1-1",
+ "chapter": 1,
+ "title": "Free Flight",
+ "intro": "A wavepacket spreads as it travels. Choose its width and speed, press Play, and Observe when the green meter peaks. A narrow packet starts sharp but disperses fastest; a wide one barely spreads but is already big. Somewhere in between is best.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 7,
+  "y": 20,
+  "k": [
+   1.6,
+   1,
+   2.2
+  ],
+  "angle": 0,
+  "sigma": [
+   1.2,
+   0.8,
+   4
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 31,
+   "y": 20,
+   "r": 3.5
+  }
+ ],
+ "stars": [
+  0.25,
+  0.35,
+  0.42
+ ],
+ "expectThreshold": 0.3,
+ "reference": {
+  "setup": {
+   "launch": {
+    "k": 2.2,
+    "sigma": 2.35
+   }
+  },
+  "observeAt": 10.6,
+  "events": []
+ }
+}

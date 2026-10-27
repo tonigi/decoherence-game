@@ -1,0 +1,69 @@
+{
+ "id": "1-2",
+ "chapter": 1,
+ "title": "Between the Mines",
+ "intro": "Aim the packet with the arrow. Mines flank the target: if the measurement lands on one, you lose. Dispersion widens the packet faster than you expect, so a tighter launch is not always safer.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 7,
+  "y": 30,
+  "k": [
+   1.8,
+   1,
+   2.4
+  ],
+  "angle": [
+   -35,
+   -70,
+   0
+  ],
+  "sigma": [
+   1.5,
+   0.8,
+   4
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 30,
+   "y": 10,
+   "r": 2.6
+  }
+ ],
+ "mines": [
+  {
+   "shape": "circle",
+   "x": 30,
+   "y": 16.5,
+   "r": 2.2
+  },
+  {
+   "shape": "circle",
+   "x": 30,
+   "y": 3.5,
+   "r": 2.2
+  }
+ ],
+ "stars": [
+  0.12,
+  0.18,
+  0.22
+ ],
+ "expectThreshold": 0.15,
+ "reference": {
+  "setup": {
+   "launch": {
+    "k": 2.4,
+    "angle": -41.6,
+    "sigma": 2.53
+   }
+  },
+  "observeAt": 12.4,
+  "events": []
+ }
+}

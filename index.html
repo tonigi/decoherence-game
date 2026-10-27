@@ -1,188 +1,71 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Decoherence – Prototype</title>
-    <style>
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: #0a0b10;
-        color: #e8f0ff;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      }
-      #root {
-        position: fixed;
-        inset: 0;
-        display: grid;
-        place-items: center;
-      }
-      .stage {
-        position: relative;
-        image-rendering: pixelated;
-      }
-      canvas {
-        display: block;
-      }
-      #overlayCanvas {
-        position: absolute;
-        left: 0;
-        top: 0;
-        pointer-events: none;
-      }
-      .hud {
-        position: fixed;
-        left: 16px;
-        top: 16px;
-        width: 240px;
-      }
-      .bar {
-        height: 10px;
-        background: #222a;
-        border: 1px solid #445;
-        border-radius: 6px;
-        overflow: hidden;
-      }
-      .bar > .fill {
-        height: 100%;
-        width: 100%;
-        background: linear-gradient(90deg, #3ee 0%, #49f 100%);
-        transform-origin: left center;
-        transform: scaleX(1);
-      }
-      .overlay {
-        position: fixed;
-        inset: 0;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0,0,0,0.6);
-      }
-      .overlay.active { display: flex; }
-      .panel {
-        background: #10131a;
-        border: 1px solid #2a3240;
-        padding: 24px;
-        border-radius: 10px;
-        box-shadow: 0 10px 30px #0008;
-        text-align: center;
-      }
-      .panel h1 { margin: 0 0 12px; }
-      .panel button {
-        background: #2a67ff;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-      }
-      .panel button:hover { filter: brightness(1.1); }
-      .controls { position: fixed; right: 12px; top: 12px; }
-      .controls .toggle { position: absolute; right: 0; top: 0; z-index: 2; opacity: 0.8; }
-      .controls .panel { display: none; margin-top: 36px; max-height: 80vh; overflow: auto; width: 280px; }
-      .controls.open .panel { display: block; }
-      .controls .panel details { margin-bottom: 8px; }
-      .controls .panel label { display: flex; justify-content: space-between; gap: 6px; margin: 4px 0; font-size: 12px; }
-      .controls .panel input { width: 90px; }
-    </style>
-  </head>
-  <body>
-    <div id="compatWarning" class="overlay" style="display:none"><div class="panel"><h1>Cannot Start</h1><div class="msg">Loading…</div><p>Run from a local server (not file://). Example:<br/><code>python3 -m http.server</code> then open <code>http://localhost:8000</code></p></div></div>
-    <div id="root">
-      <div class="stage">
-        <canvas id="simCanvas" width="320" height="180"></canvas>
-        <canvas id="overlayCanvas" width="320" height="180"></canvas>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Born Rule</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Born Rule <small>a wavefunction puzzle</small></h1>
+  <nav id="levels"></nav>
+</header>
+<main>
+  <section id="stage">
+    <canvas id="view" width="800" height="800"></canvas>
+    <div id="banner" hidden></div>
+    <div id="hud">
+      <span id="clock">t = 0.0</span>
+      <span id="phaseTag">setup</span>
+    </div>
+  </section>
+  <aside>
+    <section>
+      <h2 id="lvlTitle"></h2>
+      <p id="lvlIntro"></p>
+    </section>
+
+    <section id="meters">
+      <div class="meter"><label>P<sub>T</sub> target</label><div class="bar"><i id="barT"></i><span id="starTicks"></span></div><b id="valT">0</b></div>
+      <div class="meter"><label>P<sub>M</sub> mines</label><div class="bar mine"><i id="barM"></i></div><b id="valM">0</b></div>
+      <div class="meter"><label>lost (absorbed)</label><div class="bar lost"><i id="barL"></i></div><b id="valL">0</b></div>
+      <div class="meter" title="Probability at |k| above 60% of the grid's Nyquist momentum. High values alias."><label>momentum budget</label><div class="bar leak"><i id="barK"></i></div><b id="valK">ok</b></div>
+      <canvas id="plot" width="420" height="150"></canvas>
+    </section>
+
+    <section id="runControls">
+      <div class="row">
+        <button id="btnPlay">▶ Play <kbd>Space</kbd></button>
+        <button id="btnObserve" class="primary">👁 Observe <kbd>Enter</kbd></button>
+        <button id="btnReset">↺ Reset <kbd>R</kbd></button>
       </div>
-    </div>
-    <div class="hud">
-      <div>Coherence</div>
-      <div class="bar"><div class="fill" id="coherenceFill"></div></div>
-    </div>
-    <div id="controls" class="controls">
-      <button id="toggleControlsBtn" class="toggle">⚙️</button>
-      <div class="panel">
-        <h3>Tuning</h3>
-        <details open>
-          <summary>Simulation</summary>
-          <label>dt <input id="dtInput" type="number" step="0.001" min="0.001" max="0.05"></label>
-          <label>substeps <input id="substepsInput" type="number" step="1" min="1" max="16"></label>
-        </details>
-        <details open>
-          <summary>Renderer</summary>
-          <label>gamma <input id="gammaInput" type="number" step="0.05" min="0.2" max="2.2"></label>
-          <label>percentile <input id="percentileInput" type="number" step="0.01" min="0.5" max="0.999"></label>
-          <label>regen alpha <input id="overlayAlphaInput" type="number" step="0.01" min="0" max="1"></label>
-          <label>regen bright <input id="overlayBrightInput" type="number" step="0.01" min="0" max="1"></label>
-          <label>outline int <input id="outlineInput" type="number" step="0.1" min="0" max="4"></label>
-        </details>
-        <details>
-          <summary>Player</summary>
-          <label>base speed <input id="baseSpeedInput" type="number" step="1" min="1" max="200"></label>
-          <label>min factor <input id="minFactorInput" type="number" step="0.05" min="0" max="5"></label>
-          <label>max factor <input id="maxFactorInput" type="number" step="0.05" min="0.1" max="10"></label>
-        </details>
-        <details>
-          <summary>Coherence</summary>
-          <label>min drain <input id="minDrainInput" type="number" step="0.001" min="0" max="1"></label>
-          <label>max drain <input id="maxDrainInput" type="number" step="0.001" min="0" max="5"></label>
-          <label>regen thresh <input id="regenThreshInput" type="number" step="0.01" min="0" max="1"></label>
-          <label>regen rate <input id="regenRateInput" type="number" step="0.01" min="0" max="5"></label>
-        </details>
-        <details>
-          <summary>Potential (Double Slit)</summary>
-          <label>barrier thickness <input id="barrierThicknessInput" type="number" step="1" min="1" max="40"></label>
-          <label>barrier V <input id="barrierVInput" type="number" step="1" min="0" max="200"></label>
-          <label>slit height <input id="slitHeightInput" type="number" step="1" min="1" max="180"></label>
-          <label>slit separation <input id="slitSepInput" type="number" step="1" min="0" max="180"></label>
-          <label>slit offset Y <input id="slitOffsetInput" type="number" step="1" min="-90" max="90"></label>
-          <button id="applyPotentialBtn">Apply Potential</button>
-        </details>
-        <details>
-          <summary>Absorb Mask</summary>
-          <label>margin <input id="absorbMarginInput" type="number" step="1" min="1" max="80"></label>
-          <label>strength <input id="absorbStrengthInput" type="number" step="0.01" min="0" max="1"></label>
-          <button id="applyAbsorbBtn">Apply Absorb</button>
-        </details>
-        <details>
-          <summary>Seed</summary>
-          <label>sigma <input id="seedSigmaInput" type="number" step="0.5" min="1" max="30"></label>
-          <label>k x <input id="seedKxInput" type="number" step="0.05" min="-5" max="5"></label>
-          <label>k y <input id="seedKyInput" type="number" step="0.05" min="-5" max="5"></label>
-          <button id="reseedBtn">Reseed</button>
-        </details>
-        <details open>
-          <summary>Observe</summary>
-          <label>sigma <input id="observeSigmaInput" type="number" step="0.5" min="1" max="30"></label>
-          <label>penalty <input id="observePenaltyInput" type="number" step="0.05" min="0" max="1"></label>
-          <label>cooldown s <input id="observeCooldownInput" type="number" step="0.1" min="0" max="5"></label>
-          <small>Press O or Space to observe: sample |Ψ|², teleport, collapse</small>
-        </details>
+      <div class="row">
+        <label>speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+        <label><input type="checkbox" id="optExpect"> expectation mode (no dice)</label>
       </div>
-    </div>
-    <div id="winOverlay" class="overlay"><div class="panel"><h1>Level Complete</h1><button id="nextBtn">Restart</button></div></div>
-    <div id="loseOverlay" class="overlay"><div class="panel"><h1>Decoherence</h1><button id="retryBtn">Retry</button></div></div>
-    <script>
-      (function(){
-        function show(msg){
-          var el = document.getElementById('compatWarning');
-          if(!el) return;
-          el.querySelector('.msg').textContent = msg;
-          el.style.display = 'flex';
-        }
-        if (location.protocol === 'file:') {
-          show('This app uses ES modules. Browsers often block module imports from file://.');
-        }
-        window.addEventListener('error', function(e){
-          show('Error: ' + (e.error && e.error.message ? e.error.message : (e.message || 'Unknown error')));
-        });
-      })();
-    </script>
-    <script type="module">
-      const root = document.getElementById('controls');
-      const btn = document.getElementById('toggleControlsBtn');
-      btn.addEventListener('click', () => root.classList.toggle('open'));
-    </script>
-    <script type="module" src="./src/main.js"></script>
-  </body>
-  </html>
+      <div id="actions" class="row"></div>
+      <div id="rtInfo" class="note"></div>
+    </section>
+
+    <section id="setupPanel">
+      <h3>Launch</h3>
+      <div id="launchSliders"></div>
+      <div id="inventory"></div>
+      <div id="itemPanel"></div>
+    </section>
+
+    <section>
+      <h3>View</h3>
+      <div class="row">
+        <select id="view_mode"><option value="phase">domain colouring</option><option value="density">|ψ|² only</option><option value="momentum">momentum |φ(k)|²</option></select>
+        <label><input type="checkbox" id="optCurrent"> current <kbd>C</kbd></label>
+        <label><input type="checkbox" id="optGhost" checked> ghost preview <kbd>G</kbd></label>
+      </div>
+      <p class="note">Hue = phase, brightness = |ψ|. Orange tint = potential barrier, blue = well. Ghost preview shows the P<sub>T</sub>(t) curve for the current launch with no real-time actions.</p>
+    </section>
+  </aside>
+</main>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

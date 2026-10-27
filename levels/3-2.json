@@ -1,0 +1,122 @@
+{
+ "id": "3-2",
+ "chapter": 3,
+ "title": "Phase Shift",
+ "intro": "A slab of constant potential does not deflect the packet. It only delays its phase. The slab over the lower slit has flipped the fringes: the centre is now dark and the mines are lit. Use your own phase plate to bring them back.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 5,
+  "y": 20,
+  "k": 2,
+  "angle": 0,
+  "sigma": 2.8
+ },
+ "elements": [
+  {
+   "type": "wall",
+   "x": 12,
+   "w": 1,
+   "V": 10,
+   "slits": [
+    {
+     "y": 16,
+     "w": 3.4
+    },
+    {
+     "y": 24,
+     "w": 3.4
+    }
+   ]
+  },
+  {
+   "type": "rect",
+   "x": 18,
+   "y": 25,
+   "w": 6,
+   "h": 8,
+   "V": 0.8
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "plate",
+    "kind": "rect",
+    "label": "Phase plate",
+    "count": 1,
+    "area": [
+     14,
+     8,
+     24,
+     32
+    ],
+    "w": [
+     3,
+     1,
+     8
+    ],
+    "h": [
+     6,
+     2,
+     12
+    ],
+    "V": [
+     0.4,
+     0,
+     1.2
+    ],
+    "x": 18,
+    "y": 15
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 32,
+   "y": 20,
+   "w": 6,
+   "h": 17.5
+  }
+ ],
+ "mines": [
+  {
+   "shape": "circle",
+   "x": 32,
+   "y": 16,
+   "r": 1.2
+  },
+  {
+   "shape": "circle",
+   "x": 32,
+   "y": 24,
+   "r": 1.2
+  }
+ ],
+ "stars": [
+  0.04,
+  0.07,
+  0.09
+ ],
+ "expectThreshold": 0.06,
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "plate",
+     "x": 18.39,
+     "y": 9.08,
+     "w": 6.63,
+     "h": 10.6,
+     "V": 0.73
+    }
+   ]
+  },
+  "observeAt": 13.2,
+  "events": []
+ }
+}

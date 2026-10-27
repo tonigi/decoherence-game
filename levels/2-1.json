@@ -1,0 +1,60 @@
+{
+ "id": "2-1",
+ "chapter": 2,
+ "title": "Thin Wall",
+ "intro": "The packet's energy is lower than the wall, yet some probability leaks through: tunnelling. More energy, more leakage, but a wider (slower-dispersing) packet has a sharper energy. Find the best compromise.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": [
+   1.8,
+   1,
+   2.2
+  ],
+  "angle": 0,
+  "sigma": [
+   2.5,
+   1,
+   4
+  ]
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 1,
+   "h": 40,
+   "V": 3
+  }
+ ],
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 30,
+   "y": 20,
+   "r": 4
+  }
+ ],
+ "stars": [
+  0.1,
+  0.18,
+  0.24
+ ],
+ "expectThreshold": 0.15,
+ "reference": {
+  "setup": {
+   "launch": {
+    "k": 2.2,
+    "sigma": 2.14
+   }
+  },
+  "observeAt": 9.8,
+  "events": []
+ }
+}

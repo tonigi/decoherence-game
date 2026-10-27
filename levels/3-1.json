@@ -1,0 +1,83 @@
+{
+ "id": "3-1",
+ "chapter": 3,
+ "title": "Two Slits",
+ "intro": "Both slits are open, so the packet goes through both and interferes with itself. Bright fringes are where the two paths add; dark fringes are where they cancel. The mines sit on dark fringes. Tune the wavelength so the fringes land where the mines are, then observe at the bright centre.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 5,
+  "y": 20,
+  "k": [
+   2,
+   1.4,
+   2.8
+  ],
+  "angle": 0,
+  "sigma": [
+   2.8,
+   2,
+   3.5
+  ]
+ },
+ "elements": [
+  {
+   "type": "wall",
+   "x": 12,
+   "w": 1,
+   "V": 10,
+   "slits": [
+    {
+     "y": 16,
+     "w": 3.4
+    },
+    {
+     "y": 24,
+     "w": 3.4
+    }
+   ]
+  }
+ ],
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 32,
+   "y": 20,
+   "w": 6,
+   "h": 17.5
+  }
+ ],
+ "mines": [
+  {
+   "shape": "circle",
+   "x": 32,
+   "y": 16,
+   "r": 1.2
+  },
+  {
+   "shape": "circle",
+   "x": 32,
+   "y": 24,
+   "r": 1.2
+  }
+ ],
+ "stars": [
+  0.05,
+  0.09,
+  0.13
+ ],
+ "expectThreshold": 0.08,
+ "reference": {
+  "setup": {
+   "launch": {
+    "k": 2.8,
+    "sigma": 3.49
+   }
+  },
+  "observeAt": 9.2,
+  "events": []
+ }
+}

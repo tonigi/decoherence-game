@@ -1,0 +1,94 @@
+{
+ "id": "2-2",
+ "chapter": 2,
+ "title": "Mirror",
+ "intro": "The packet is headed for the mines on the right. Place a barrier to turn it around so it comes back to the target. Whatever tunnels through is probability lost to the mines, so thickness and height both matter; but a barrier that is too short lets the spreading packet slip around the edges.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 18,
+  "y": 20,
+  "k": 2,
+  "angle": 0,
+  "sigma": [
+   2,
+   1.2,
+   3
+  ]
+ },
+ "inventory": {
+  "items": [
+   {
+    "id": "mirror",
+    "kind": "rect",
+    "label": "Barrier",
+    "count": 1,
+    "area": [
+     22,
+     8,
+     30,
+     32
+    ],
+    "w": [
+     1,
+     0.3,
+     3
+    ],
+    "h": [
+     8,
+     4,
+     16
+    ],
+    "V": [
+     3,
+     0.5,
+     6
+    ],
+    "x": 26,
+    "y": 20
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 9,
+   "y": 20,
+   "r": 4
+  }
+ ],
+ "mines": [
+  {
+   "shape": "rect",
+   "x": 34,
+   "y": 20,
+   "w": 6,
+   "h": 24
+  }
+ ],
+ "stars": [
+  0.3,
+  0.42,
+  0.5
+ ],
+ "expectThreshold": 0.35,
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "mirror",
+     "x": 25.5,
+     "y": 22,
+     "w": 3,
+     "h": 15,
+     "V": 3.4
+    }
+   ]
+  },
+  "observeAt": 11,
+  "events": []
+ }
+}

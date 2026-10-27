@@ -1,233 +1,399 @@
-import { makeDoubleSlit } from './sim/potential.js';
-import { makeAbsorbMask } from './sim/absorb.js';
-import { createFDTDSim } from './sim/fdtd_cpu.js';
-import { CPURenderer } from './render/renderer_cpu.js';
-import { Player } from './game/player.js';
-import { Coherence } from './game/coherence.js';
-import { Detector } from './game/detector.js';
-import { HUD } from './ui/hud.js';
-import { Controls } from './ui/controls.js';
+import { Session, defaultSetup, defaultItem, itemKeys, param, sanitizeSetup, DT } from './session.js';
+import { Renderer } from './render.js';
+import { simulateCurveAsync } from './ghost.js';
 
-const CONFIG = {
-  width: 320,
-  height: 180,
-  dx: 1.0,
-  dt: 0.015,
-  substeps: 5,
+const $ = (id) => document.getElementById(id);
+const canvas = $('view');
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem('born-rule:' + k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('born-rule:' + k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
 
-function setupCanvases(w, h) {
-  const simCanvas = document.getElementById('simCanvas');
-  const overlayCanvas = document.getElementById('overlayCanvas');
-  simCanvas.width = w; simCanvas.height = h;
-  overlayCanvas.width = w; overlayCanvas.height = h;
-  // Scale canvases to fit window preserving aspect ratio
-  const stage = simCanvas.parentElement;
-  function resize() {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scale = Math.min(vw / w, vh / h) * 0.98;
-    stage.style.transform = `scale(${scale})`;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-  return { simCanvas, overlayCanvas };
-}
+const ui = {
+  index: null, levels: {}, level: null, session: null, renderer: null,
+  setup: null, phase: 'setup', playing: false, speed: 1, acc: 0, mode: 'born',
+  selected: -1, ghost: null, ghostToken: 0, history: { t: [], pT: [], pM: [] },
+  keys: new Set(), lastFire: {}, frame: 0, leak: 0, stars: store.get('stars', {}),
+  rebuildPending: false, drag: null,
+};
 
-function drawOverlay(ctx, player, detector) {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  // Detector area
-  ctx.save();
-  ctx.strokeStyle = '#5df';
-  ctx.globalAlpha = 0.8;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(detector.x + 0.5, detector.y + 0.5, detector.w, detector.h);
-  ctx.restore();
-  // Player
-  ctx.save();
-  ctx.fillStyle = '#fff';
-  ctx.shadowColor = '#8ff';
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function main() {
-  const { width: W, height: H } = CONFIG;
-  const { simCanvas, overlayCanvas } = setupCanvases(W, H);
-  const overlayCtx = overlayCanvas.getContext('2d');
-  const renderer = new CPURenderer(simCanvas, W, H);
-  const hud = new HUD();
-
-  // Build potential and absorbing mask
-  const potentialParams = { barrierThickness: 6, barrierV: 40, slitHeight: Math.floor(H * 0.14), slitSeparation: Math.floor(H * 0.20), slitOffsetY: 0 };
-  const V = makeDoubleSlit(W, H, potentialParams);
-  const absorbParams = { margin: 16, strength: 0.06 };
-  const absorbMask = makeAbsorbMask(W, H, absorbParams);
-
-  // Create simulation
-  const sim = createFDTDSim({ width: W, height: H, dx: CONFIG.dx, dt: CONFIG.dt, V, absorbMask });
-  const seedParams = { sigma: 7, kx: 0.7, ky: 0 };
-  sim.seedGaussian({ x0: Math.floor(W * 0.18), y0: Math.floor(H * 0.5), ...seedParams });
-
-  // Game objects
-  const player = new Player({
-    x: Math.floor(W * 0.18),
-    y: Math.floor(H * 0.5),
-    baseSpeed: 30,
-    radius: 3,
-    speedProfile: { minFactor: 0.8, maxFactor: 4.0 },
-  });
-  const coherence = new Coherence({ max: 1, value: 1, minDrain: 0.005, maxDrain: 0.10, regenThreshold: 0.7, regenRate: 0.18 });
-  const detector = new Detector({ x: Math.floor(W * 0.80), y: Math.floor(H * 0.5) - 30, w: 16, h: 60 });
-
-  // Input
-  const input = { up: false, down: false, left: false, right: false };
-  const keys = {
-    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
-    w: 'up', s: 'down', a: 'left', d: 'right',
-  };
-  window.addEventListener('keydown', (e) => {
-    const k = keys[e.key];
-    if (k) { input[k] = true; e.preventDefault(); return; }
-    if (e.key === ' ' || e.key === 'o' || e.key === 'O') { doObserve(); e.preventDefault(); }
-  });
-  window.addEventListener('keyup', (e) => { const k = keys[e.key]; if (k) { input[k] = false; e.preventDefault(); } });
-
-  // UI overlays
-  const winOverlay = document.getElementById('winOverlay');
-  const loseOverlay = document.getElementById('loseOverlay');
-  const retryBtn = document.getElementById('retryBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  retryBtn.addEventListener('click', () => restart());
-  nextBtn.addEventListener('click', () => restart());
-
-  let lastTime = performance.now();
-  let running = true;
-  let substeps = CONFIG.substeps;
-  const observe = { sigma: 3, penalty: 0.3, cooldown: 0.6 };
-  let lastObserveAt = -1e9;
-  let observeFlashT = 0.0;
-  let lastDensity = null;
-
-  function samplePositionFromDensity(arr, w, h) {
-    if (!arr) return null;
-    let total = 0;
-    for (let i = 0; i < arr.length; i++) total += arr[i];
-    if (!(total > 0)) return null;
-    let r = Math.random() * total;
-    for (let i = 0; i < arr.length; i++) {
-      r -= arr[i];
-      if (r <= 0) {
-        const x = i % w;
-        const y = (i / w) | 0;
-        return { x, y };
-      }
-    }
-    // Fallback (should not happen)
-    return { x: (arr.length % w), y: (arr.length / w) | 0 };
-  }
-
-  function doObserve() {
-    const now = performance.now() / 1000;
-    if (now - lastObserveAt < observe.cooldown) return;
-    lastObserveAt = now;
-    // Sample a position from |Ψ|^2 and teleport the player there
-    const pos = samplePositionFromDensity(lastDensity, W, H);
-    if (pos) {
-      player.x = pos.x;
-      player.y = pos.y;
-      // Collapse Ψ at the observed position
-      sim.collapseAt(pos.x, pos.y, { sigma: observe.sigma });
-    }
-    // Coherence penalty (cost to observe)
-    coherence.value = Math.max(0, coherence.value - observe.penalty);
-    // Flash effect
-    observeFlashT = 0.18;
-  }
-
-  function restart() {
-    winOverlay.classList.remove('active');
-    loseOverlay.classList.remove('active');
-    coherence.reset();
-    player.x = Math.floor(W * 0.18);
-    player.y = Math.floor(H * 0.5);
-    sim.seedGaussian({ x0: player.x, y0: player.y, sigma: 7, kx: 0.7, ky: 0 });
-    running = true;
-    lastTime = performance.now();
-    requestAnimationFrame(loop);
-  }
-
-  function loop(now) {
-    if (!running) return;
-    const dtFrame = Math.min(0.05, (now - lastTime) / 1000);
-    lastTime = now;
-
-    // Sim substeps
-    for (let i = 0; i < substeps; i++) sim.step(1);
-    const density = sim.computeDensity();
-    lastDensity = density;
-    const dMax = sim.getLastMaxDensity();
-
-    // Player + coherence
-    const localNd = player.update(input, dtFrame, (x, y) => sim.sampleDensity(x, y) / (dMax + 1e-6));
-    player.clampToBounds(W, H);
-    const alive = coherence.update(dtFrame, localNd);
-    hud.setCoherence01(coherence.value / coherence.max);
-
-    // Win/Lose checks
-    if (!alive) {
-      running = false;
-      loseOverlay.classList.add('active');
-    } else if (detector.contains(player.x, player.y)) {
-      running = false;
-      winOverlay.classList.add('active');
-    }
-
-    // Render with phase coloring and regen overlay
-    const state = sim.getState();
-    renderer.render(density, { psiR: state.psiR, psiI: state.psiIhalf, dMax, regenThreshold: coherence.regenThreshold });
-    drawOverlay(overlayCtx, player, detector);
-    if (observeFlashT > 0) {
-      const t = Math.max(0, Math.min(1, observeFlashT / 0.18));
-      overlayCtx.save();
-      overlayCtx.fillStyle = `rgba(255,255,255,${0.25 * t})`;
-      overlayCtx.fillRect(0, 0, W, H);
-      overlayCtx.restore();
-      observeFlashT -= dtFrame;
-    }
-
-    if (running) requestAnimationFrame(loop);
-  }
-
+// ---------------------------------------------------------------- loading
+async function init() {
+  ui.index = await (await fetch('levels/index.json')).json();
+  await Promise.all(ui.index.levels.map(async (id) => { ui.levels[id] = await (await fetch(`levels/${id}.json`)).json(); }));
+  buildNav();
+  const want = location.hash.slice(1);
+  loadLevel(ui.levels[want] ? want : store.get('last', ui.index.levels[0]));
   requestAnimationFrame(loop);
-
-  // Controls wiring
-  const controls = new Controls({
-    sim,
-    renderer,
-    player,
-    coherence,
-    config: CONFIG,
-    observe,
-    potentialParams,
-    absorbParams,
-    seedParams,
-    rebuildPotential: () => {
-      const Vnew = makeDoubleSlit(W, H, potentialParams);
-      sim.setPotential(Vnew);
-    },
-    rebuildAbsorb: () => {
-      const m = makeAbsorbMask(W, H, absorbParams);
-      sim.setAbsorbMask(m);
-    },
-    reseed: () => {
-      sim.seedGaussian({ x0: Math.floor(W * 0.18), y0: Math.floor(H * 0.5), ...seedParams });
-    },
-    setSubsteps: (v) => { substeps = v; },
-  });
 }
 
-main();
+function buildNav() {
+  const nav = $('levels'); nav.innerHTML = '';
+  let chap = null;
+  for (const id of ui.index.levels) {
+    const lv = ui.levels[id];
+    if (lv.chapter !== chap) {
+      chap = lv.chapter;
+      const c = document.createElement('span'); c.className = 'chap';
+      c.textContent = 'Ch ' + chap + ' · ' + (ui.index.chapters.find(x => x.id === chap)?.name || ''); nav.append(c);
+    }
+    const b = document.createElement('button'); b.dataset.id = id;
+    b.innerHTML = `${id} <span class="st">${'★'.repeat(ui.stars[id] || 0)}</span>`;
+    b.title = lv.title; b.onclick = () => loadLevel(id);
+    if (ui.level && ui.level.id === id) b.classList.add('cur');
+    nav.append(b);
+  }
+}
+
+function loadLevel(id) {
+  ui.level = ui.levels[id]; store.set('last', id); history.replaceState(null, '', '#' + id);
+  ui.setup = defaultSetup(ui.level); ui.selected = -1;
+  $('lvlTitle').textContent = `${id} · ${ui.level.title}`;
+  $('lvlIntro').textContent = ui.level.intro;
+  buildNav(); buildStarTicks(); buildLaunchSliders(); buildInventory();
+  resetToSetup();
+}
+
+function newSeed() { return (Math.random() * 2 ** 32) >>> 0; }
+
+function resetToSetup(keepSeed) {
+  ui.setup = sanitizeSetup(ui.level, ui.setup);
+  ui.seed = keepSeed ? ui.seed : newSeed();
+  ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
+  if (!ui.renderer) ui.renderer = new Renderer(canvas, ui.session.sim); else ui.renderer.setSim(ui.session.sim);
+  ui.phase = 'setup'; ui.playing = false; ui.history = { t: [], pT: [], pM: [] };
+  ui.lastFire = {}; ui.keys.clear();
+  $('banner').hidden = true;
+  buildActions(); updatePanels(); scheduleGhost();
+}
+
+function rebuildSetupView() { ui.rebuildPending = true; }
+
+// ---------------------------------------------------------------- setup UI
+function buildLaunchSliders() {
+  const host = $('launchSliders'); host.innerHTML = '';
+  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width' };
+  for (const key of ['x', 'y', 'k', 'angle', 'sigma']) {
+    const p = param(ui.level.launch[key]);
+    const row = document.createElement('div'); row.className = 'slider' + (p.max > p.min ? '' : ' fixed');
+    const step = key === 'angle' ? 1 : 0.05;
+    row.innerHTML = `<span>${names[key]}</span><input type="range" min="${p.min}" max="${p.max}" step="${step}" value="${p.v}" ${p.max > p.min ? '' : 'disabled'}><output></output>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    out.textContent = (+p.v).toFixed(key === 'angle' ? 0 : 2);
+    inp.oninput = () => { ui.setup.launch[key] = +inp.value; out.textContent = (+inp.value).toFixed(key === 'angle' ? 0 : 2); rebuildSetupView(); };
+    inp.dataset.key = key; host.append(row);
+  }
+}
+
+function syncLaunchSliders() {
+  for (const inp of document.querySelectorAll('#launchSliders input')) {
+    const k = inp.dataset.key; inp.value = ui.setup.launch[k];
+    inp.parentElement.querySelector('output').textContent = ui.setup.launch[k].toFixed(k === 'angle' ? 0 : 2);
+  }
+}
+
+function buildInventory() {
+  const host = $('inventory'); host.innerHTML = '';
+  const items = ui.level.inventory?.items || [];
+  if (!items.length) { $('itemPanel').innerHTML = ''; return; }
+  host.innerHTML = '<h3>Inventory</h3>';
+  for (const spec of items) {
+    const b = document.createElement('button'); b.dataset.spec = spec.id;
+    b.onclick = () => {
+      if (ui.phase !== 'setup') return;
+      if (countPlaced(spec.id) >= spec.count) return;
+      ui.setup.placed.push(defaultItem(spec, ui.level)); ui.selected = ui.setup.placed.length - 1;
+      rebuildSetupView(); updatePanels();
+    };
+    host.append(b);
+  }
+}
+const countPlaced = (id) => ui.setup.placed.filter(p => p.id === id).length;
+
+function buildItemPanel() {
+  const host = $('itemPanel'); host.innerHTML = '';
+  const it = ui.setup.placed[ui.selected]; if (!it || ui.phase !== 'setup') return;
+  const spec = ui.level.inventory.items.find(s => s.id === it.id);
+  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius' };
+  host.innerHTML = `<h3>${spec.label}</h3>`;
+  for (const k of itemKeys(spec)) {
+    const p = param(spec[k]);
+    const row = document.createElement('div'); row.className = 'slider';
+    row.innerHTML = `<span>${names[k]}</span><input type="range" min="${p.min}" max="${p.max}" step="0.05" value="${it[k]}"><output>${(+it[k]).toFixed(2)}</output>`;
+    const inp = row.querySelector('input');
+    inp.oninput = () => { it[k] = +inp.value; row.querySelector('output').textContent = (+inp.value).toFixed(2); rebuildSetupView(); };
+    host.append(row);
+  }
+  const del = document.createElement('button'); del.textContent = 'Remove  (Del)';
+  del.onclick = removeSelected; host.append(del);
+}
+function removeSelected() {
+  if (ui.selected < 0) return;
+  ui.setup.placed.splice(ui.selected, 1); ui.selected = -1; rebuildSetupView(); updatePanels();
+}
+
+function buildActions() {
+  const host = $('actions'); host.innerHTML = '';
+  const acts = ui.session.actions();
+  acts.forEach((a, n) => {
+    const b = document.createElement('button'); b.dataset.n = n; b.dataset.type = a.type; b.dataset.i = a.i;
+    b.innerHTML = `${a.label} <kbd>${n + 1}</kbd>`;
+    b.onpointerdown = () => doAction(n, true);
+    b.onpointerup = b.onpointerleave = () => ui.keys.delete('act' + n);
+    host.append(b);
+  });
+  buildStarTicks();
+}
+
+function buildStarTicks() {
+  $('starTicks').innerHTML = (ui.level.stars || []).map(v => `<span style="left:${Math.min(100, v * 100)}%"></span>`).join('');
+}
+
+function updatePanels() {
+  const s = ui.session, lv = ui.level, inv = lv.inventory || {};
+  $('setupPanel').hidden = ui.phase !== 'setup';
+  for (const b of document.querySelectorAll('#inventory button')) {
+    const spec = lv.inventory.items.find(x => x.id === b.dataset.spec);
+    const left = spec.count - countPlaced(spec.id);
+    b.textContent = `+ ${spec.label} (${left} left)`; b.disabled = left <= 0;
+  }
+  buildItemPanel();
+  $('btnPlay').textContent = ui.playing ? '⏸ Pause' : (ui.phase === 'setup' ? '▶ Play' : '▶ Resume');
+  $('btnPlay').disabled = ui.phase === 'done';
+  $('btnObserve').disabled = ui.phase === 'done' || !s.canObserve();
+  $('phaseTag').textContent = ui.phase === 'setup' ? 'setup: drag the packet, its arrow, and any items' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
+  const bits = [];
+  if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges - click the field (impulse toward the cursor).`);
+  if (inv.tilt) bits.push('Field tilt: hold arrow keys / WASD.');
+  if (lv.minObserveTime) bits.push(`Observation allowed after t = ${lv.minObserveTime}.`);
+  const dets = s.detectors.map((d, i) => `${d.label} ${d.shots} shots`).join(', ');
+  if (dets) bits.push(dets + (s.detectors.some(d => d.hold) ? ' - hold the key to pulse repeatedly.' : '.'));
+  $('rtInfo').textContent = bits.join(' ');
+  for (const b of document.querySelectorAll('#actions button')) {
+    if (b.dataset.type === 'detector') b.disabled = s.detectors[+b.dataset.i].shots <= 0 || s.finished;
+  }
+}
+
+// ---------------------------------------------------------------- run control
+function play() {
+  if (ui.phase === 'done') return;
+  if (ui.phase === 'setup') {
+    // freeze the setup into a fresh session (same seed) and start
+    resetFromSetup();
+    ui.phase = 'run';
+  }
+  ui.playing = !ui.playing; updatePanels();
+}
+function resetFromSetup() {
+  ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
+  ui.renderer.setSim(ui.session.sim); ui.history = { t: [], pT: [], pM: [] };
+}
+
+function observe() {
+  const s = ui.session;
+  if (ui.phase === 'setup') { resetFromSetup(); ui.phase = 'run'; }
+  if (!s.canObserve()) return;
+  const r = ui.session.observe();
+  if (!r) return;
+  ui.phase = 'done'; ui.playing = false;
+  showResult(r); updatePanels();
+}
+
+function showResult(r) {
+  const b = $('banner'), lv = ui.level;
+  const txt = {
+    hit: r.stars >= 3 ? 'Direct hit!' : 'Hit!', miss: 'Missed - the particle was found elsewhere.',
+    mine: 'Boom - the measurement found the particle on a mine.', lost: 'Lost - the particle had already been absorbed at the boundary.',
+  }[r.outcome];
+  b.className = r.hit ? 'win' : 'lose'; b.hidden = false;
+  const idx = ui.index.levels.indexOf(lv.id), next = ui.index.levels[idx + 1];
+  const expectNote = ui.mode === 'expect' ? ` (expectation mode: P<sub>T</sub> ${r.pT >= (lv.expectThreshold ?? 0.5) ? '≥' : '<'} ${lv.expectThreshold ?? 0.5})` : '';
+  b.innerHTML = `<h2>${txt} ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</h2>
+    <p>P<sub>T</sub> at observation = <b>${(r.pT * 100).toFixed(1)}%</b>, P<sub>M</sub> = ${(r.pM * 100).toFixed(1)}%, absorbed = ${(r.lost * 100).toFixed(1)}%${expectNote}.
+    The stars come from P<sub>T</sub> at the moment you observed, so skill is rewarded even when the dice are unkind.</p>
+    <div class="row"><button id="bRetry" class="primary">Retry (new dice)</button><button id="bSetup">Back to setup</button>
+    ${next && r.hit ? '<button id="bNext">Next level →</button>' : ''}<button id="bCopy">Copy replay JSON</button></div>`;
+  $('bRetry').onclick = () => { resetToSetup(); play(); };
+  $('bSetup').onclick = () => resetToSetup();
+  if ($('bNext')) $('bNext').onclick = () => loadLevel(next);
+  $('bCopy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(ui.session.solution(), null, 1)); $('bCopy').textContent = 'Copied'; };
+  if (r.hit && r.stars > (ui.stars[lv.id] || 0)) { ui.stars[lv.id] = r.stars; store.set('stars', ui.stars); buildNav(); }
+}
+
+function doAction(n, down) {
+  const a = ui.session.actions()[n]; if (!a) return;
+  if (ui.phase === 'setup') { resetFromSetup(); ui.phase = 'run'; ui.playing = true; updatePanels(); }
+  if (ui.phase !== 'run') return;
+  if (a.type === 'gate') { if (down) ui.session.toggleGate(a.i); }
+  else if (down) {
+    const d = ui.session.detectors[a.i];
+    ui.session.fireDetector(a.i); ui.lastFire[a.i] = ui.session.stepCount;
+    if (d.hold) ui.keys.add('act' + n);
+    updatePanels();
+  }
+}
+
+// ---------------------------------------------------------------- input
+function tiltFromKeys() {
+  const k = ui.keys; let x = 0, y = 0;
+  if (k.has('ArrowLeft') || k.has('a')) x -= 1; if (k.has('ArrowRight') || k.has('d')) x += 1;
+  if (k.has('ArrowUp') || k.has('w')) y -= 1; if (k.has('ArrowDown') || k.has('s')) y += 1;
+  return [x, y];
+}
+
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' && e.target.type === 'range') e.target.blur();
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (e.repeat && /^[1-9]$/.test(key)) return;
+  if (key === ' ') { e.preventDefault(); play(); return; }
+  if (key === 'Enter') { e.preventDefault(); observe(); return; }
+  if (key === 'r') { resetToSetup(true); return; }
+  if (key === 'v') { const sel = $('view_mode'); sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; sel.onchange(); return; }
+  if (key === 'c') { $('optCurrent').click(); return; }
+  if (key === 'g') { $('optGhost').click(); return; }
+  if (key === 'Delete' || key === 'Backspace') { if (ui.phase === 'setup') removeSelected(); return; }
+  if (/^[1-9]$/.test(key)) { doAction(+key - 1, true); return; }
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(key)) {
+    e.preventDefault(); ui.keys.add(key);
+  }
+});
+addEventListener('keyup', (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  ui.keys.delete(key);
+  if (/^[1-9]$/.test(key)) ui.keys.delete('act' + (+key - 1));
+});
+addEventListener('blur', () => ui.keys.clear());
+
+function pointer(e) {
+  const r = canvas.getBoundingClientRect(), S = canvas.width / r.width, L = ui.level.grid.L;
+  return { x: ((e.clientX - r.left) * S) / (canvas.width / L), y: ((e.clientY - r.top) * S) / (canvas.width / L), px: (e.clientX - r.left) * S, py: (e.clientY - r.top) * S };
+}
+const pxPerUnit = () => canvas.width / ui.level.grid.L;
+
+canvas.addEventListener('pointerdown', (e) => {
+  const p = pointer(e), lv = ui.level;
+  if (ui.phase === 'run' && ui.playing) {
+    const [cx, cy] = ui.session.sim.centroid();
+    ui.session.kick(p.x - cx, p.y - cy); updatePanels(); return;
+  }
+  if (ui.phase !== 'setup') return;
+  const l = ui.setup.launch, S = pxPerUnit(), a = l.angle * Math.PI / 180;
+  const hx = l.x * S + Math.cos(a) * l.k * 22, hy = l.y * S + Math.sin(a) * l.k * 22;
+  const kEditable = param(lv.launch.k).max > param(lv.launch.k).min || param(lv.launch.angle).max > param(lv.launch.angle).min;
+  const posEditable = param(lv.launch.x).max > param(lv.launch.x).min || param(lv.launch.y).max > param(lv.launch.y).min;
+  if (kEditable && Math.hypot(p.px - hx, p.py - hy) < 16) ui.drag = { kind: 'k' };
+  else {
+    // items first (topmost last)
+    for (let i = ui.setup.placed.length - 1; i >= 0; i--) {
+      const it = ui.setup.placed[i], spec = lv.inventory.items.find(s => s.id === it.id);
+      const inside = spec.shape === 'circle' ? Math.hypot(p.x - it.x, p.y - it.y) <= it.r : Math.abs(p.x - it.x) <= it.w / 2 && Math.abs(p.y - it.y) <= it.h / 2;
+      if (inside) { ui.selected = i; ui.drag = { kind: 'item', dx: it.x - p.x, dy: it.y - p.y }; updatePanels(); canvas.setPointerCapture(e.pointerId); return; }
+    }
+    if (posEditable && Math.hypot(p.px - l.x * S, p.py - l.y * S) < Math.max(22, l.sigma * 2 * S)) ui.drag = { kind: 'pos', dx: l.x - p.x, dy: l.y - p.y };
+    else { ui.selected = -1; updatePanels(); }
+  }
+  if (ui.drag) canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!ui.drag) return;
+  const p = pointer(e), l = ui.setup.launch;
+  if (ui.drag.kind === 'k') {
+    const S = pxPerUnit(), dx = p.px - l.x * S, dy = p.py - l.y * S;
+    l.k = Math.hypot(dx, dy) / 22; l.angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    syncLaunchSliders();
+  } else if (ui.drag.kind === 'pos') { l.x = p.x + ui.drag.dx; l.y = p.y + ui.drag.dy; syncLaunchSliders(); }
+  else if (ui.drag.kind === 'item') { const it = ui.setup.placed[ui.selected]; it.x = p.x + ui.drag.dx; it.y = p.y + ui.drag.dy; }
+  rebuildSetupView();
+});
+canvas.addEventListener('pointerup', () => { ui.drag = null; });
+
+$('btnPlay').onclick = play;
+$('btnObserve').onclick = observe;
+$('btnReset').onclick = () => resetToSetup(true);
+$('speed').onchange = (e) => { ui.speed = +e.target.value; };
+$('optExpect').onchange = (e) => { ui.mode = e.target.checked ? 'expect' : 'born'; if (ui.phase === 'setup') resetToSetup(true); else ui.session.mode = ui.mode; };
+$('view_mode').onchange = () => { ui.renderer.view = $('view_mode').value; };
+$('optCurrent').onchange = (e) => { ui.renderer.showCurrent = e.target.checked; };
+$('optGhost').onchange = () => { scheduleGhost(); };
+
+// ---------------------------------------------------------------- ghost preview
+let ghostTimer = 0;
+function scheduleGhost() {
+  clearTimeout(ghostTimer); ui.ghostToken++;
+  if (!$('optGhost').checked) { ui.ghost = null; return; }
+  const token = ui.ghostToken;
+  ghostTimer = setTimeout(() => {
+    const setup = sanitizeSetup(ui.level, ui.setup);
+    simulateCurveAsync(ui.level, setup, { N: 64, shouldCancel: () => token !== ui.ghostToken, onDone: (c) => { if (token === ui.ghostToken) ui.ghost = c; } });
+  }, 250);
+}
+
+// ---------------------------------------------------------------- main loop
+function advance(budget) {
+  const s = ui.session, acts = s.actions();
+  while (budget > 0 && !s.finished && s.t < ui.level.tmax - 1e-9) {
+    const [tx, ty] = tiltFromKeys(); s.setTilt(tx, ty);
+    let n = Math.min(budget, Math.round(ui.level.tmax / DT) - s.stepCount);
+    for (const key of ui.keys) {
+      if (!key.startsWith('act')) continue;
+      const a = acts[+key.slice(3)]; if (!a || a.type !== 'detector') continue;
+      const d = s.detectors[a.i], cd = d.cooldown || 1, last = ui.lastFire[a.i] ?? -1e9;
+      if (s.stepCount - last >= cd) { s.fireDetector(a.i); ui.lastFire[a.i] = s.stepCount; }
+      n = Math.min(n, Math.max(1, ui.lastFire[a.i] + cd - s.stepCount));
+    }
+    s.step(n); budget -= n;
+    if (s.stepCount % 2 === 0 || n > 1) { ui.history.t.push(s.t); ui.history.pT.push(s.pT()); ui.history.pM.push(s.pM()); }
+  }
+  if (!s.finished && s.t >= ui.level.tmax - 1e-9) observe();   // time is up: the world measures for you
+}
+
+function loop() {
+  ui.frame++;
+  if (ui.rebuildPending && ui.phase === 'setup') {
+    ui.rebuildPending = false; resetToSetup(true); scheduleGhost();
+  }
+  if (ui.phase === 'run' && ui.playing) {
+    ui.acc += ui.speed; const n = Math.floor(ui.acc); ui.acc -= n;   // fractional speeds accumulate
+    if (n > 0) advance(n);
+    updatePanels();
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function draw() {
+  const s = ui.session; if (!s) return;
+  ui.renderer.draw(s, ui);
+  $('clock').textContent = `t = ${s.t.toFixed(1)} / ${ui.level.tmax}`;
+  const pT = s.pT(), pM = s.pM(), alive = s.alive();
+  $('barT').style.width = (pT * 100) + '%'; $('valT').textContent = (pT * 100).toFixed(1) + '%';
+  $('barM').style.width = (pM * 100) + '%'; $('valM').textContent = (pM * 100).toFixed(1) + '%';
+  $('barL').style.width = (Math.max(0, 1 - alive) * 100) + '%'; $('valL').textContent = (Math.max(0, 1 - alive) * 100).toFixed(1) + '%';
+  if (ui.frame % 15 === 0) ui.leak = s.sim.kLeak(0.6);
+  $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
+  $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';
+  if (ui.frame % 3 === 0) drawPlot();
+}
+
+function drawPlot() {
+  const c = $('plot'), g = c.getContext('2d'), W = c.width, H = c.height, tmax = ui.level.tmax;
+  g.clearRect(0, 0, W, H);
+  const gh = ui.ghost, h = ui.history;
+  let ymax = 0.2;
+  for (const a of [gh?.pT, h.pT]) if (a) for (const v of a) ymax = Math.max(ymax, v * 1.15);
+  ymax = Math.min(1, ymax);
+  const X = (t) => 28 + (W - 36) * t / tmax, Y = (v) => H - 18 - (H - 28) * v / ymax;
+  g.font = '10px system-ui'; g.fillStyle = '#8b93a7'; g.strokeStyle = '#2a3245'; g.lineWidth = 1;
+  for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.5 ? 0.25 : 0.1) { g.beginPath(); g.moveTo(28, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); g.fillText((v * 100).toFixed(0) + '%', 2, Y(v) + 3); }
+  for (let t = 0; t <= tmax; t += 5) g.fillText(t, X(t) - 4, H - 4);
+  g.setLineDash([4, 3]); g.strokeStyle = '#ffd23f66';
+  for (const v of ui.level.stars || []) { if (v <= ymax) { g.beginPath(); g.moveTo(28, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); } }
+  g.setLineDash([]);
+  const line = (ts, vs, color, w = 2) => { if (!ts || !ts.length) return; g.strokeStyle = color; g.lineWidth = w; g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vs[i])) : g.moveTo(X(t), Y(vs[i])))); g.stroke(); };
+  if (gh) { line(gh.t, gh.pT, 'rgba(76,255,124,0.3)', 3); if ((ui.level.mines || []).length) line(gh.t, gh.pM, 'rgba(255,74,74,0.3)', 3); }
+  line(h.t, h.pT, '#4cff7c'); if ((ui.level.mines || []).length) line(h.t, h.pM, '#ff4a4a');
+  g.strokeStyle = '#fff6'; g.beginPath(); g.moveTo(X(ui.session.t), 4); g.lineTo(X(ui.session.t), H - 16); g.stroke();
+  if (ui.level.minObserveTime) { g.fillStyle = '#ffffff10'; g.fillRect(28, 4, X(ui.level.minObserveTime) - 28, H - 20); }
+}
+
+init();

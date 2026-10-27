@@ -1,0 +1,111 @@
+{
+ "id": "5-1",
+ "chapter": 5,
+ "title": "Which Way?",
+ "intro": "The phase slab has put a dark fringe on the target, so a coherent packet can never reach it. But a detector that asks 'is the particle in this beam?' reveals which slit it took, and which-path information destroys interference. Place the detector over one beam after the slits, and fire it (key 1). Either answer collapses the packet into a single beam that no longer cancels at the target.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 25,
+ "launch": {
+  "x": 5,
+  "y": 20,
+  "k": 2,
+  "angle": 0,
+  "sigma": 2.8
+ },
+ "elements": [
+  {
+   "type": "wall",
+   "x": 12,
+   "w": 1,
+   "V": 10,
+   "slits": [
+    {
+     "y": 16,
+     "w": 3.4
+    },
+    {
+     "y": 24,
+     "w": 3.4
+    }
+   ]
+  },
+  {
+   "type": "rect",
+   "x": 18,
+   "y": 25,
+   "w": 6,
+   "h": 8,
+   "V": 0.8
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "det",
+    "kind": "detector",
+    "shape": "rect",
+    "label": "Which-way detector",
+    "count": 1,
+    "shots": 1,
+    "area": [
+     15,
+     6,
+     28,
+     34
+    ],
+    "w": [
+     4,
+     1,
+     12
+    ],
+    "h": [
+     8,
+     1,
+     16
+    ],
+    "x": 22,
+    "y": 27
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 32,
+   "y": 20,
+   "w": 6,
+   "h": 17.5
+  }
+ ],
+ "stars": [
+  0.03,
+  0.055,
+  0.08
+ ],
+ "expectThreshold": 0.05,
+ "mines": [],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "det",
+     "x": 22,
+     "y": 27,
+     "w": 8,
+     "h": 12
+    }
+   ]
+  },
+  "events": [
+   {
+    "step": 170,
+    "type": "detect",
+    "i": 0
+   }
+  ],
+  "observeAt": 13
+ }
+}

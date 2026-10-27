@@ -1,0 +1,82 @@
+{
+ "id": "5-2",
+ "chapter": 5,
+ "title": "Hold Still",
+ "intro": "A tight packet spreads quickly, and you may only observe after t = 12 (the grey band on the plot). Repeated 'yes' outcomes from a detector keep re-localising the packet: the quantum Zeno effect. Place the detector over the target and HOLD its key (1) to pulse it. Each pulse can also say 'no', which removes the packet from the target, so the detector's size is a trade-off: too small and it leaks, too large and it holds the packet loosely.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 18,
+ "minObserveTime": 12,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 1.2
+ },
+ "inventory": {
+  "items": [
+   {
+    "id": "det",
+    "kind": "detector",
+    "shape": "circle",
+    "label": "Zeno detector",
+    "count": 1,
+    "shots": 80,
+    "cooldown": 5,
+    "hold": true,
+    "area": [
+     12,
+     12,
+     28,
+     28
+    ],
+    "r": [
+     3,
+     1.5,
+     6
+    ],
+    "x": 20,
+    "y": 20
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 20,
+   "y": 20,
+   "r": 3
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "det",
+     "x": 20,
+     "y": 20,
+     "r": 3.5
+    }
+   ]
+  },
+  "observeAt": 12,
+  "events": [
+   {
+    "step": 0,
+    "type": "detect",
+    "i": 0,
+    "every": 5,
+    "until": 240
+   }
+  ]
+ },
+ "stars": [
+  0.25,
+  0.4,
+  0.5
+ ],
+ "expectThreshold": 0.35
+}
