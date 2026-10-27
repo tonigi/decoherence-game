@@ -58,7 +58,7 @@ function impulse(ctx, seconds) {
 export class Sonifier {
   constructor() {
     this.ctx = null; this.enabled = true;
-    this.nextSparkle = 0; this.lastNo = 0; this.doneAt = null;
+    this.nextSparkle = 0; this.lastNo = 0;
   }
 
   /** Call from a user gesture: browsers only start audio after one. */
@@ -134,18 +134,17 @@ export class Sonifier {
     if (!this.live) return;
     const ctx = this.ctx, now = ctx.currentTime, sim = session.sim;
     const a = analyse(sim);
-    if (phase !== 'done') this.doneAt = null;
-    else if (this.doneAt === null) this.doneAt = now;
-    const level = phase === 'setup' ? 0.35 : phase === 'run' ? (playing ? 1 : 0.5) : 0.9 * Math.exp(-(now - this.doneAt) / 6);
-    const tau = phase === 'done' ? 0.6 : 0.15;
+    // after the observation the pad fades to silence (~4 s); only the result chime rings out
+    const level = phase === 'setup' ? 0.35 : phase === 'run' ? (playing ? 1 : 0.5) : 0;
+    const tau = phase === 'done' ? 0.8 : 0.15;
     a.weights.forEach((w, b) => {
       const v = this.voices[b];
       v.g.gain.setTargetAtTime(0.2 * level * Math.sqrt(w), now, tau);
       v.pan.pan.setTargetAtTime(clamp((a.pan[b] - 0.5) * 1.6, -1, 1), now, 0.2);
     });
     this.tone.frequency.setTargetAtTime(clamp(600 + 320 * a.kRms, 400, 5000), now, 0.3);
-    this.halo.gain.setTargetAtTime(0.1 * level * session.pT(), now, 0.3);
-    this.shadow.gain.setTargetAtTime(0.22 * level * session.pM(), now, 0.3);
+    this.halo.gain.setTargetAtTime(0.1 * level * session.pT(), now, tau);
+    this.shadow.gain.setTargetAtTime(0.22 * level * session.pM(), now, tau);
 
     // the Born-rule melody: sample |psi|^2, ring the sampled band an octave up
     if (phase !== 'run' || !playing) { this.nextSparkle = 0; return; }
@@ -191,19 +190,20 @@ export class Sonifier {
     if (yes) { this.bell(ROOT * 6, 0, 0.09, now, 3.5); this.bell(ROOT * 15 / 2, 0, 0.06, now + 0.08, 3.5); }
     else if (now - this.lastNo > 0.25) { this.lastNo = now; this.bell(ROOT * 2, 0, 0.05, now, 1.2); }
   }
-  result(r, L) {
-    if (!this.live) return;
-    const now = this.ctx.currentTime + 0.05;
-    const pan = r.sample?.x !== undefined ? clamp((r.sample.x / L - 0.5) * 1.6, -1, 1) : 0;
-    if (r.outcome === 'hit') {
-      const notes = [1, 5 / 4, 3 / 2, 2, 5 / 2, 3, 4, 5].slice(0, 4 + r.stars + (r.stars > 2 ? 1 : 0));
-      notes.forEach((m, n) => this.bell(ROOT * 2 * m, pan * (1 - n / notes.length), 0.1, now + n * 0.11, 5));
-    } else if (r.outcome === 'mine' || r.outcome === 'boom') {
-      [1 / 2, 3 / 4, 1].forEach((m, n) => this.bell(ROOT * m, pan, 0.14, now + n * 0.02, 6));
-    } else if (r.outcome === 'lost') {
-      this.bell(ROOT, 0, 0.08, now, 6);
-    } else {
-      [3, 5 / 2, 9 / 4, 3 / 2].forEach((m, n) => this.bell(ROOT * m, pan, 0.08, now + n * 0.22, 4.5));
-    }
+  /** The observation: the pad fades out (update) and one faint, pure tone at the
+   *  found position (pitch of its band, two octaves up) rings into the reverb. */
+  observed(r, L) {
+    if (!this.live || r.sample?.x === undefined) return;   // absorbed or momentum-space: just silence
+    const ctx = this.ctx, now = ctx.currentTime, b = Math.min(BANDS - 1, Math.floor((r.sample.y / L) * BANDS));
+    const o = ctx.createOscillator(), env = ctx.createGain(), p = ctx.createStereoPanner();
+    o.frequency.value = bandFreq(b) * 4;
+    const lfo = ctx.createOscillator(), depth = ctx.createGain();   // a slow, unsteady waver
+    lfo.frequency.value = 0.3; depth.gain.value = 9; lfo.connect(depth); depth.connect(o.detune);
+    p.pan.value = clamp((r.sample.x / L - 0.5) * 1.6, -1, 1);
+    o.connect(env); env.connect(p); p.connect(this.fx);
+    env.gain.setValueAtTime(0, now);
+    env.gain.linearRampToValueAtTime(0.035, now + 0.4);
+    env.gain.exponentialRampToValueAtTime(1e-4, now + 7);
+    o.start(now); o.stop(now + 7.1); lfo.start(now); lfo.stop(now + 7.1);
   }
 }

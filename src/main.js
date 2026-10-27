@@ -232,6 +232,7 @@ function observe() {
   const r = ui.session.observe();
   if (!r) return;
   ui.phase = 'done'; ui.playing = false;
+  audio.observed(r, ui.level.grid.L);
   updatePanels();
   if (!r.pending) { showResult(r); return; }
   // detectors fired: score on the branch-averaged P_T (src/ledger.js)
@@ -306,7 +307,6 @@ function showResult(r) {
   const key = starKey(lv.id, mode);
   if (r.hit && r.stars > (ui.stars[key] || 0)) { ui.stars[key] = r.stars; store.set('stars', ui.stars); buildNav(); }
   buildLedgerPanel(L);
-  audio.result(r, lv.grid.L);
 }
 
 function doAction(n, down) {
