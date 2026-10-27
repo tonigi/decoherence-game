@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { Sim, spinExp } from '../src/sim.js';
 import { rasterV } from '../src/shapes.js';
 import { opticTerm, jones } from '../src/optics.js';
-import { Session, defaultSetup, sanitizeSetup, replay, DT } from '../src/session.js';
+import { Session, defaultSetup, sanitizeSetup, replay, placeIn, DT } from '../src/session.js';
 import { ledger } from '../src/ledger.js';
 import { mulberry32 } from '../src/rng.js';
 
@@ -138,4 +138,53 @@ test('switchable optics replay exactly; spinor branches go through the ledger', 
   assert.ok(Math.abs(L.score - exact.score) <= L.dropped + 1e-6, `${L.score} vs ${exact.score}, dropped ${L.dropped}`);
   // the branch states carry both components
   assert.ok(L.branches[0].state.re2 && L.branches[0].state.re2.length === 64 * 64);
+});
+
+test('Stern-Gerlach: the magnet splits along its axis with Born weights cos^2, up and down', () => {
+  const lv = load('6-4'), N = 64;
+  const split = (axis) => {
+    const s = new Session(lv, sanitizeSetup(lv, { placed: [{ id: 'mag', x: 15, y: 20, pol: axis, gradient: 0.35 }] }), { N });
+    s.step(180);
+    const up = new Float64Array(N * N); for (let j = 0; j < N / 2; j++) for (let i = 0; i < N; i++) up[j * N + i] = 1;
+    // the upper beam carries the axis polarization, the lower one the crossed polarization
+    const lo = up.map(v => 1 - v), su = s.sim.stokes(up), sl = s.sim.stokes(lo);
+    return { pUp: s.sim.mass(up) / s.sim.norm(), angUp: Math.atan2(su[1], su[0]) / 2 / deg, angLo: Math.atan2(sl[1], sl[0]) / 2 / deg };
+  };
+  for (const axis of [0, 30, 60]) {
+    const r = split(axis);
+    near(r.pUp, Math.cos((60 - axis) * deg) ** 2, 0.03, `P(up), axis ${axis}`);   // the upper beam's tail still reaches y = 20
+    if (axis !== 60) {
+      near(r.angUp, axis, 3, 'upper beam polarized along the axis');
+      near((((r.angLo - axis) % 180) + 180) % 180, 90, 3, 'lower beam crossed');
+    }
+  }
+});
+
+test('bomb optics: what a polarization-selective bomb absorbs is caught, exactly, and per look it is sin^2', () => {
+  const sim = new Sim(64, 40, DT, { spinor: true, absorbStrength: 0 });
+  sim.addSpin(rasterV(sim, { type: 'rect', x: 20, y: 20, w: 1, h: 40, V: 1 }), opticTerm({ kind: 'polarizer', angle: 0 }), { bomb: true });
+  sim.setGaussian({ x: 12, y: 20, kx: 2.5, ky: 0, sigma: 2, pol: jones(30) });
+  sim.step(140);
+  near(sim.norm() + sim.caught, 1, 1e-10, 'norm + caught');
+  near(sim.caught, Math.sin(30 * deg) ** 2, 0.01, 'booms = sin^2 30');
+  // in a session it is a mine and an observation's "boom" branch; 6-5's stations add sin^2 per look
+  const lv = load('6-5'), one = new Session(lv, sanitizeSetup(lv, { placed: [{ id: 'st', x: 19.2, y: 20 }] }), { N: 64 });
+  one.step(220);
+  near(one.pM(), Math.sin(Math.PI / 4) ** 2, 0.03, 'one look after two plates: sin^2(pi/4)');
+  near(one.alive() + one.sim.caught + one.lost(), 1, 1e-12, 'bookkeeping');
+});
+
+test('bomb tester (6-5): one station per cycle, and placement zones keep stations out of the plates', () => {
+  const lv = load('6-5'), score = (xs) => {
+    const s = new Session(lv, sanitizeSetup(lv, { placed: xs.map(x => ({ id: 'st', x, y: 20 })) }), { N: 64 });
+    let b = 0; while (s.t < lv.tmax) { s.step(2); b = Math.max(b, s.pT()); } return b;
+  };
+  const none = score([]), perGap = score([13.6, 19.2, 24.8]), doubled = score([13.6, 18.4, 20]);
+  assert.ok(none < 0.01, 'no stations: the photon arrives vertical');
+  assert.ok(perGap > 1.25 * doubled, `one per gap ${perGap} beats doubling up ${doubled}`);
+  // zones: an item dropped on a plate snaps into the nearest gap
+  const zones = lv.inventory.items[0].area;
+  assert.deepEqual(placeIn(zones, 16.4, 20), { x: 14.6, y: 20 });
+  assert.deepEqual(placeIn(zones, 17, 25), { x: 18.2, y: 20 });
+  assert.equal(sanitizeSetup(lv, { placed: [{ id: 'st', x: 22, y: 3 }] }).placed[0].x, 20.2);
 });

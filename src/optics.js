@@ -14,6 +14,11 @@
 //   retarder {angle, delta}: (delta / 2) n(theta).sigma, a birefringent plate
 //     that builds up a phase delta per unit time between the axis theta and the
 //     crossed axis (a quarter-wave plate is delta * dwell = pi / 2)
+//   zeeman {angle, gradient}: gradient * v * n(theta).sigma, with v the transverse
+//     coordinate across the element (Session scales chi by it): a Stern-Gerlach
+//     magnet. The force -gradient * n.sigma pushes polarization along theta toward
+//     -v (up on screen for an unrotated element) and the crossed one toward +v
+//   any optic with `bomb: true`: what it absorbs is caught, like an absorbing bomb
 const rad = (deg) => (deg * Math.PI) / 180;
 
 /** Poincare-sphere axis of linear polarization at angle deg. */
@@ -35,6 +40,11 @@ export function opticTerm(o) {
       break;
     }
     case 'rotator': t.hy[0] = o.omega || 0; break;
+    case 'zeeman': {
+      const n = polAxis(o.angle || 0), g = o.gradient || 0;
+      t.hx[0] = g * n[0]; t.hz[0] = g * n[2];
+      break;
+    }
     case 'retarder': {
       const n = polAxis(o.angle || 0), d = (o.delta || 0) / 2;
       t.hx[0] = d * n[0]; t.hz[0] = d * n[2];

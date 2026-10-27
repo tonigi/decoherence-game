@@ -142,7 +142,7 @@ function buildItemPanel() {
   const host = $('itemPanel'); host.innerHTML = '';
   const it = ui.setup.placed[ui.selected]; if (!it || ui.phase !== 'setup') return;
   const spec = ui.level.inventory.items.find(s => s.id === it.id);
-  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength', pol: 'axis °', omega: 'rotation rate ω', delta: 'retardance rate δ' };
+  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength', pol: 'axis °', omega: 'rotation rate ω', delta: 'retardance rate δ', gradient: 'field gradient' };
   host.innerHTML = `<h3>${spec.label || spec.kind}</h3>`;
   for (const k of itemKeys(spec)) {
     const p = param(spec[k]), deg = DEGREE_KEYS.has(k), fix = (v) => (+v).toFixed(deg ? 0 : 2);
@@ -404,12 +404,12 @@ function setupHandles() {
     // scalar strengths (barrier V, detector strength) sit on a stalk above the item:
     // the higher the handle, the larger the value over its range
     const top = it.y - (spec.shape === 'circle' ? it.r : it.h / 2);
-    for (const k of ['V', 'strength']) {
+    for (const k of ['V', 'strength', 'gradient']) {
       if (!itemKeys(spec).includes(k) || !editable(spec[k])) continue;
       const q = param(spec[k]), f = (it[k] - q.min) / (q.max - q.min);
       out.push({
         id: k, x: it.x, y: top - STALK_MIN - f * STALK_LEN, base: top, shape: 'stalk', cursor: 'ns-resize',
-        label: `${k === 'V' ? 'V' : 's'} ${(+it[k]).toFixed(2)}`, title: k === 'V' ? 'strength V (drag up / down)' : 'measurement strength (drag up / down)',
+        label: `${{ V: 'V', strength: 's', gradient: 'g' }[k]} ${(+it[k]).toFixed(2)}`, title: { V: 'strength V', strength: 'measurement strength', gradient: 'field gradient' }[k] + ' (drag up / down)',
         drag: (p) => { const g = (top - STALK_MIN - p.y) / STALK_LEN; it[k] = q.min + Math.min(1, Math.max(0, g)) * (q.max - q.min); },
       });
     }

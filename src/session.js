@@ -18,16 +18,29 @@ export function launchKeys(level) { return [...LAUNCH_KEYS, ...(level.spinor ? S
 export const ITEM_KEYS = {
   rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'],
   // optics (spinor levels): `pol` is the polarization axis in degrees, not a rotation of the shape
-  polarizer: ['w', 'h', 'pol'], rotator: ['w', 'h', 'omega'], retarder: ['w', 'h', 'pol', 'delta'],
+  polarizer: ['w', 'h', 'pol'], rotator: ['w', 'h', 'omega'], retarder: ['w', 'h', 'pol', 'delta'], zeeman: ['w', 'h', 'pol', 'gradient'],
 };
-export const OPTIC_KINDS = ['polarizer', 'rotator', 'retarder'];
+export const OPTIC_KINDS = ['polarizer', 'rotator', 'retarder', 'zeeman'];
 export function itemKeys(spec) {
   if (spec.kind === 'detector') return [...ITEM_KEYS['detector_' + (spec.shape || 'rect')], ...(spec.strength !== undefined ? ['strength'] : [])];
   return ITEM_KEYS[spec.kind] || ITEM_KEYS.rect;
 }
 /** The optic of a placed optical item, in the element format of optics.js. */
 export function itemOptic(spec, it) {
-  return { kind: spec.kind, angle: it.pol, omega: it.omega, delta: it.delta, absorb: spec.absorb, V: spec.reflect };
+  return { kind: spec.kind, angle: it.pol, omega: it.omega, delta: it.delta, gradient: it.gradient, absorb: spec.absorb, V: spec.reflect, bomb: spec.bomb };
+}
+
+/** chi(x) of an optic element; a Zeeman magnet's field term grows linearly across
+ *  it, so its chi is scaled by the transverse (rect-local v) coordinate. */
+function opticChi(sim, el, optic) {
+  const chi = rasterV(sim, { ...el, V: 1 });
+  if (optic.kind !== 'zeeman') return chi;
+  const { N, dx } = sim, a = ((el.angle || 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const X = (i + 0.5) * dx - el.x, Y = (j + 0.5) * dx - el.y;
+    chi[j * N + i] *= -s * X + c * Y;
+  }
+  return chi;
 }
 
 export function defaultSetup(level) {
@@ -56,12 +69,28 @@ export function sanitizeSetup(level, setup) {
     if (!spec) continue;
     used[it.id] = (used[it.id] || 0) + 1;
     if (used[it.id] > spec.count) continue;
-    const a = spec.area || [0, 0, L, L];
-    const o = { id: it.id, x: clamp(it.x, a[0], a[2]), y: clamp(it.y, a[1], a[3]) };
+    const o = { id: it.id, ...placeIn(spec.area || [0, 0, L, L], it.x, it.y) };
     for (const k of itemKeys(spec)) { const p = param(spec[k]); o[k] = clamp(typeof it[k] === 'number' ? it[k] : p.v, p.min, p.max); }
     out.placed.push(o);
   }
   return out;
+}
+
+/** Clamp (x, y) into a placement area: one rect [x0, y0, x1, y1], or a list of
+ *  rects (placement zones), in which case the nearest zone wins. */
+export function placeIn(area, x, y) {
+  const zones = Array.isArray(area[0]) ? area : [area];
+  let best = null, bd = Infinity;
+  for (const a of zones) {
+    const p = { x: clamp(x, a[0], a[2]), y: clamp(y, a[1], a[3]) }, d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+/** Bounding box of a placement area (one rect or a list of zones). */
+export function areaBounds(area) {
+  const zones = Array.isArray(area[0]) ? area : [area];
+  return [Math.min(...zones.map(a => a[0])), Math.min(...zones.map(a => a[1])), Math.max(...zones.map(a => a[2])), Math.max(...zones.map(a => a[3]))];
 }
 
 export class Session {
@@ -92,12 +121,12 @@ export class Session {
     for (const el of level.elements || []) {
       // `optic` makes an element a polarization optic (src/optics.js), optionally switchable
       if (el.optic) {
-        const spin = { chi: rasterV(sim, { ...el, V: 1 }), term: opticTerm(el.optic) }, entry = { shape: shapeOf(el), optic: el.optic };
+        const spin = { chi: opticChi(sim, el, el.optic), term: opticTerm(el.optic) }, entry = { shape: shapeOf(el), optic: el.optic };
         if (el.gate) {
           const i = sim.addGate(null, el.gate.open !== false, el.gate.ramp, null, false, spin);
           entry.gate = this.gates.length;
           this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Optic', open: el.gate.open !== false });
-        } else sim.addSpin(spin.chi, spin.term);
+        } else sim.addSpin(spin.chi, spin.term, { bomb: !!el.optic.bomb });
         this.optics.push(entry);
         continue;
       }
@@ -127,8 +156,8 @@ export class Session {
         const shape = spec.shape === 'circle' ? { shape: 'circle', x: it.x, y: it.y, r: it.r } : { shape: 'rect', x: it.x, y: it.y, w: it.w, h: it.h };
         addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold, it.strength ?? 1);
       } else if (OPTIC_KINDS.includes(spec.kind)) {
-        const el = { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h }, optic = itemOptic(spec, it);
-        sim.addSpin(rasterV(sim, { ...el, V: 1 }), opticTerm(optic));
+        const el = { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, angle: spec.tilt }, optic = itemOptic(spec, it);
+        sim.addSpin(opticChi(sim, el, optic), opticTerm(optic), { bomb: !!spec.bomb });
         this.optics.push({ shape: { shape: 'rect', ...el }, optic, placed: true });
       } else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
       else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));

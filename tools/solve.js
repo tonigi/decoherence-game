@@ -5,7 +5,7 @@
 //   node tools/solve.js levels/1-1.json [--iters 200] [--N 64] [--net]
 import fs from 'node:fs';
 import { simulateCurve } from '../src/ghost.js';
-import { param, defaultSetup, defaultItem, itemKeys, sanitizeSetup } from '../src/session.js';
+import { param, defaultSetup, defaultItem, itemKeys, sanitizeSetup, areaBounds } from '../src/session.js';
 import { mulberry32 } from '../src/rng.js';
 
 const args = process.argv.slice(2);
@@ -24,7 +24,7 @@ for (const k of ['x', 'y', 'k', 'angle', 'sigma']) {
 const items = [];
 for (const spec of level.inventory?.items || []) {
   for (let c = 0; c < spec.count; c++) {
-    const a = spec.area || [0, 0, level.grid.L, level.grid.L];
+    const a = areaBounds(spec.area || [0, 0, level.grid.L, level.grid.L]);   // zones: sanitizeSetup snaps into one
     items.push(spec);
     const idx = items.length - 1;
     vars.push({ path: ['placed', idx, 'x'], min: a[0], max: a[2], v: (a[0] + a[2]) / 2 });

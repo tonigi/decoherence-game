@@ -8,10 +8,10 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 16 levels in 6 chapters: free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 18 levels in 6 chapters: free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-3), measurement (5-1, 5-2),
-  and polarization (6-1…6-3, spinor ψ).
-* `npm test`: 39 tests, all passing (~1 min). `npm run verify`: every level passes. The
+  and polarization (6-1…6-5, spinor ψ).
+* `npm test`: 45 tests, all passing (~1 min). `npm run verify`: every level passes. The
   reference solution reaches 2 stars, and naive play stays below 1 star (3-1 is
   exempt, see §5).
 * Pure ES modules with no build step and no dependencies. `npm start` serves the game
@@ -36,6 +36,8 @@ is open, and how to work on it without breaking anything.
 | 6-1 Three Polarizers | crossed polarizers; inserted ones let light through | 23 % | 0 % |
 | 6-2 Watched Pot | polarization Zeno: N polarizers in a rotator, equal spacing | 26 % | 1 % |
 | 6-3 Half-Wave | a retarder rotates losslessly; thickness sets the retardance | 53 % | 0 % |
+| 6-4 Stern–Gerlach | the magnet splits along its axis; align it, aim with the gradient | 27 % | 4 % |
+| 6-5 Bomb Tester | Kwiat's interaction-free test: one bomb station per rotator cycle | 15 % | 1 % |
 
 ## 2. Architecture (src/, ~2000 lines)
 
@@ -43,7 +45,7 @@ is open, and how to work on it without breaking anything.
 |---|---|
 | `fft.js` | radix-2 complex FFT. `pass()` is the transposed fast path used by the propagator; `forward`/`inverse` give the normal layout. |
 | `sim.js` | 2D TDSE solver, ħ = m = 1, Strang split-step (V/2 → T → V/2). Static V, gates (V and/or absorption W, ramped), tilt, boundary absorber W, element absorber Wel with exact `caught` bookkeeping, harmonic contours for display. Observables: `norm`, `mass`, `mass2`, `kMass` (k-space), `kDensity`, `stats` (Δx, Δkₓ, ⟨E⟩), `kLeak`. `step(n, others)` steps extra states in lock-step; `withState(st, fn)` runs any method on another state. Spinor mode (`spinor: true`) adds `re2/im2`; every per-state loop goes through `comps()`, `snapshot()`/`load()` copy states, and optics are a sparse per-cell 2×2 exponential (`spinExp`, exact for complex h) beside the scalar half-steps. `stokes()`, `polMass()` read the polarization. |
-| `optics.js` | polarization optics as spin Hamiltonian terms h₀ + h·σ (polarizer: absorbing or reflecting projector; rotator ω σ_y; retarder (δ/2) n(θ)·σ); `jones()` for launch polarizations. |
+| `optics.js` | polarization optics as spin Hamiltonian terms h₀ + h·σ (polarizer: absorbing or reflecting projector; rotator ω σ_y; retarder (δ/2) n(θ)·σ; Stern–Gerlach `zeeman` g·v·n(θ)·σ, where Session scales the mask by the transverse coordinate v); `bomb: true` routes an optic's absorption into `caught`; `jones()` for launch polarizations. |
 | `shapes.js` | rasterisation with tanh edges of fixed physical width `SOFTNESS = 0.45` at every N (this keeps the 64² ghost consistent with the 128² game). Rects take `angle`; also `disc`, `wall` with slits, `harmonic`. `rasterKMask` builds momentum-space masks on the fft-shifted grid (dk = 2π/L, the same for every N). |
 | `session.js` | DOM-free game core: one playthrough = (level, setup, seed, event log). Setup sanitising, items, detectors (Kraus `M_yes = √s·m`, `M_no = √(1 − s m²)`), the observation (Born sample in x or k space; P(hit) = P_T exactly), scoring (`scoreWith`), `replay`. |
 | `ledger.js` | skill score for runs with detector firings: replays the open-loop inputs, splits every branch at each firing, compresses beyond 16 branches to the leading eigenvectors of ρ (deterministic; the error is bounded by the reported `dropped`). Returns the branch states plus its 64² `Sim` for the Branches panel. |
@@ -121,6 +123,13 @@ references and calibrate stars.
   pumps energy and traps; an absorbing chopper is clean but gives only about 3 % vs 1.7 %),
   the "Energy filter" (barrier filtering does not change the absolute high-k
   probability), and box revivals (T_rev = 4L²/π is too long at useful sizes).
+* **Reflecting splitters inside a rotating medium form cavities.** A polarizing beam
+  splitter overlapping a rotator reflects V backwards, which keeps rotating and leaks
+  H forward between neighbouring splitters (6-5 prototype: 0.85 against the ideal
+  0.61). Keep reflecting optics outside rotators, as in a real apparatus, or use
+  absorbing / `bomb` optics. Likewise any polarizer *inside* a rotator watches the
+  rotation continuously and beats the discrete Zeno law; 6-5 uses placement zones to
+  keep its stations in the gaps.
 * **Performance.** CPU JS at 128² is about 1.4 ms/step. Ledger scoring of a 48-pulse
   Zeno run takes about 2.5 s (async, shows a "Scoring…" banner); the Jacobi
   eigen-solve on the 32×32 Gram embedding dominates.
@@ -142,16 +151,15 @@ references and calibrate stars.
 ## 7. Roadmap (in suggested order)
 
 1. **More spinor levels on the new optics.** The solver, ledger and UI are done
-   (chapter 6). Cheap next steps: (a) **Stern–Gerlach**: a Zeeman gradient is an optic
-   with a position-dependent h_z (add `optic.kind = "zeeman"` with a gradient, or
-   reuse the reflecting polarizer as a spin-selective barrier); (b) **the quantum
+   (chapter 6, including Stern–Gerlach and the bomb tester). Cheap next steps:
+   (a) **sequential Stern–Gerlach** (z, then x, then z again gives 50/50: measurement
+   disturbs), with a blocker on one exit of the first magnet; (b) **the quantum
    eraser**: orthogonal polarizers on two slits kill the fringes, a ±45° analyzer target
    restores them in the post-selected half. Erasure never raises P_T above the
    incoherent sum, so it needs the two-part objective (score fringes *and* a which-way
-   readout, or P_T − P_M) that weak detectors need too; (c) **bomb tester by
-   polarization** (Kwiat's version) avoids the Mach–Zehnder dark-port leak: the 6-2
-   corridor with a "bomb" (absorbing element) on the V path behind a polarizing
-   beam splitter; (d) gated optics (already supported) as real-time player tools, e.g.
+   readout, or P_T − P_M) that weak detectors need too; (c) a **two-world bomb tester**
+   (with and without the bomb, scored together) needs the same two-part objective;
+   6-5 shows the bomb-present world only; (d) gated optics (already supported) as real-time player tools, e.g.
    a polarizer you switch in at the right moment, or Zeno with a polarizer as the
    pulsed "detector".
 2. **Finer grid / WebGPU port.** The split-step maps directly onto compute shaders. 256²

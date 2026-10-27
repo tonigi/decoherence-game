@@ -140,7 +140,7 @@ export class Renderer {
     const ctx = this.ctx, S = this.scale;
     for (const o of session.optics) {
       const g = o.gate !== undefined ? session.gates[o.gate] : null, off = g && g.open;
-      const col = OPTIC_COLOURS[o.optic.kind];
+      const col = o.optic.bomb ? BOMB_COLOUR : OPTIC_COLOURS[o.optic.kind];
       this.shapePath(o.shape);
       ctx.fillStyle = off ? 'transparent' : col + '22'; ctx.fill();
       ctx.setLineDash(off ? [3, 5] : []); ctx.strokeStyle = col + (off ? '66' : 'cc'); ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
@@ -232,7 +232,8 @@ export class Renderer {
   }
 }
 
-const OPTIC_COLOURS = { polarizer: '#b9a7ff', rotator: '#ffb347', retarder: '#5fe0d0' };
+const OPTIC_COLOURS = { polarizer: '#b9a7ff', rotator: '#ffb347', retarder: '#5fe0d0', zeeman: '#ff7ad9' };
+const BOMB_COLOUR = '#ff5a5a';   // a polarization-selective bomb (what it absorbs is a boom)
 /** Where an optic's dial sits (world units): near the top of a rect, clear of the
  *  absorbing border; placed items one row lower, so they never hide a level element's dial. */
 export function dialPos(sh, placed = false) {
@@ -259,6 +260,10 @@ function opticDial(ctx, x, y, o, col) {
     if (o.kind === 'retarder') {                              // a second, parallel line: a plate
       const px = -s * 0.25, py = c * 0.25;
       ctx.beginPath(); ctx.moveTo(x - c * 0.7 + px, y - s * 0.7 + py); ctx.lineTo(x + c * 0.7 + px, y + s * 0.7 + py); ctx.stroke();
+    }
+    if (o.kind === 'zeeman') {                                // magnet: the axis goes up, the crossed axis down
+      ctx.beginPath(); ctx.moveTo(x - 4, y - R + 6); ctx.lineTo(x, y - R + 1); ctx.lineTo(x + 4, y - R + 6);
+      ctx.moveTo(x - 4, y + R - 6); ctx.lineTo(x, y + R - 1); ctx.lineTo(x + 4, y + R - 6); ctx.stroke();
     }
   }
   ctx.restore();

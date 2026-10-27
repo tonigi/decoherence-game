@@ -77,6 +77,29 @@
 > slider" optimum (capture grows with speed), so it was changed. A quantum-eraser
 > level was considered and deferred: erasure only removes the dark fringes and never
 > raises P_T above the incoherent sum, so it needs a two-part objective.
+>
+> **Eighth round.** Stern–Gerlach and Kwiat's bomb tester. A `zeeman` optic is
+> g·v·n(θ)·σ (v across the magnet): a 60° packet through an axis-0 magnet goes
+> 0.25 up / 0.75 down, through an aligned one 0.98 up (the rest is the upper beam's
+> tail), and the two beams carry the axis and the crossed polarization (±3°). **6-4**:
+> align the axis and aim with the gradient (interior optimum g ≈ 0.35–0.4; 27 %, axis
+> 45° gives 24 %, axis 0 gives 6.5 % with 20 % on the mine). The optimiser first beat
+> the reference (0.36) by moving the magnet off-axis vertically, a second hidden aiming
+> knob, so the magnet's height is now fixed. **6-5**: the first design (6-2's
+> continuous rotator with 45°-tilted reflecting splitters sending V up into a bomb)
+> beat the ideal Zeno law by far (0.85 vs 0.61 at N = 4; three bunched splitters beat
+> equal spacing). A momentum/polarization decomposition showed why: V reflected inside
+> the rotating medium keeps rotating, and between splitters it leaks H forward (a
+> cavity). Absorbing polarizers follow the ideal law in the same geometry. The level is
+> therefore Kwiat's real arrangement unrolled: four discrete 22.5° plates and stations
+> (PBS whose V port is the bomb, a `bomb` optic: what it absorbs is caught, exactly).
+> Per look the booms are sin² of the angle turned (0.146, 0.50 measured), one station
+> per gap gives 0.475 of the light (ideal cos⁸(π/8) = 0.531; the packet's 11 % speed
+> spread blurs each plate), doubling up 0.36. The optimiser then parked stations
+> *inside* plates (continuous Zeno during the rotation, 0.195 vs 0.152), so items got
+> **placement zones** (`area` as a list of rects) that keep the stations in the gaps;
+> with them the optimiser finds one per gap (0.160). `solve.js` needs `--net 0` here,
+> because booms count in P_M.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

@@ -1,0 +1,85 @@
+{
+ "id": "6-4",
+ "chapter": 6,
+ "title": "Stern–Gerlach",
+ "spinor": true,
+ "intro": "A Stern–Gerlach magnet has a field that grows across it, so it pushes the two polarizations along its axis in opposite directions: along the axis goes up, crossed goes down. It splits the beam, and the Born rule sets the split: cos² of the angle between the packet's polarization and the magnet's axis goes up. The packet here is polarized at 60° (the dial on the packet). Place the magnet, choose its axis to send everything up, and its field gradient to aim the upper beam at the target. The lower beam ends on a mine.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 12,
+ "launch": {
+  "x": 7,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 1.5,
+  "pol": 60
+ },
+ "inventory": {
+  "items": [
+   {
+    "id": "mag",
+    "kind": "zeeman",
+    "label": "Stern–Gerlach magnet",
+    "count": 1,
+    "w": 8,
+    "h": 14,
+    "pol": [
+     0,
+     -90,
+     90
+    ],
+    "gradient": [
+     0.15,
+     0.05,
+     0.8
+    ],
+    "x": 15,
+    "y": 20,
+    "area": [
+     13,
+     20,
+     18,
+     20
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 31,
+   "y": 12,
+   "r": 3
+  }
+ ],
+ "mines": [
+  {
+   "shape": "circle",
+   "x": 31,
+   "y": 28,
+   "r": 3
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "mag",
+     "x": 15,
+     "y": 20,
+     "pol": 60,
+     "gradient": 0.35
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.1,
+  0.2,
+  0.25
+ ],
+ "expectThreshold": 0.2
+}

@@ -16,7 +16,8 @@ export class Sim {
     this.spinor = !!spinor;
     this.re2 = spinor ? new Float64Array(n2) : null; this.im2 = spinor ? new Float64Array(n2) : null;
     this.spinH = null;                   // per-cell spin Hamiltonian h0 + h.sigma (complex), see addSpin
-    this.spinCells = null;               // sparse half-step propagator {idx, m}, built by _refresh
+    this.spinCells = null;               // sparse half-step propagator {idx, m, bomb}, built by _refresh
+    this.spinBomb = null;                // cells whose spin absorption counts as `caught` (polarization-selective bombs)
     this.Vstat = new Float64Array(n2);   // always-on potential
     this.Vdraw = new Float64Array(n2);   // statics + gates (no tilt), for display
     this.W = new Float64Array(n2);       // absorbing boundary (imaginary part)
@@ -110,7 +111,14 @@ export class Sim {
 
   /** Add chi(x) * (h0 + h.sigma) to the spin Hamiltonian. `term` = {h0, hx, hy, hz},
    *  each a complex number [re, im] (missing = 0); chi is a smooth [0,1] mask. */
-  addSpin(chi, term) {
+  /** With `bomb`, what this optic absorbs (e.g. only the V component) counts as
+   *  caught by an absorbing element, like a bomb, instead of as lost. */
+  addSpin(chi, term, { bomb = false } = {}) {
+    if (bomb) {
+      if (!this.spinBomb) this.spinBomb = new Uint8Array(this.N * this.N);
+      for (let i = 0; i < chi.length; i++) if (chi[i]) this.spinBomb[i] = 1;   // every cell it touches, so caught is exact
+      this.hasWel = true;
+    }
     const A = this._spinArrays(chi, term);
     if (!this.spinH) { this.spinH = A; } else A.forEach((a, c) => { const H = this.spinH[c]; for (let i = 0; i < a.length; i++) H[i] += a[i]; });
     this.dirty = true;
@@ -141,18 +149,24 @@ export class Sim {
       const M = spinExp(a, H[0][i], H[1][i], H[2][i], H[3][i], H[4][i], H[5][i], H[6][i], H[7][i]);
       m.set(M, 8 * n);
     });
-    this.spinCells = { idx: Int32Array.from(idx), m };
+    const bomb = this.spinBomb ? Uint8Array.from(idx, i => this.spinBomb[i]) : null;
+    this.spinCells = { idx: Int32Array.from(idx), m, bomb };
   }
 
+  /** Apply the spin half-step; returns the probability absorbed on bomb cells. */
   _spinStep(re, im, re2, im2) {
-    const { idx, m } = this.spinCells;
+    const { idx, m, bomb } = this.spinCells;
+    let caught = 0;
     for (let n = 0; n < idx.length; n++) {
       const i = idx[n], o = 8 * n, ar = re[i], ai = im[i], br = re2[i], bi = im2[i];
+      if (bomb && bomb[n]) caught += ar * ar + ai * ai + br * br + bi * bi;
       re[i] = m[o] * ar - m[o + 1] * ai + m[o + 2] * br - m[o + 3] * bi;
       im[i] = m[o] * ai + m[o + 1] * ar + m[o + 2] * bi + m[o + 3] * br;
       re2[i] = m[o + 4] * ar - m[o + 5] * ai + m[o + 6] * br - m[o + 7] * bi;
       im2[i] = m[o + 4] * ai + m[o + 5] * ar + m[o + 6] * bi + m[o + 7] * br;
+      if (bomb && bomb[n]) caught -= re[i] * re[i] + im[i] * im[i] + re2[i] * re2[i] + im2[i] * im2[i];
     }
+    return caught;
   }
 
   _refresh() {
@@ -207,7 +221,7 @@ export class Sim {
     let caught = 0;
     const half = () => {
       for (const [re, im] of C) { if (this.hasWel) caught += this._elLoss(re, im); this._mul(this.cH, this.sH, re, im); }
-      if (spin) this._spinStep(st.re, st.im, st.re2, st.im2);
+      if (spin) caught += this._spinStep(st.re, st.im, st.re2, st.im2);
     };
     half();
     for (const [re, im] of C) {

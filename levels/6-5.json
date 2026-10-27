@@ -1,0 +1,150 @@
+{
+ "id": "6-5",
+ "chapter": 6,
+ "title": "Bomb Tester",
+ "spinor": true,
+ "intro": "Kwiat's interaction-free bomb test, unrolled. Each amber plate turns the polarization by 22.5°, so after all four a horizontal photon would arrive vertical and miss the horizontal analyzer at the target. A bomb station is a polarizing beam splitter whose vertical port leads into the bomb: horizontal passes, vertical sets the bomb off. Each station sends the photon back to horizontal at the cost of sin² of the small angle turned since the last look. Stations fit in the gaps between plates, never inside one. Place them so the photon reaches the target having 'seen' the bomb without touching it: one look per cycle; a second look in the same gap sees nothing new.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 12,
+ "launch": {
+  "x": 6.5,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 1.8,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 10.8,
+   "y": 20,
+   "w": 1.6,
+   "h": 40,
+   "optic": {
+    "kind": "rotator",
+    "omega": 0.61359
+   }
+  },
+  {
+   "type": "rect",
+   "x": 16.4,
+   "y": 20,
+   "w": 1.6,
+   "h": 40,
+   "optic": {
+    "kind": "rotator",
+    "omega": 0.61359
+   }
+  },
+  {
+   "type": "rect",
+   "x": 22,
+   "y": 20,
+   "w": 1.6,
+   "h": 40,
+   "optic": {
+    "kind": "rotator",
+    "omega": 0.61359
+   }
+  },
+  {
+   "type": "rect",
+   "x": 27.6,
+   "y": 20,
+   "w": 1.6,
+   "h": 40,
+   "optic": {
+    "kind": "rotator",
+    "omega": 0.61359
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "st",
+    "kind": "polarizer",
+    "label": "Bomb station (PBS → bomb)",
+    "count": 4,
+    "w": 1,
+    "h": 40,
+    "pol": 0,
+    "bomb": true,
+    "x": 19.2,
+    "y": 20,
+    "area": [
+     [
+      7,
+      20,
+      9,
+      20
+     ],
+     [
+      12.6,
+      20,
+      14.6,
+      20
+     ],
+     [
+      18.2,
+      20,
+      20.2,
+      20
+     ],
+     [
+      23.8,
+      20,
+      25.8,
+      20
+     ],
+     [
+      29.4,
+      20,
+      30,
+      20
+     ]
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 32.5,
+   "y": 20,
+   "r": 3,
+   "pol": 0
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "st",
+     "x": 13.6,
+     "y": 20
+    },
+    {
+     "id": "st",
+     "x": 19.2,
+     "y": 20
+    },
+    {
+     "id": "st",
+     "x": 24.8,
+     "y": 20
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.05,
+  0.09,
+  0.14
+ ],
+ "expectThreshold": 0.12
+}
