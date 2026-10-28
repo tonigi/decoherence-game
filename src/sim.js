@@ -429,14 +429,12 @@ export class Sim {
   }
   /** |phi(k)|^2 fft-shifted into `out` (kx right, ky down), scaled to sum 1. */
   momentumDensity(out) {
-    const { N } = this, P = this._kPower(this._kbuf), dk = (2 * Math.PI) / this.L;
-    // for display: shifted by the gauge (to the nearest k cell) so it shows the kinetic
-    // momentum, which a force on a ring moves although the canonical k stays put
-    const sx = Math.round(this.gauge[0] / dk), sy = Math.round(this.gauge[1] / dk), wrap = (v) => ((v % N) + N) % N;
+    // on the canonical grid; the renderer shifts it by the gauge to show kinetic momentum
+    const { N } = this, P = this._kPower(this._kbuf);
     let tot = 0;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const p = P[j * N + i];
-      out[wrap(j + N / 2 + sy) * N + wrap(i + N / 2 + sx)] = p; tot += p;
+      out[((j + N / 2) % N) * N + ((i + N / 2) % N)] = p; tot += p;
     }
     for (let i = 0; i < out.length; i++) out[i] /= tot || 1;
   }

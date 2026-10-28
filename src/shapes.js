@@ -86,14 +86,17 @@ function rectP(r, x, y, s) {
 // Momentum-space masks live on the fft-shifted k grid of Sim.momentumDensity:
 // cell I has k = (I - N/2) * dk with dk = 2 pi / L, the same at every N.
 export const K_SOFTNESS = 0.08;
+// A shape's `edge` overrides the softness (a sharp edge resolves single k cells). Regions
+// are in kinetic momentum k + sim.gauge, which differs from the grid's canonical k on a
+// ring with a flux or a force (see Sim).
 export function rasterKMask(sim, shape) {
-  const { N } = sim, dk = (2 * Math.PI) / sim.L, s = K_SOFTNESS;
+  const { N } = sim, dk = (2 * Math.PI) / sim.L, s = shape.edge ?? K_SOFTNESS, g = sim.gauge || [0, 0];
   const m = new Float64Array(N * N);
   const circle = shape.shape === 'circle';
   for (let J = 0; J < N; J++) {
-    const ky = (J - N / 2) * dk;
+    const ky = (J - N / 2) * dk + g[1];
     for (let I = 0; I < N; I++) {
-      const kx = (I - N / 2) * dk;
+      const kx = (I - N / 2) * dk + g[0];
       m[J * N + I] = circle ? edge(shape.r - Math.hypot(kx - shape.x, ky - shape.y), s) : rectP(shape, kx, ky, s);
     }
   }

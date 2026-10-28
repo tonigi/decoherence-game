@@ -1,0 +1,78 @@
+{
+ "id": "9-5",
+ "chapter": 9,
+ "title": "Leak",
+ "experiment": "Interaction-free measurement in a Sagnac loop (Elitzur–Vaidman)",
+ "intro": "The loop mirror of 9-1 again, with no flux: the wall splits the packet, the halves lap the ring in opposite directions, and the ring sends nearly everything back onto the mine. This time the right-hand edge can be switched from a portal into a drain (key 1): whatever crosses it while it drains is lost. The two halves cross that edge at different times. Find out what a drain does to a mirror.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": {
+  "x": "periodic",
+  "y": "absorb"
+ },
+ "tmax": 22,
+ "minObserveTime": 22,
+ "launch": {
+  "x": 3,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 3
+ },
+ "elements": [
+  { "type": "rect", "x": 10, "y": 20, "w": 0.6, "h": 40, "V": 4.6 }
+ ],
+ "drains": [
+  { "side": "right", "key": 1, "label": "Drain (right edge)" }
+ ],
+ "targets": [
+  { "shape": "rect", "x": 18, "y": 20, "w": 10, "h": 20 }
+ ],
+ "mines": [
+  { "shape": "rect", "x": 3.5, "y": 20, "w": 7, "h": 20 },
+  { "shape": "rect", "x": 38.5, "y": 20, "w": 3, "h": 20 }
+ ],
+ "stars": [
+  0.1,
+  0.15,
+  0.19
+ ],
+ "expectThreshold": 0.15,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 80, "type": "gate", "i": 0 },
+   { "step": 180, "type": "gate", "i": 0 }
+  ],
+  "observeAt": 22
+ },
+ "naive": {
+  "setup": {},
+  "observeAt": 22
+ },
+ "goal": "Open the drain (key 1, then key 1 again to close it) while only one of the two halves crosses the right edge, so that some of the particle gets through the mirror to the green region. The world looks at t = 22.",
+ "physics": {
+  "point": "The ring is a mirror only because both halves come back and interfere. Drain one of them and the other arrives alone: half of it now passes the wall. A detector the particle was never caught by has changed where it goes.",
+  "eq": "P_T: ≈ (T − R)² → ≈ T·R",
+  "learn": {
+   "idea": [
+    "In 1993 Elitzur and Vaidman asked how to tell that a bomb is live, a bomb so sensitive that a single photon touching it sets it off. Their answer: put it in one arm of an interferometer whose dark port stays dark only while both arms are open. If the bomb is there, the photon sometimes comes out of the dark port, and then it cannot have gone through the bomb's arm. Kwiat and colleagues did it with photons in 1995 (6-5 is its polarization version).",
+    "A Sagnac loop is such an interferometer: its dark output is the way through. Here the drain plays the bomb. Switched on while one half crosses the right edge, it removes that half (lost, like a bomb going off). The other half then reaches the wall alone, with nothing to interfere with, and the wall splits it: half of it goes through, onto the target.",
+    "The runs that end on the target are runs in which the drain caught nothing, yet without the drain they would not happen. Drain both halves (leave it on) and everything is lost; drain neither and the mirror wins."
+   ],
+   "maths": [
+    "With wall transmission T and reflection R (T + R = 1, here T ≈ ½ at k = 2.5), the closed loop sends (T − R)² through and 4TR back. Remove one half and the other, of weight T (or R), is split again: T·R goes through, T² back, and half the probability is lost in the drain.",
+    "The packet hits the wall at about t = 2.8. The reflected half reaches the right edge (across the left-hand portal) at t ≈ 4–9, the transmitted half only at t ≈ 11–16, so the halves can be told apart in time. Measured at t = 22 (target / mine):",
+    { "eq": "no drain              7% / 47%\ndrain on t = 4 … 9   20% / 16%   (33% lost)\ndrain on t = 11 … 16  8% / 16%   (58% lost: it also clips the first half)\ndrain always on       0% /  1%   (99% lost)" },
+    "The ideal numbers would be 0% without the drain and 25% with it; the wall's speed-dependent transmission and the packets' spreading lose some contrast."
+   ],
+   "try": [
+    "Do nothing: the ring is a mirror, mostly onto the mine.",
+    "Leave the drain on: nearly everything is lost.",
+    "Switch the drain on at t ≈ 4 and off at t ≈ 9, after the first half has crossed and before the second arrives."
+   ]
+  }
+ }
+}

@@ -123,11 +123,6 @@ export class Session {
     const g = level.grid;
     this.periodic = boundaryOf(level);
     this.sim = new Sim(opts.N || g.N, g.L, DT, { spinor: !!level.spinor, periodic: this.periodic });
-    // along a periodic axis a force acts through the gauge (a flux growing in time, see
-    // Sim), so canonical and kinetic momentum differ there: no momentum measurement then
-    const forced = [level.field?.[0] || level.inventory?.tilt?.max, level.field?.[1] || level.inventory?.tilt?.max];
-    if (level.observe === 'momentum' && (level.launch.flux !== undefined || this.periodic.some((p, a) => p && forced[a])))
-      throw new Error(level.id + ': no momentum measurement with a flux or a force along a periodic axis');
     this.stepCount = 0;
     this.events = [];
     this.result = null;
@@ -163,6 +158,13 @@ export class Session {
         const i = sim.addGate(V, el.gate.open !== false, el.gate.ramp, W, el.type === 'harmonic', null, el.gate.pulse || 0);
         this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Gate', open: el.gate.open !== false, pulse: el.gate.pulse || 0 });
       } else if (V) sim.addStatic(V);
+    }
+    // `drains: [{side: 'left' | 'right' | 'top' | 'bottom', key, label, open}]` switch one
+    // edge between a portal (gate open, nothing there) and a drain (closed: an absorbing
+    // strip like the boundary's, whose swallowed probability counts as lost)
+    for (const d of level.drains || []) {
+      const W = drainStrip(sim, d.side), i = sim.addGate(null, d.open !== false, d.ramp ?? 2, W);
+      this.gates.push({ index: i, key: d.key, label: d.label || 'Drain ' + d.side, open: d.open !== false });
     }
     this.detectors = [];
     // A detector of strength s (0..1] is a weak measurement: Kraus operators
@@ -205,9 +207,10 @@ export class Session {
     this.mineMask = unionMask(sim, level.mines || [], raster);
 
     if (level.field) sim.setTilt(this.field[0], this.field[1]);
-    // `flux` (flux quanta) threads the ring of the periodic axis `fluxAxis` ('x' by default):
+    // `flux` (flux quanta) threads the ring of the periodic axis `fluxAxis` ('x' by default)
     // psi picks up e^{2 pi i flux} per lap (Aharonov-Bohm)
-    if (this.setup.launch.flux !== undefined) sim.setTwist(level.fluxAxis === 'y' ? 1 : 0, 2 * Math.PI * this.setup.launch.flux);
+    // ('xy': both axes, e.g. two particles on one ring, each threaded by the same flux)
+    if (this.setup.launch.flux !== undefined) for (const a of { x: [0], y: [1], xy: [0, 1] }[level.fluxAxis || 'x']) sim.setTwist(a, 2 * Math.PI * this.setup.launch.flux);
     const l = this.setup.launch, a = (l.angle * Math.PI) / 180;
     // with a flux, canonical and kinetic momentum differ by the gauge: launch the packet
     // with the kinetic momentum asked for, so the flux changes only the phase per lap
@@ -222,8 +225,18 @@ export class Session {
   get t() { return this.stepCount * DT; }
   get finished() { return !!this.result; }
   _mass(m) { return this.kSpace ? this.sim.kMass(m) : this.sim.mass(m); }
+  /** k-space regions are in kinetic momentum: rebuild them when the gauge has moved
+   *  (a flux set at launch, or a force along a periodic axis). */
+  _kRegions() {
+    const g = this.sim.gauge;
+    if (!this.kSpace || (this._kg && this._kg[0] === g[0] && this._kg[1] === g[1])) return;
+    this._kg = [g[0], g[1]];
+    this.targetMask = unionMask(this.sim, (this.level.targets || []).filter(t => t.pol === undefined), rasterKMask);
+    this.mineMask = unionMask(this.sim, this.level.mines || [], rasterKMask);
+  }
   pT() {
     if (this.stateMode) return this.sim.modeMass(this.stateMode);
+    this._kRegions();
     let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p; }
   /** Probability that cell idx, once found, counts as on target (analyzers pass |<pol|psi_idx>|^2 / |psi_idx|^2). */
   _targetAt(idx) {
@@ -232,7 +245,7 @@ export class Session {
     return t;
   }
   /** Mines include probability already swallowed by absorbing elements (bombs). */
-  pM() { return this._mass(this.mineMask) + this.sim.caught; }
+  pM() { this._kRegions(); return this._mass(this.mineMask) + this.sim.caught; }
   alive() { return this.sim.norm(); }
   /** Probability lost at the boundary absorber. */
   lost() { return Math.max(0, 1 - this.sim.norm() - this.sim.caught); }
@@ -319,7 +332,8 @@ export class Session {
         // momentum measurement: sample |phi(k)|^2 on the shifted k grid
         const dens = sim.kDensity(new Float64Array(sim.N * sim.N)), N = sim.N, dk = (2 * Math.PI) / sim.L;
         let idx = 0; for (let acc = 0; idx < dens.length - 1; idx++) { acc += dens[idx]; if (acc > u) break; }
-        sample = { kx: ((idx % N) - N / 2) * dk, ky: (Math.floor(idx / N) - N / 2) * dk, space: 'k' };
+        this._kRegions();
+        sample = { kx: ((idx % N) - N / 2) * dk + sim.gauge[0], ky: (Math.floor(idx / N) - N / 2) * dk + sim.gauge[1], space: 'k' };
         const v = this.rng(), m = this.mineMask[idx];
         outcome = v < m ? 'mine' : v < m + Math.min(this.targetMask[idx], 1 - m) ? 'hit' : 'miss';
       } else {
@@ -384,6 +398,20 @@ export function replay(level, solution, opts = {}) {
     s.apply(ev);
   }
   return s;
+}
+
+/** The absorbing strip of one edge. On a periodic axis the far side of the edge is the
+ *  other side of the box, so the profile is a smooth bump, 2 sin^2(pi d / A), that
+ *  vanishes at the seam too (a ramp ending at full strength there would reflect). */
+function drainStrip(sim, side) {
+  const { N, dx, L } = sim, A = sim.absorbWidth, W = new Float64Array(N * N);
+  if (!['left', 'right', 'top', 'bottom'].includes(side)) throw new Error('drain side must be left, right, top or bottom');
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = (i + 0.5) * dx, y = (j + 0.5) * dx;
+    const d = { left: x, right: L - x, top: y, bottom: L - y }[side];
+    W[j * N + i] = d < A ? 2 * Math.sin((Math.PI * d) / A) ** 2 : 0;
+  }
+  return W;
 }
 
 function unionMask(sim, shapes, raster = rasterMask) {

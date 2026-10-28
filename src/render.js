@@ -68,8 +68,14 @@ export class Renderer {
       d[k] = r * 255; d[k + 1] = g * 255; d[k + 2] = bl * 255; d[k + 3] = 255;
     }
     this.octx.putImageData(img, 0, 0);
-    this.ctx.imageSmoothingEnabled = true; this.ctx.imageSmoothingQuality = 'high';
-    if (view === 'momentum') { const c = this.kCrop(); this.ctx.drawImage(this.off, c.i0, c.i0, c.w, c.w, 0, 0, this.canvas.width, this.canvas.height); }
+    // on a ring momentum is discrete (k = 2 pi n / L): draw the k cells crisp, not smoothed
+    this.ctx.imageSmoothingEnabled = !(view === 'momentum' && sim.periodic?.some(Boolean)); this.ctx.imageSmoothingQuality = 'high';
+    if (view === 'momentum') {
+      // kinetic momentum k + gauge: the canonical grid drawn shifted by the gauge, to a fraction of a cell
+      const c = this.kCrop(), g = sim.gauge || [0, 0], f = this.canvas.width / c.w;
+      this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(this.off, 0, 0, N, N, (g[0] / c.dk - c.i0) * f, (g[1] / c.dk - c.i0) * f, N * f, N * f);
+    }
     else this.ctx.drawImage(this.off, 0, 0, this.canvas.width, this.canvas.height);
   }
 

@@ -1,0 +1,65 @@
+{
+ "id": "9-3",
+ "chapter": 9,
+ "title": "Half Steps",
+ "experiment": "Momentum quantisation on a ring threaded by flux (Byers–Yang)",
+ "intro": "A wave on a ring must fit round it, so only momenta k = 2πn/L exist: a comb with teeth 0.157 apart. This level measures momentum, and the target is a thin line exactly halfway between two teeth. No launch speed can put the particle there: the comb has no tooth on it. A magnetic flux through the ring shifts the whole comb.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": {
+  "x": "periodic",
+  "y": "absorb"
+ },
+ "tmax": 4,
+ "observe": "momentum",
+ "kView": 2,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": [1.3, 0.8, 2.2],
+  "angle": 0,
+  "sigma": 5,
+  "flux": [0, 0, 1]
+ },
+ "targets": [
+  { "shape": "rect", "x": 1.4923, "y": 0, "w": 0.06, "h": 6, "edge": 0.005 }
+ ],
+ "stars": [
+  0.3,
+  0.45,
+  0.55
+ ],
+ "expectThreshold": 0.45,
+ "reference": {
+  "setup": { "launch": { "k": 1.4923, "flux": 0.5 } },
+  "observeAt": 0.1
+ },
+ "naive": {
+  "setup": { "launch": { "k": 1.4923 } }
+ },
+ "goal": "Measure the particle's momentum on the thin green line (k = 1.49). Choose the launch speed and the flux Φ through the ring. The momentum view shows the comb of allowed momenta.",
+ "physics": {
+  "point": "On a ring the allowed momenta are k = (2πn + θ)/L, where θ = 2πΦ/Φ₀ is the phase a flux Φ adds per lap. Half a flux quantum moves the comb by half a tooth.",
+  "eq": "k = (2πn + 2πΦ/Φ₀) / L",
+  "learn": {
+   "idea": [
+    "A particle on a ring has to come back to itself after one lap, so its wave fits a whole number of wavelengths round the ring: the momentum is quantised, k = 2πn/L. In this 40-unit world that is a comb with teeth 0.157 apart. The momentum view shows it: a packet on the ring is a set of discrete spikes, not a smooth blob.",
+    "A flux through the hole of the ring, which the particle never touches, adds a phase 2πΦ/Φ₀ to every lap (the Aharonov–Bohm phase of 9-1). Now the wave must come back to itself times that phase, and every allowed momentum moves by the same amount. Byers and Yang (1961) showed that this makes every property of a ring periodic in the flux with period Φ₀ = h/e; in small metal rings it drives persistent currents that never decay.",
+    "Here the target sits exactly halfway between two teeth. With no flux no speed reaches it; with half a flux quantum one tooth lands on it, whatever the speed, as long as the packet's spread covers it."
+   ],
+   "maths": [
+    "ψ(x + L) = e^{iθ}ψ(x) with θ = 2πΦ/Φ₀ allows e^{ikx} only for kL = 2πn + θ. The target is the line k = 9.5 · 2π/40 ≈ 1.492, of half-width 0.03 (a fifth of the tooth spacing), with sharp edges.",
+    "A packet of width σ = 5 has a momentum spread 1/(2σ) = 0.1, so the tooth nearest its centre carries about 0.157/(√(2π)·0.1) ≈ 62% of the probability. Measured, with the launch speed on the target:",
+    { "eq": "Φ/Φ₀    0    0.25   0.3   0.375   0.5   0.75\nP_T     0%    1%    21%    60%    62%    1%" },
+    "The response repeats every flux quantum."
+   ],
+   "try": [
+    "Flux 0: slide the launch speed through 1.49 and watch the spikes jump over the green line; P_T stays at 0.",
+    "Set the speed to 1.49 and raise the flux: the whole comb slides right, and at Φ = Φ₀/2 a spike sits on the line.",
+    "Flux 1: the comb is back where it started."
+   ]
+  }
+ }
+}

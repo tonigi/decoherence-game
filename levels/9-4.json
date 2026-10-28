@@ -1,0 +1,64 @@
+{
+ "id": "9-4",
+ "chapter": 9,
+ "title": "Pairs",
+ "experiment": "The pair flux quantum h/2e (Deaver–Fairbank, Doll–Näbauer, 1961)",
+ "intro": "Two particles on the same ring. As in 8-1 the square is the pair: across is particle 1, down is particle 2, and with portals on all four sides the plane is a torus. The flux threads the ring, so it acts on both. The target is a thin line in their total momentum, K = k₁ + k₂, halfway between allowed values. In 9-3 half a flux quantum did it for one particle. Find the flux that does it for two.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": "periodic",
+ "particles": "distinguishable",
+ "fluxAxis": "xy",
+ "tmax": 4,
+ "observe": "momentum",
+ "kView": 2,
+ "launch": {
+  "x": 13,
+  "y": 27,
+  "k": [1.3, 0.8, 2.2],
+  "angle": 0,
+  "sigma": 5,
+  "flux": [0, 0, 1]
+ },
+ "targets": [
+  { "shape": "rect", "x": 0.74613, "y": 0.74613, "w": 0.04243, "h": 8, "angle": 45, "edge": 0.005 }
+ ],
+ "stars": [
+  0.2,
+  0.3,
+  0.38
+ ],
+ "expectThreshold": 0.3,
+ "reference": {
+  "setup": { "launch": { "k": 1.4923, "flux": 0.25 } },
+  "observeAt": 0.1
+ },
+ "naive": {
+  "setup": { "launch": { "k": 1.4923, "flux": 0.5 } }
+ },
+ "goal": "Measure the pair's total momentum k₁ + k₂ on the thin green line (1.49). Particle 1 is launched with the speed you choose, particle 2 at rest; choose the flux Φ through the ring.",
+ "physics": {
+  "point": "Each particle's momenta move by Φ/Φ₀ of a tooth, so their sum moves twice as fast: for the pair a quarter flux quantum is half a tooth, and the pair's spectrum repeats every half flux quantum, h/2e.",
+  "eq": "K = k₁ + k₂ = (2πm + 2·2πΦ/Φ₀) / L",
+  "learn": {
+   "idea": [
+    "In 1961 Deaver and Fairbank, and independently Doll and Näbauer, measured the flux trapped in tiny superconducting cylinders. It came in steps of h/2e, half the flux quantum h/e that a single electron would need. The charge carriers in a superconductor are pairs of electrons, Cooper pairs, and a pair feels the Aharonov–Bohm phase twice.",
+    "This level shows the bookkeeping behind it, without the superconductor. One particle on a ring has momenta k = (2πn + θ)/L (9-3). Two particles each pick up the phase θ per lap, so their total momentum K = (2π(n₁ + n₂) + 2θ)/L: the comb of totals has the same spacing but moves twice as fast with the flux.",
+    "So the flux that put one particle on the line in 9-3, half a quantum, moves the pair's comb by a whole tooth: nothing changes. A quarter quantum does it."
+   ],
+   "maths": [
+    "With θ = 2πΦ/Φ₀ on both axes of the torus, the allowed (k₁, k₂) are a square grid shifted by (θ/L, θ/L). The totals K = k₁ + k₂ lie on lines of slope −1 in the momentum view, spaced 2π/L ≈ 0.157 in K and shifted by 2θ/L.",
+    "The target is the strip K = 9.5 · 2π/40 ≈ 1.492 of half-width 0.03 (drawn as a thin diagonal line). Particle 1 at speed 1.49 and particle 2 at rest, each with a momentum spread 0.1, give a spread in K of 0.14, so one line of totals carries about 41% of the probability:",
+    { "eq": "Φ/Φ₀    0    0.125   0.2   0.25   0.3   0.375   0.5\nP_T     0%     3%     41%   42%    41%     3%     0%" },
+    "The particles here do not interact, so this is only kinematics. In a superconductor the pairs are bound, and then the ring's whole spectrum, not only the total momentum, repeats every h/2e."
+   ],
+   "try": [
+    "Flux 0.5, the answer to 9-3: P_T is 0. The pair's comb has moved by exactly one tooth.",
+    "Flux 0.25: one line of totals sits on the target.",
+    "Switch to the momentum view during setup and change the flux: the grid of (k₁, k₂) slides along the diagonal."
+   ]
+  }
+ }
+}

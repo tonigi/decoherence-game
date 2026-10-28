@@ -135,7 +135,6 @@ test('periodic axes: kicks come in whole quanta 2 pi / L, lattices fit the box',
   s.kick(1, 0);
   const q = (2 * Math.PI) / 40;
   near(s.events[0].dk[0], 6 * q, 1e-12, 'dk = 1 rounds to 6 quanta');
-  assert.throws(() => new Session({ ...lv, observe: 'momentum', field: [0.1, 0] }, defaultSetup(lv), { N: 64 }), /momentum/);
   // every level with a periodic axis: full-length lattices along it must fit a whole number of periods
   const index = JSON.parse(fs.readFileSync(new URL('../levels/index.json', import.meta.url), 'utf8'));
   for (const id of index.levels) {
@@ -184,4 +183,29 @@ test('Bloch oscillations on a ring: holding the push brings the atom back, a qua
   };
   near(run(Infinity), 10, 1.5, 'after one Bloch period T_B = 31.4 the atom is home');
   assert.ok(Math.abs(run(157) - 10) > 8, 'released at T_B/4 it has glided away');
+});
+
+test('flux shifts the comb of allowed momenta: one particle needs half a flux quantum, a pair a quarter', () => {
+  const at = (id, flux) => { const lv = load(id), st = defaultSetup(lv); st.launch.k = 1.4923; st.launch.flux = flux; return new Session(lv, st, { N: 64 }); };
+  assert.ok(at('9-3', 0).pT() < 0.01, 'no tooth halfway between the allowed momenta');
+  assert.ok(at('9-3', 0.5).pT() > 0.55, 'half a flux quantum moves a tooth onto it');
+  assert.ok(at('9-4', 0.5).pT() < 0.01, 'the pair: half a quantum moves the total by a whole tooth');
+  assert.ok(at('9-4', 0.25).pT() > 0.35, 'the pair: a quarter quantum is half a tooth');
+  // the Born sample is a kinetic momentum: on the shifted comb, k = (2 pi n + theta) / L
+  const s = at('9-3', 0.5); s.step(2); s.rng = mulberry32(7); const r = s.observe();
+  const n = (r.sample.kx * 40) / (2 * Math.PI) - 0.5;
+  near(n, Math.round(n), 1e-9, 'sampled kx on the half-shifted comb');
+});
+
+test('drains: a switched edge absorbs only while closed, and what it swallows is lost', () => {
+  const lv = load('9-5'), run = (on, off) => {
+    const s = new Session(lv, defaultSetup(lv), { N: 64 });
+    for (let i = 0; i < 440; i++) { if (i === on || i === off) s.toggleGate(0); s.step(1); }
+    return s;
+  };
+  const none = run(-1, -1), one = run(80, 180), all = run(0, -1);
+  near(none.lost(), 0, 0.01, 'an open portal loses nothing');
+  assert.ok(all.lost() > 0.9, 'a drain left on swallows nearly everything');
+  near(one.alive() + one.lost() + one.sim.caught, 1, 1e-9, 'bookkeeping');
+  assert.ok(one.pT() > 2 * none.pT(), `draining one half lights the dark way: ${one.pT()} vs ${none.pT()}`);
 });
