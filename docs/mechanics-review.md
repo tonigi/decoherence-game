@@ -121,6 +121,17 @@
 > torus, 77 % vs 0 %), **9-7 Chopper** (post-selected velocity selection, 52 % vs 19 %),
 > **9-8 Bound Pair** (window at Φ₀/8, 85 % vs 16 %), **9-9 Pauli Ring** (parity effect,
 > 100 % vs 0 %). Details and the parked attempts are in `HANDOFF.md` §2.1, §5 and §8.
+>
+> **Eleventh round.** **6-7 Ask Again**, the sequential Stern–Gerlach experiment (HANDOFF
+> §7.1a): an H beam, a fixed 0° magnet whose V port is the target, and one player magnet
+> in between (30 % vs 0 %). P_T follows sin²2α exactly (29.5 / 22 / 7.4 / 0 % at
+> 45 / 30 / 15 / 0°), and the gradient has an interior optimum: the V share matches
+> ½(1 − e^(−2Δk²σ²)) to within 1 % (4.6 / 15 / 38 / 48 % at g = 0.05 / 0.1 / 0.2 / 0.3), so
+> an unresolved split is no measurement. The fixed magnet out-pushes the player's (0.8
+> against a cap of 0.5), which kills steering a 90° H beam onto the target (≤ 1 %); the
+> first layout, with equal magnets, let that exploit score 26 %. Magnet gradients stay
+> moderate because the entrance and exit edges kick the beam along its motion (§5 of
+> HANDOFF). `solve.js` needs `--net 0` here (the H beam always lands on the mine).
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

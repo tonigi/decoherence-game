@@ -8,9 +8,9 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 36 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 37 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-4), measurement (5-1, 5-2),
-  polarization (6-1…6-6, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
+  polarization (6-1…6-7, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
   rings and flux (9-1…9-9, periodic boundaries).
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
@@ -43,6 +43,7 @@ is open, and how to work on it without breaking anything.
 | 6-4 Stern–Gerlach | the magnet splits along its axis; align it, aim with the gradient | 27 % | 4 % |
 | 6-5 Bomb Tester | Kwiat's interaction-free test: one bomb station per rotator cycle | 15 % | 1 % |
 | 6-6 Humpty Dumpty | full-loop Stern–Gerlach: gradient pulses +τ, −2τ, +τ restore the spin | 55 % | 0 % |
+| 6-7 Ask Again | sequential Stern–Gerlach: a 45° magnet between two 0° ones restores 50/50, if its gradient separates the beams | 30 % | 0 % |
 | 7-1 Light Grating | Kapitza–Dirac: a flash fills the orders with J_n(Vτ/2)² | 65 % | 1 % |
 | 7-2 Self-Image | Talbot effect: fire a phase-grating flash half a Talbot time early | 42 % | 21 % |
 | 7-3 Bragg Mirror | weak ridges reflect where k_in = π/a, above the ridge height | 59 % | 3 % |
@@ -242,9 +243,8 @@ references and calibrate stars.
 ## 7. Roadmap (in suggested order)
 
 1. **More spinor levels on the new optics.** The solver, ledger and UI are done
-   (chapter 6, including Stern–Gerlach and the bomb tester). Cheap next steps:
-   (a) **sequential Stern–Gerlach** (z, then x, then z again gives 50/50: measurement
-   disturbs), with a blocker on one exit of the first magnet; (b) **the quantum
+   (chapter 6, including Stern–Gerlach, sequential Stern–Gerlach (6-7, done) and the
+   bomb tester). Cheap next steps: (b) **the quantum
    eraser**: orthogonal polarizers on two slits kill the fringes, a ±45° analyzer target
    restores them in the post-selected half. Erasure never raises P_T above the
    incoherent sum, so it needs the two-part objective (score fringes *and* a which-way
@@ -270,7 +270,6 @@ Each still has to pass the §4 contract (interior optimum, ≥ 2× over naive pl
 
 | Idea | Lesson | Engine | Notes |
 |---|---|---|---|
-| Sequential Stern–Gerlach | z, x, z gives 50/50: measurement disturbs | none (zeeman + absorbing blocker) | §7.1a |
 | Quantum eraser (5-6) | orthogonal polarizers on two slits kill fringes; a ±45° analyzer restores them post-selected | two-part objective | §7.1b; erasure never beats the incoherent sum |
 | Two-world bomb tester | with and without the bomb, scored together | two-part objective | §7.1c |
 | Fringe dial (5-5) | weak which-way detector: V² + D² ≤ 1 | two-part objective | weak detectors already exist |

@@ -1,0 +1,128 @@
+{
+ "id": "6-7",
+ "chapter": 6,
+ "title": "Ask Again",
+ "experiment": "Sequential Stern–Gerlach experiment",
+ "spinor": true,
+ "intro": "Every atom here has just come out of the upper port of a magnet set to 0°, so each is polarized along 0° (H). A second magnet at 0°, fixed on the right, asks the same question again: H goes up onto the mine, and only crossed atoms (V) would go down to the target. Asked twice, the answer never changes, so nothing arrives. You have one more magnet to place in between. Choose its axis (the dial) and its field gradient (the g handle).",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 8,
+ "minObserveTime": 8,
+ "launch": {
+  "x": 7,
+  "y": 20,
+  "k": 2.8,
+  "angle": 0,
+  "sigma": 2,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 19,
+   "y": 20,
+   "w": 6,
+   "h": 26,
+   "optic": { "kind": "zeeman", "angle": 0, "gradient": 0.8 }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "mag",
+    "kind": "zeeman",
+    "label": "Stern–Gerlach magnet",
+    "count": 1,
+    "w": 6,
+    "h": 12,
+    "pol": [
+     0,
+     -90,
+     90
+    ],
+    "gradient": [
+     0.1,
+     0.02,
+     0.5
+    ],
+    "x": 12,
+    "y": 20,
+    "area": [
+     11,
+     20,
+     13,
+     20
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 28,
+   "y": 28,
+   "w": 12,
+   "h": 12
+  }
+ ],
+ "mines": [
+  {
+   "shape": "rect",
+   "x": 28,
+   "y": 12,
+   "w": 12,
+   "h": 12
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "mag",
+     "x": 12,
+     "y": 20,
+     "pol": 45,
+     "gradient": 0.3
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.1,
+  0.2,
+  0.27
+ ],
+ "expectThreshold": 0.2,
+ "goal": "Place the magnet between the launch and the fixed 0° magnet, and set its axis and gradient so that as many atoms as possible come out of the last magnet's lower port and reach the target at t = 8.",
+ "physics": {
+  "point": "Measuring along 45° erases the answer along 0°: after it, asking 0° again gives 50/50. But only a real measurement does this. The gradient has to pull the two beams fully apart, or the spin is left as it was.",
+  "eq": "P(V) = ½ sin²2α · (1 − e^(−2Δk²σ²))",
+  "learn": {
+   "idea": [
+    "Stern and Gerlach's magnet sorts atoms by spin. Send the upper beam of a z magnet into a second z magnet and all of it goes up again: the answer is repeatable. Put an x magnet in between, keep one of its beams, and the last z magnet splits it 50/50 again. The x measurement has wiped out the z answer. In a game of polarization angles, z and x are 0° and 45°.",
+    "Here the atoms arrive along 0°, and only crossed atoms (90°) can reach the target, so with no magnet in between, or with yours at 0° or 90°, nothing arrives. Your magnet at an axis α splits the beam along α. Each of its two beams is then half along 0° and half crossed when α = 45°: the last magnet sends half of each down.",
+    "You do not even need to block one of your beams. Each beam on its own is a fresh 45° spin, so the last magnet splits each of them evenly.",
+    "The gradient matters as much as the axis. A weak gradient barely moves the two halves apart. They still overlap, still add up to the original 0° spin, and the last magnet sees an H atom again. A measurement only happens when the beams no longer overlap, so that their position carries the answer. Push too hard, though, and the beams overshoot the target."
+   ],
+   "maths": [
+    "Your magnet at axis α splits |H⟩ = cos α |α⟩ − sin α |α⊥⟩ into two beams with momenta ±Δk. The last magnet sends crossed atoms down with probability",
+    { "eq": "P(V) = ½ sin²2α · (1 − Re⟨φ₊|φ₋⟩)" },
+    "where φ₊ and φ₋ are the motional states of your two beams. Overlapping beams (⟨φ₊|φ₋⟩ = 1) give P(V) = 0: the halves recombine into the original spin. Separated beams give ½ sin²2α, and ½ at α = 45°.",
+    "For Gaussian packets of width σ = 2 kicked apart by ±Δk, with Δk = g · w / v = g × 6 / 2.8,",
+    { "eq": "⟨φ₊|φ₋⟩ = exp(−2Δk²σ²)" },
+    "Measured share of V atoms after the last magnet, at α = 45°, compared with this formula:",
+    { "eq": "g = 0.05:  4.6%   (formula 4.4%)\ng = 0.1:  15%    (15%)\ng = 0.2:  38%    (39%)\ng = 0.3:  48%    (48%)\ng = 0.5:  50%    (50%)" },
+    "P<sub>T</sub> at t = 8 follows sin²2α exactly: 29.5% at 45°, 22% at 30° and 60°, 7.4% at 15° and 75°, 0 at 0° and 90°. Over the gradient it peaks at about 0.3 (25% at 0.2, 17% at 0.5, where the lower beam passes under the target).",
+    "The last magnet pushes harder than yours (0.8 against at most 0.5), so you cannot simply steer an H beam onto the target: it always ends up above the centre line."
+   ],
+   "try": [
+    "Place the magnet at 0°: nothing reaches the target. Turn it to 90°: still nothing. Asking along 0° or 90° asks the same question as before.",
+    "Set it to 45° with the gradient at 0.05: about 3%. The beams have not separated, so the spin has not been measured and stays H.",
+    "45° at gradient 0.3: about 29%. Watch the polarization view: two diagonal beams leave your magnet, and each splits again at the last one."
+   ]
+  }
+ }
+}
