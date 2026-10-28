@@ -19,6 +19,17 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 
 `.github/workflows/pages.yml` runs the tests and `verify`, then publishes the static files to GitHub Pages on every push to `main` (or by hand from the Actions tab). One-time setup: repository Settings → Pages → Source: **GitHub Actions**.
 
+### Versioning
+
+Releases follow SemVer, with `package.json` as the source of truth. While the game is pre-1.0: bump **minor** for new levels or mechanics (or a saved-progress format change) and **patch** for fixes and balance tweaks; `1.0.0` marks a stable level set and save format.
+
+```bash
+npm version minor   # or patch / major: edits package.json, commits, tags vX.Y.Z
+git push --follow-tags
+```
+
+The Pages workflow stamps the deployed site with `version.json` (`git describe --tags`, so `v0.1.0` on a tag and `v0.1.0-12-g727fe61` after it).
+
 ## Controls
 
 | | |
