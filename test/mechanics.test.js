@@ -114,3 +114,35 @@ test('Hong-Ou-Mandel: at a 50/50 wall bosons leave together, distinguishable par
   assert.ok(b > 0.85, 'bosons bunch ' + b);
   near(d, 0.5, 0.05, 'distinguishable: T^2 + R^2 at T = 1/2');
 });
+
+test('periodic boundaries: what leaves one side comes back on the other', () => {
+  const lv = { id: 't', grid: { N: 64, L: 40 }, tmax: 30, boundary: { x: 'periodic', y: 'absorb' }, launch: { x: 30, y: 20, k: 2, angle: 0, sigma: 2 }, targets: [{ shape: 'circle', x: 10, y: 20, r: 3 }] };
+  const s = new Session(lv, defaultSetup(lv), { N: 64 });
+  s.step(200); // 10 time units at speed 2: 20 units, through the right edge to x = 10
+  near(s.alive(), 1, 1e-5, 'nothing absorbed along the periodic axis (only the far tail in y)');
+  assert.ok(s.pT() > 0.3, 'the packet wrapped round onto the target ' + s.pT());
+  // absorbing along y still absorbs
+  const lvUp = { ...lv, launch: { ...lv.launch, angle: 90 } }, up = new Session(lvUp, defaultSetup(lvUp), { N: 64 });
+  up.step(400); assert.ok(up.alive() < 0.05, 'absorbed at the y edge');
+  // the default stays absorbing on both axes
+  const ab = new Session({ ...lv, boundary: undefined }, defaultSetup(lv), { N: 64 });
+  ab.step(400); assert.ok(ab.alive() < 0.05, 'absorbed at the x edge by default');
+});
+
+test('periodic axes: kicks come in whole quanta 2 pi / L, forces are refused, lattices fit the box', () => {
+  const lv = { id: 't', grid: { N: 64, L: 40 }, tmax: 10, boundary: 'periodic', launch: { x: 20, y: 20, k: 0, angle: 0, sigma: 2 }, inventory: { kick: { charges: 1, dk: 1 } }, targets: [{ shape: 'circle', x: 10, y: 20, r: 3 }] };
+  const s = new Session(lv, defaultSetup(lv), { N: 64 });
+  s.kick(1, 0);
+  const q = (2 * Math.PI) / 40;
+  near(s.events[0].dk[0], 6 * q, 1e-12, 'dk = 1 rounds to 6 quanta');
+  assert.throws(() => new Session({ ...lv, field: [0.1, 0] }, defaultSetup(lv), { N: 64 }), /periodic/);
+  // every level with a periodic axis: full-length lattices along it must fit a whole number of periods
+  const index = JSON.parse(fs.readFileSync(new URL('../levels/index.json', import.meta.url), 'utf8'));
+  for (const id of index.levels) {
+    const l = load(id); if (!l.boundary) continue;
+    const per = new Session(l, defaultSetup(l), { N: 64 }).periodic;
+    for (const el of l.elements || []) if (el.type === 'lattice' && el.w === undefined && per[(el.angle || 0) % 180 ? 1 : 0]) {
+      const n = l.grid.L / el.period; near(n, Math.round(n), 1e-9, id + ' lattice periods around the box');
+    }
+  }
+});

@@ -8,6 +8,10 @@
   "N": 128,
   "L": 40
  },
+ "boundary": {
+  "x": "periodic",
+  "y": "absorb"
+ },
  "tmax": 9,
  "minObserveTime": 9,
  "launch": {
@@ -34,23 +38,113 @@
   }
  ],
  "targets": [
-  { "shape": "rect", "x": 6, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 10, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 14, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 18, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 22, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 26, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 30, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 34, "y": 20, "w": 0.8, "h": 24 }
+  {
+   "shape": "rect",
+   "x": 6,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 10,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 14,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 18,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 22,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 26,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 30,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 34,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  }
  ],
  "mines": [
-  { "shape": "rect", "x": 8, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 12, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 16, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 20, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 24, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 28, "y": 20, "w": 0.8, "h": 24 },
-  { "shape": "rect", "x": 32, "y": 20, "w": 0.8, "h": 24 }
+  {
+   "shape": "rect",
+   "x": 8,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 12,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 16,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 24,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 28,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  },
+  {
+   "shape": "rect",
+   "x": 32,
+   "y": 20,
+   "w": 0.8,
+   "h": 24
+  }
  ],
  "stars": [
   0.26,
@@ -61,7 +155,11 @@
  "reference": {
   "setup": {},
   "events": [
-   { "step": 114, "type": "gate", "i": 0 }
+   {
+    "step": 114,
+    "type": "gate",
+    "i": 0
+   }
   ],
   "observeAt": 9
  },
@@ -81,9 +179,11 @@
    ],
    "maths": [
     "ψ(x, t) = Σₙ cₙ e^{inqx} e^{−in²q²t/2}. At t = 2π·2/q² = d²/π every phase n²·2π is 1, so ψ is restored; at t = d²/(2π) the phase is (−1)ⁿ, which is a translation by d/2.",
-    "Here d = 4: T ≈ 5.09. The flash (V = 10 for 0.3 time units) focuses the cloud under its potential minima about 1 time unit after it, and on the half-shifted lines (the targets) about half a Talbot time later, 3.0–4.0 after the flash. A strong grating focuses sooner than the quarter-Talbot time T/4 ≈ 1.3 of a weak one, but the half-period shift between the two foci is always T/2.",
-    "Without a flash the cloud covers the targets and the mines equally: P_T ≈ P_M ≈ 20%. The best timing gives P_T ≈ 42% and P_M ≈ 7%:",
-    { "eq": "flash at t   4.5   5.0   5.5   5.7   6.0   6.5   7.0   7.8\nP_T(9)       37%   34%   41%   42%   37%   15%    9%    7%\nP_M(9)        8%    5%    7%    7%   10%   29%   43%   40%" }
+    "The box is periodic across the grating (the left and right edges are portals), so the grating has no ends: it is the infinite grating of the textbook. Here d = 4: T ≈ 5.09. The flash (V = 10 for 0.3 time units) focuses the cloud under its potential minima about 1 time unit after it, and on the half-shifted lines (the targets) about half a Talbot time later, 3.0–4.0 after the flash. A strong grating focuses sooner than the quarter-Talbot time T/4 ≈ 1.3 of a weak one, but the half-period shift between the two foci is always T/2.",
+    "Without a flash the cloud covers the targets and the mines equally: P_T ≈ P_M ≈ 20%. The best timing gives P_T ≈ 43% and P_M ≈ 7%:",
+    {
+     "eq": "flash at t   4.5   5.0   5.5   5.7   6.0   6.5   7.0   7.8\nP_T(9)       38%   34%   42%   43%   37%   15%   10%    7%\nP_M(9)        8%    6%    7%    7%   10%   30%   44%   40%"
+    }
    ],
    "try": [
     "Flash at the very start and watch the stripes come and go: dark-line stripes, then target stripes, then a smooth cloud at t ≈ 5.1, then the same again.",

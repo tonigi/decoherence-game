@@ -156,21 +156,33 @@ export class Renderer {
   }
 
   /** The complex absorbing potential along the edges: a hatched frame, so the "lost"
-   *  probability has a visible place to go. */
+   *  probability has a visible place to go. Periodic edges (portals) are drawn as
+   *  bright dashed lines instead: what leaves there comes back on the other side. */
   drawAbsorber() {
-    const ctx = this.ctx, W = this.canvas.width, A = (this.sim.absorbWidth || 0) * this.scale;
-    if (!A) return;
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0, 0, W, W); ctx.rect(A, A, W - 2 * A, W - 2 * A); ctx.clip('evenodd');
-    ctx.fillStyle = 'rgba(7,9,15,0.35)'; ctx.fillRect(0, 0, W, W);
-    ctx.strokeStyle = 'rgba(140,150,190,0.13)'; ctx.lineWidth = 1;
-    for (let x = -W; x < W; x += 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + W, W); ctx.stroke(); }
-    ctx.restore();
-    ctx.save();
-    ctx.strokeStyle = 'rgba(140,150,190,0.28)'; ctx.setLineDash([3, 4]); ctx.strokeRect(A, A, W - 2 * A, W - 2 * A);
-    ctx.fillStyle = 'rgba(140,150,190,0.6)'; ctx.font = '11px "JetBrains Mono", ui-monospace, monospace';
-    ctx.fillText('absorbing edge', A + 4, W - A + 14);
-    ctx.restore();
+    const ctx = this.ctx, W = this.canvas.width, S = this.scale, sim = this.sim;
+    const Ax = (sim.absorbX ?? sim.absorbWidth ?? 0) * S, Ay = (sim.absorbY ?? sim.absorbWidth ?? 0) * S;
+    const mono = '11px "JetBrains Mono", ui-monospace, monospace';
+    if (Ax || Ay) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, W); ctx.rect(Ax, Ay, W - 2 * Ax, W - 2 * Ay); ctx.clip('evenodd');
+      ctx.fillStyle = 'rgba(7,9,15,0.35)'; ctx.fillRect(0, 0, W, W);
+      ctx.strokeStyle = 'rgba(140,150,190,0.13)'; ctx.lineWidth = 1;
+      for (let x = -W; x < W; x += 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + W, W); ctx.stroke(); }
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(140,150,190,0.28)'; ctx.setLineDash([3, 4]); ctx.strokeRect(Ax, Ay, W - 2 * Ax, W - 2 * Ay);
+      ctx.fillStyle = 'rgba(140,150,190,0.6)'; ctx.font = mono;
+      ctx.fillText('absorbing edge', Ax + 4, Ay ? W - Ay + 14 : W - 8);
+      ctx.restore();
+    }
+    const [px, py] = sim.periodic || [false, false];
+    if (px || py) {
+      ctx.save(); ctx.strokeStyle = 'rgba(120,220,255,0.55)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+      ctx.fillStyle = 'rgba(120,220,255,0.75)'; ctx.font = mono;
+      if (px) { for (const x of [1, W - 1]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, W); ctx.stroke(); } ctx.fillText('⇄ portal', 6, W / 2 - 6); }
+      if (py) { for (const y of [1, W - 1]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } ctx.fillText('⇅ portal', W / 2 + 6, 14); }
+      ctx.restore();
+    }
   }
 
   drawOverlays(session, ui) {

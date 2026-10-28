@@ -47,6 +47,16 @@ function opticChi(sim, el, optic) {
   return chi;
 }
 
+/** Per-axis boundary of a level: `boundary` is "absorb" (default), "periodic", or
+ *  {x, y} with either value per axis. Returns [periodicX, periodicY]. */
+export function boundaryOf(level) {
+  const b = level.boundary || 'absorb', ax = (v) => {
+    if (v !== 'absorb' && v !== 'periodic') throw new Error(level.id + ': boundary must be "absorb" or "periodic"');
+    return v === 'periodic';
+  };
+  return typeof b === 'string' ? [ax(b), ax(b)] : [ax(b.x || 'absorb'), ax(b.y || 'absorb')];
+}
+
 export function defaultSetup(level) {
   const launch = {};
   for (const k of launchKeys(level)) launch[k] = param(level.launch[k]).v;
@@ -110,7 +120,12 @@ export class Session {
     this.seed = opts.seed ?? 1;
     this.rng = mulberry32(this.seed);
     const g = level.grid;
-    this.sim = new Sim(opts.N || g.N, g.L, DT, { spinor: !!level.spinor });
+    this.periodic = boundaryOf(level);
+    this.sim = new Sim(opts.N || g.N, g.L, DT, { spinor: !!level.spinor, periodic: this.periodic });
+    // a constant force along a periodic axis would be a sawtooth with a jump at the seam
+    // (the consistent version is a growing flux, not built yet); refuse it
+    const forced = [level.field?.[0] || level.inventory?.tilt?.max, level.field?.[1] || level.inventory?.tilt?.max];
+    if (this.periodic.some((p, a) => p && forced[a])) throw new Error(level.id + ': no field or tilt along a periodic axis');
     this.stepCount = 0;
     this.events = [];
     this.result = null;
@@ -226,8 +241,9 @@ export class Session {
 
   kick(dkx, dky) {
     if (this.result || this.kicksLeft <= 0) return false;
-    const dk = this.level.inventory.kick.dk, m = Math.hypot(dkx, dky) || 1;
-    const v = [(dkx / m) * dk, (dky / m) * dk];
+    const dk = this.level.inventory.kick.dk, m = Math.hypot(dkx, dky) || 1, q = (2 * Math.PI) / this.sim.L;
+    // along a periodic axis only whole momentum quanta 2 pi / L are kicks without a seam
+    const v = [(dkx / m) * dk, (dky / m) * dk].map((c, a) => (this.periodic[a] ? Math.round(c / q) * q : c));
     this.kicksLeft--;
     this.sim.kick(v[0], v[1]);
     this._log({ type: 'kick', dk: v });

@@ -9,7 +9,7 @@ import { FFT2 } from './fft.js';
 const GATE_RAMP_STEPS = 10; // gates fade over this many steps to avoid shocks
 
 export class Sim {
-  constructor(N, L, dt, { absorbWidth = 6, absorbStrength = 2, spinor = false } = {}) {
+  constructor(N, L, dt, { absorbWidth = 6, absorbStrength = 2, spinor = false, periodic = [false, false] } = {}) {
     this.N = N; this.L = L; this.dx = L / N; this.dt = dt;
     const n2 = N * N;
     this.re = new Float64Array(n2); this.im = new Float64Array(n2);
@@ -47,14 +47,19 @@ export class Sim {
         this.ks[a * N + b] = Math.sin(ang) / n2;
       }
     }
-    // absorbing boundary: smooth quadratic ramp in each axis
+    // absorbing boundary: smooth quadratic ramp in each axis. The FFT makes the box a
+    // torus; an axis marked periodic keeps no absorber, so psi leaving one side
+    // re-enters on the other with its phase intact (a portal instead of a drain).
     const A = absorbWidth; this.absorbWidth = A;
+    this.periodic = [!!periodic[0], !!periodic[1]];
+    const Ax = this.periodic[0] ? 0 : A, Ay = this.periodic[1] ? 0 : A;
+    this.absorbX = Ax; this.absorbY = Ay;
     for (let j = 0; j < N; j++) {
       const y = (j + 0.5) * this.dx;
-      const wy = ramp(Math.min(y, L - y), A);
+      const wy = Ay ? ramp(Math.min(y, L - y), Ay) : 0;
       for (let i = 0; i < N; i++) {
         const x = (i + 0.5) * this.dx;
-        this.W[j * N + i] = absorbStrength * (ramp(Math.min(x, L - x), A) + wy);
+        this.W[j * N + i] = absorbStrength * ((Ax ? ramp(Math.min(x, L - x), Ax) : 0) + wy);
       }
     }
   }

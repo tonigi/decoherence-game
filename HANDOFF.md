@@ -13,7 +13,7 @@ is open, and how to work on it without breaking anything.
   polarization (6-1…6-6, spinor ψ), gratings and lattices (7-1…7-3) and two particles (8-1).
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
-* `npm test`: 54 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
+* `npm test`: 56 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
   reference solution reaches 2 stars, and naive play stays below 1 star (3-1 is
   exempt, see §5).
 * Pure ES modules with no build step and no dependencies. `npm start` serves the game
@@ -60,7 +60,7 @@ is open, and how to work on it without breaking anything.
 | `ghost.js` | low-res (64²) forward preview of P_T(t) for the current setup. |
 | `render.js` | canvas: domain colouring / \|ψ\|² / zoomed momentum view, potential tint, absorber tint, harmonic contours, overlays (rotated shapes, k-space regions), setup handles. |
 | `audio.js` | Web Audio sonification: `analyse(sim)` (band weights, mean/sd of x, RMS k; pure, tested) drives a pentatonic pad, HRTF-placed by mean x, crossfading to a surround bed as sd(x) grows; Born-rule-sampled bells; event chimes; observation fades to silence plus one faint tone at the found position. Uses `Math.random` only, outside the session. |
-| Textbook-level mechanics | **State targets** (`{shape: "state", x, y, sigma}`): the observation is the projector onto a coherent state, P_T = Σ_c\|⟨φ\|ψ_c⟩\|² (`Sim.gaussianMode`, `modeMass`, `projectMode`); it must be the only target, with no mines. **Pulse gates** (`gate.pulse` = steps): a key press closes the gate for that long and it reopens by itself, inside `Sim._refresh`, so the ledger sees the same pulses; a pulse gate created closed fires at t = 0. **`launch.sigmaT`**: width across the motion. **`field`**: a constant force added to the player's tilt. **`particles: "bosons" \| "fermions"`**: the grid is ψ(x₁, x₂), (anti)symmetrised by `Sim.exchange`; the renderer draws the exchange diagonal and the axis labels. |
+| Textbook-level mechanics | **State targets** (`{shape: "state", x, y, sigma}`): the observation is the projector onto a coherent state, P_T = Σ_c\|⟨φ\|ψ_c⟩\|² (`Sim.gaussianMode`, `modeMass`, `projectMode`); it must be the only target, with no mines. **Pulse gates** (`gate.pulse` = steps): a key press closes the gate for that long and it reopens by itself, inside `Sim._refresh`, so the ledger sees the same pulses; a pulse gate created closed fires at t = 0. **`launch.sigmaT`**: width across the motion. **`field`**: a constant force added to the player's tilt. **`particles: "bosons" \| "fermions"`**: the grid is ψ(x₁, x₂), (anti)symmetrised by `Sim.exchange`; the renderer draws the exchange diagonal and the axis labels. **`boundary`**: `"absorb"` (default), `"periodic"`, or `{x, y}` per axis. The FFT box is a torus; a periodic axis simply drops the absorber there (`Sim.periodic`, `absorbX/absorbY`), and the renderer draws portal edges instead of the hatched frame. On a periodic axis kicks are rounded to whole quanta 2π/L (anything else leaves a phase seam), and `field`/tilt are refused (a sawtooth). 7-1 and 7-2 use x-periodic edges: an infinite grating (the scores moved by under 1 %). |
 | `main.js` | UI: level picker, sliders, inventory, playfield handles, input, run loop, result banner, Branches panel, HUD readouts. |
 
 `tools/verify.js` checks every level (and `--replay file.json` re-verifies a saved run).
@@ -192,7 +192,8 @@ references and calibrate stars.
    (`absorb: W`, "boom" outcome) is already in and tested.
 5. **An adjoint solver** for hints and difficulty ratings (the dynamics are linear and
    differentiable), replacing the random-restart `solve.js`.
-6. **More textbook levels** (the full pending list is §8).
+6. **More textbook levels** (the full pending list is §8), and the boundary dynamics of
+   §8.1, starting with the twist θ (ring Aharonov–Bohm) and the flux-ramp force (Bloch).
 
 ## 8. Pending level ideas (all of them, one place)
 
@@ -227,3 +228,18 @@ Each still has to pass the §4 contract (interior optimum, ≥ 2× over naive pl
 | Aharonov–Bohm | phase from an enclosed flux | Peierls kinetic term (after WebGPU) | review §2 |
 | Box revivals | full / half / quarter revivals | larger box or smaller L | T_rev = 4L²/π too long now; Talbot (7-2) covers the physics |
 | Bohmian trajectories | an overlay, not a level | renderer | |
+
+### 8.1 Game dynamics from the boundary: portals (periodic) vs drains (absorbing)
+
+Per-level `boundary` is built (see §2). These ideas build on it; the numbers are
+estimates, not yet prototyped.
+
+| Idea | Lesson | Engine | Notes |
+|---|---|---|---|
+| **Ring interferometer with a flux dial** | Aharonov–Bohm / Sagnac: halves of a packet go round a periodic axis in opposite directions and meet on the far side; a twist phase θ per lap (an enclosed flux, or a rotation) shifts the fringe there; θ = π swaps bright and dark with no local field | twist θ: kinetic phase with (k + θ/L)², recomputed when θ changes; a θ slider | meeting after half a lap ≈ 20/k, about 10 time units; interior optimum in θ; removes the Peierls blocker for AB in the narrow ring geometry |
+| **Dial the allowed momenta** | on a ring only k = (2πn + θ)/L exist (spacing 0.157 at L = 40); a k-space target between two allowed values is unreachable at θ = 0; θ = π is the antiperiodic ("Möbius") world where k = 0 is forbidden | twist θ, momentum targets | topology decides the spectrum |
+| **On a ring a push is a flux** | Faraday: the only seamless kick on a ring is a change of flux. A constant force is a flux growing linearly in time, θ(t) = F·L·t: exact, no sawtooth. With a periodic lattice: **exact Bloch oscillations in an infinite crystal** (unblocks the parked level, §5). A real-time flux ramp is an EMF around the ring: the betatron principle, acceleration with no local push | time-dependent twist (one phase multiply per step); `field` along a periodic axis then becomes legal | Bloch: T_B = 2π/(F a); Zener from the gap size; no classical trapping escape route since the box no longer limits the excursion |
+| **Portal or drain, switched in real time** | each side a gate between portal and drain. *Velocity selector*: fast components reach the edge first, so a briefly opened drain cuts a slice of momentum (pairs with k-space targets). *Which-way by leaving*: one half of a split packet would wrap round and spoil a fringe; draining it restores the fringe at the cost of its probability, keeping it keeps the interference: a trade-off with an interior optimum. *Closed vs open*: in a portal world nothing ever leaves, mines must be dodged forever; a drain is an environment that records the escape | a gate carrying one side's share of the boundary absorber (gates already take W) | drain loss counts as lost, like shutters |
+| **Infinite gratings** | Kapitza–Dirac, Talbot and Bragg in a truly infinite crystal | done for 7-1 and 7-2 | Bragg (7-3) needs its transmitted beam to leave, so it stays absorbing |
+| **Two particles on a ring** | with x and y periodic, ψ(x₁, x₂) lives on a torus; with a flux, bosons and fermions on a ring see shifted spectra (the exchange phase meets the Aharonov–Bohm phase), a doorway to anyon-flavoured levels | twist θ on both axes | niche |
+| **Box revivals on a short ring** | a packet on a ring of length ℓ revives at ℓ²/π; only fits if one axis could be shorter than L | non-square grids | today T = 509 for ℓ = 40 |
