@@ -33,7 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history and tags, for git describe
       - name: Assemble the site
         run: |
           mkdir _site
@@ -41,9 +40,9 @@ jobs:
           touch _site/.nojekyll
       - name: Stamp the version
         run: |
-          # v0.1.0 on a tagged commit, v0.1.0-12-g727fe61 after it
+          # package.json is the version of record; the game shows version and hash on its title screen
           printf '{"version":"%s","commit":"%s","built":"%s"}\n' \
-            "$(git describe --tags --always)" "$(git rev-parse --short HEAD)" \
+            "$(jq -r .version package.json)" "$(git rev-parse --short HEAD)" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/version.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

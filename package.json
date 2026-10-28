@@ -1,6 +1,6 @@
 {
   "name": "born-rule",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Born Rule - a wavefunction puzzle game (2D TDSE, split-step Fourier)",
   "type": "module",
   "private": true,

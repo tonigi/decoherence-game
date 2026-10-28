@@ -26,9 +26,18 @@ const audio = new Sonifier();
 async function init() {
   ui.index = await (await fetch('levels/index.json')).json();
   await Promise.all(ui.index.levels.map(async (id) => { ui.levels[id] = await (await fetch(`levels/${id}.json`)).json(); }));
+  showVersion();
   route();
   addEventListener('hashchange', route);
   requestAnimationFrame(loop);
+}
+
+/** Version and git hash on the title screen: version.json is stamped by the deploy workflow; locally fall back to package.json. */
+async function showVersion() {
+  const get = async (url) => (await fetch(url, { cache: 'no-store' })).json();
+  let v = null;
+  try { v = await get('version.json'); } catch { try { v = { version: (await get('package.json')).version, commit: 'dev' }; } catch { /* no version shown */ } }
+  if (v) $('verTag').textContent = `v${v.version} · ${v.commit}`;
 }
 
 /** #title, #map or #<level id>; no hash: the title on a first visit, else the last level. */

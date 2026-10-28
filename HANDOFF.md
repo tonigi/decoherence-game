@@ -232,6 +232,11 @@ references and calibrate stars.
   for timing, read `#banner`, `#ledgerRows` and the slider values, take screenshots, and
   collect `pageerror` and `console.error`. The scripts used are not committed; they
   are short and easy to rewrite.
+* **Every push bumps the version, at least the minor number.** `npm version minor
+  --no-git-tag-version` (or `major`), commit `package.json` with the change, then push.
+  `package.json` is the version of record. The deploy workflow stamps `version.json` with it plus
+  the short git hash, and the title screen shows `vX.Y.Z · <hash>` (locally `vX.Y.Z · dev`).
+  Before 1.0, `0.MINOR.0` is the normal bump; use major only for a deliberate 1.0.
 * Commit messages describe the physics reason for each change; keep doing that.
 
 ## 7. Roadmap (in suggested order)

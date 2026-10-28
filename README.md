@@ -21,14 +21,9 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 
 ### Versioning
 
-Releases follow SemVer, with `package.json` as the source of truth. While the game is pre-1.0: bump **minor** for new levels or mechanics (or a saved-progress format change) and **patch** for fixes and balance tweaks; `1.0.0` marks a stable level set and save format.
+SemVer, with `package.json` as the source of truth. **Every push bumps at least the minor number** (`npm version minor --no-git-tag-version`, committed with the change); `1.0.0` marks a stable level set and save format.
 
-```bash
-npm version minor   # or patch / major: edits package.json, commits, tags vX.Y.Z
-git push --follow-tags
-```
-
-The Pages workflow stamps the deployed site with `version.json` (`git describe --tags`, so `v0.1.0` on a tag and `v0.1.0-12-g727fe61` after it).
+The Pages workflow stamps the deployed site with `version.json` (the `package.json` version plus the short git hash), and the title screen shows both, e.g. `v0.2.0 · 8360ce2`. Served locally it shows `v0.2.0 · dev`.
 
 ## Controls
 
