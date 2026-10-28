@@ -8,13 +8,13 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 38 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 39 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-4), measurement (5-1, 5-2),
-  polarization (6-1…6-8, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
+  polarization (6-1…6-9, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
   rings and flux (9-1…9-9, periodic boundaries).
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
-* `npm test`: 68 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
+* `npm test`: 69 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
   reference solution reaches 2 stars, and naive play stays below 1 star (3-1 is
   exempt, see §5).
 * Pure ES modules with no build step and no dependencies. `npm start` serves the game
@@ -45,6 +45,7 @@ is open, and how to work on it without breaking anything.
 | 6-6 Humpty Dumpty | full-loop Stern–Gerlach: gradient pulses +τ, −2τ, +τ restore the spin | 55 % | 0 % |
 | 6-7 Ask Again | sequential Stern–Gerlach: a 45° magnet between two 0° ones restores 50/50, if its gradient separates the beams | 30 % | 0 % |
 | 6-8 Two Worlds | bomb tester scored with and without the bomb (`worlds`): no looks ≤ ¼; Zeno looks with plates at 17° | 42 % | 19 % (best no-look) |
+| 6-9 Eraser | which-way tagged slits; a 45° analyzer sorts fringes and anti-fringes into its two exits (two post-selected worlds, momentum) | 50 % | 15 % |
 | 7-1 Light Grating | Kapitza–Dirac: a flash fills the orders with J_n(Vτ/2)² | 65 % | 1 % |
 | 7-2 Self-Image | Talbot effect: fire a phase-grating flash half a Talbot time early | 42 % | 21 % |
 | 7-3 Bragg Mirror | weak ridges reflect where k_in = π/a, above the ridge height | 59 % | 3 % |
@@ -118,7 +119,10 @@ is open, and how to work on it without breaking anything.
   exactly. The HUD's ring shows the product, the readout each world's P_T, mines and
   losses the shown world's; a toggle under the view switch picks the shown world.
   Refused together with detectors (the ledger follows one world). A product, not a min or
-  a mean: it is the only combination that is itself a Born probability.
+  a mean: it is the only combination that is itself a Born probability. An item spec's
+  `polOffset` (deg) turns its optic's axis from the player's dial, so a world can show
+  the other exit of a polarizing beam splitter (6-9). Worlds combine with `postselect`
+  (each world is conditioned on its own survivors).
 
 `tools/verify.js` checks every level (and `--replay file.json` re-verifies a saved run).
 `tools/solve.js` is a derivative-free optimiser over the setup parameters, used to find
@@ -227,6 +231,8 @@ references and calibrate stars.
 * **Ghost vs game on 9-5.** The drain level's 64² preview reads a few percent higher than
   the 128² game (no drain: 11 % vs 7 %), because the thin wall's transmission differs
   between the grids. Scores come from 128².
+* **The momentum view's caption** ("momentum space |φ(k)|² …") is drawn at the top-left
+  and overlaps the clock chips on momentum levels (seen on 6-9). Cosmetic.
 * **Gate hotkey labels** are drawn at the top-left of the playfield and overlap the clock
   badge on levels with gates (seen on 4-3, 4-4). Cosmetic.
 * **Pair levels need a stiff bond.** With ω = 1 the walls of 9-8 tear the pair apart
@@ -259,12 +265,8 @@ references and calibrate stars.
 
 1. **More spinor levels on the new optics.** The solver, ledger and UI are done
    (chapter 6, including Stern–Gerlach, sequential Stern–Gerlach (6-7), the bomb tester
-   and the two-world bomb tester (6-8, on the `worlds` two-part objective)). Cheap next
-   steps: (b) **the quantum eraser**: orthogonal polarizers on two slits kill the
-   fringes, a ±45° analyzer target restores them in the post-selected half. Erasure
-   never raises P_T above the incoherent sum, so score it in two worlds, one per analyzer
-   (+45° and −45°, each with its own fringe targets, both post-selected): only an eraser
-   gets fringes in both; (d) gated optics (already supported) as real-time player tools, e.g.
+   and the two-world bomb tester (6-8, on the `worlds` two-part objective), and the quantum
+   eraser (6-9)). Cheap next step: (d) gated optics (already supported) as real-time player tools, e.g.
    a polarizer you switch in at the right moment, or Zeno with a polarizer as the
    pulsed "detector".
 2. **Finer grid / WebGPU port.** The split-step maps directly onto compute shaders. 256²
@@ -284,7 +286,6 @@ Each still has to pass the §4 contract (interior optimum, ≥ 2× over naive pl
 
 | Idea | Lesson | Engine | Notes |
 |---|---|---|---|
-| Quantum eraser (5-6) | orthogonal polarizers on two slits kill fringes; a ±45° analyzer restores them post-selected | none (`worlds` + `postselect`) | §7.1b; erasure never beats the incoherent sum, so one world per analyzer |
 | Fringe dial (5-5) | weak which-way marker: V² + D² ≤ 1 | `worlds` with a polarization marker, or a ledger over worlds | worlds refuse detectors (§5) |
 | Bomb tester in Mach–Zehnder (3-5) | Elitzur–Vaidman with a real interferometer | 256² for a delta-like splitter | §5 dark-port leak |
 | Gated optics as tools | switch a polarizer in at the right moment; Zeno with a polarizer as the pulse | none | §7.1d |

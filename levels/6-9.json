@@ -1,0 +1,232 @@
+{
+ "id": "6-9",
+ "chapter": 6,
+ "title": "Eraser",
+ "experiment": "Quantum eraser (Scully–Drühl; Walborn et al. 2002)",
+ "spinor": true,
+ "intro": "Two slits, and a which-way tag on each: the upper slit only lets horizontal (H) through, the lower one only vertical (V). The packet arrives polarized at 45°, so it goes through both, but now its polarization says which slit it took, and the far-field pattern has no fringes. Behind the slits you can place one analyzer, a polarizing beam splitter with two exits. The two exits are the two worlds: '+' passes your dial's axis, '−' passes the crossed axis. Each world is scored on the particles that leave by its exit, '+' on the bright momentum stripes, '−' on the stripes in between.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 8,
+ "minObserveTime": 8,
+ "observe": "momentum",
+ "kView": 5,
+ "launch": {
+  "x": 6,
+  "y": 20,
+  "k": 2.8,
+  "angle": 0,
+  "sigma": 1.5,
+  "sigmaT": 4,
+  "pol": 45
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 10.625,
+   "w": 1,
+   "h": 21.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 31.875,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 8.125,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 29.375,
+   "w": 1,
+   "h": 21.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "an",
+    "kind": "polarizer",
+    "count": 1,
+    "w": 1,
+    "h": 40,
+    "pol": [
+     0,
+     -90,
+     90
+    ],
+    "x": 17,
+    "y": 20,
+    "area": [
+     13.5,
+     20,
+     22,
+     20
+    ],
+    "label": "Analyzer (polarizing beam splitter)"
+   }
+  ]
+ },
+ "postselect": {
+  "min": 0.002
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": -2.5133,
+   "w": 4,
+   "h": 0.5
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": -1.2566,
+   "w": 4,
+   "h": 0.5
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": 0,
+   "w": 4,
+   "h": 0.5
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": 1.2566,
+   "w": 4,
+   "h": 0.5
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": 2.5133,
+   "w": 4,
+   "h": 0.5
+  }
+ ],
+ "worlds": [
+  {
+   "name": "+ exit"
+  },
+  {
+   "name": "− exit",
+   "items": {
+    "an": {
+     "polOffset": 90
+    }
+   },
+   "targets": [
+    {
+     "shape": "rect",
+     "x": 2.5,
+     "y": -1.885,
+     "w": 4,
+     "h": 0.5
+    },
+    {
+     "shape": "rect",
+     "x": 2.5,
+     "y": -0.6283,
+     "w": 4,
+     "h": 0.5
+    },
+    {
+     "shape": "rect",
+     "x": 2.5,
+     "y": 0.6283,
+     "w": 4,
+     "h": 0.5
+    },
+    {
+     "shape": "rect",
+     "x": 2.5,
+     "y": 1.885,
+     "w": 4,
+     "h": 0.5
+    }
+   ]
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "an",
+     "x": 17,
+     "y": 20,
+     "pol": 45
+    }
+   ]
+  }
+ },
+ "naive": {
+  "setup": {}
+ },
+ "stars": [
+  0.22,
+  0.35,
+  0.45
+ ],
+ "expectThreshold": 0.35,
+ "goal": "Place the analyzer behind the slits and choose its axis so that the '+' exit shows bright fringes and the '−' exit shows the dark ones filled in. The score is the product of the two exits' P_T, each counted among the particles that leave by that exit, measured in momentum at t = 8.",
+ "physics": {
+  "point": "The which-way tags make the slits' waves orthogonal, so they cannot interfere. Asking about the polarization along 45° (an axis that tags neither slit) erases the record: each exit shows fringes, the two sets are complementary, and together they add up to no fringes at all.",
+  "eq": "P(k | ±45°) ∝ |φ(k)|² (1 ± cos k_y d)",
+  "learn": {
+   "idea": [
+    "Fringes need two ways that cannot be told apart. Tag the slits with orthogonal polarizations and the two waves can be told apart, even if nobody looks: the pattern becomes the plain sum of two single-slit patterns.",
+    "The tag can be erased afterwards. An analyzer at 45° asks a question that neither tag answers: H and V are each half +45° and half −45°. The particles leaving by the +45° exit show the fringes again, and those leaving by the −45° exit show the anti-fringes, bright exactly where the others are dark.",
+    "Nothing has been undone: add the two exits together and the fringes cancel. The analyzer only sorts the particles into two groups, each with fringes. This is why the score counts each exit's own particles (post-selection), in two worlds, one per exit. Without that, erasure would never raise P<sub>T</sub> above the untagged sum.",
+    "An analyzer along a tag (0° or 90°) just reads the tag: each exit gets a single slit, and no fringes appear. At −45° the fringes land on the wrong stripes in both worlds."
+   ],
+   "maths": [
+    "Behind the slits the state is (φ<sub>A</sub>(k) |H⟩ + φ<sub>B</sub>(k) |V⟩)/√2, with φ<sub>B</sub> = φ<sub>A</sub> e<sup>i k<sub>y</sub> d</sup> (slit spacing d = 5). The momentum distribution is |φ<sub>A</sub>|²: no fringes.",
+    "The analyzer's exits project on |±α⟩. The '+' exit carries amplitude cos α φ<sub>A</sub> + sin α φ<sub>B</sub>, so among its particles",
+    {
+     "eq": "P(k | +α) ∝ |φ_A|² (1 + sin 2α · cos k_y d)"
+    },
+    "and the '−' exit the same with − sin 2α. The visibility is sin 2α: full at 45°, zero at 0° and 90°, reversed at −45°. The bright stripes sit at k<sub>y</sub> = 2πn/d (spacing 1.26), the dark ones halfway between.",
+    "Measured at t = 8 (P<sub>T</sub> of each exit among its own particles, and their product):",
+    {
+     "eq": "no analyzer:   55% × 27% = 15%\nα = 0°:        55% × 27% = 15%\nα = 22.5°:     71% × 51% = 36%\nα = 45°:       77% × 65% = 50%\nα = −45°:      1%"
+    },
+    "The two exits' unconditioned patterns always add up to the untagged one. The particle numbers through the two exits are not exactly equal (10% and 5% of the launch here), because close behind the slits the two beams already overlap a little, and there they interfere at the analyzer itself.",
+    "The slit walls are made of crossed absorbing polarizers, so what they block is gone, rather than reflected back into the count of survivors."
+   ],
+   "try": [
+    "Play without an analyzer and look at the momentum view: a smooth single-slit hump, about 15%.",
+    "Place the analyzer at 0°. Toggle the worlds: '+' is the upper slit's light alone, '−' the lower slit's. Still no fringes.",
+    "Turn it to 45°: stripes appear in the '+' world, and the '−' world shows the stripes in between. The score climbs to 50%."
+   ]
+  }
+ }
+}

@@ -287,3 +287,14 @@ test('worlds: P(hit) = product of the worlds\' P_T (each world rolls its own dic
   }
   near(hit / M, pT, 4 * Math.sqrt(pT * (1 - pT) / M) + 1e-3, 'hit frequency');
 });
+
+test('eraser: polOffset turns a world\'s analyzer to the other exit; 45° erases the which-way tag', () => {
+  const lv = load('6-9'), at = (pol) => { const s = new Session(lv, { ...defaultSetup(lv), placed: pol == null ? [] : [{ id: 'an', x: 17, y: 20, pol }] }, { N: 64 }); s.step(160); return s; };
+  const s = at(45), placed = (w) => w.optics.find(o => o.placed).optic.angle;
+  assert.equal(placed(s.worlds[0]), 45); assert.equal(placed(s.worlds[1]), 135);
+  const none = at(null), tag = at(0);
+  assert.ok(s.pT() > 3 * none.pT(), `erasing beats no analyzer: ${s.pT()} vs ${none.pT()}`);
+  near(tag.pT(), none.pT(), 0.01, 'an analyzer along a tag only reads it');
+  // the two exits share out the particles: together they hold what the slits let through
+  near(s.worlds[0].alive() + s.worlds[1].alive(), none.alive(), 0.01, 'exits add up');
+});

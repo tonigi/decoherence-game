@@ -30,9 +30,11 @@ export function itemKeys(spec) {
   if (spec.kind === 'detector') return [...ITEM_KEYS['detector_' + (spec.shape || 'rect')], ...(spec.strength !== undefined ? ['strength'] : [])];
   return ITEM_KEYS[spec.kind] || ITEM_KEYS.rect;
 }
-/** The optic of a placed optical item, in the element format of optics.js. */
+/** The optic of a placed optical item, in the element format of optics.js. A spec's
+ *  `polOffset` (deg) turns its axis from the player's dial, e.g. in a world that shows
+ *  the other port of a polarizing beam splitter (polOffset 90). */
 export function itemOptic(spec, it) {
-  return { kind: spec.kind, angle: it.pol, omega: it.omega, delta: it.delta, gradient: it.gradient, absorb: spec.absorb, V: spec.reflect, bomb: spec.bomb };
+  return { kind: spec.kind, angle: it.pol === undefined ? undefined : it.pol + (spec.polOffset || 0), omega: it.omega, delta: it.delta, gradient: it.gradient, absorb: spec.absorb, V: spec.reflect, bomb: spec.bomb };
 }
 
 /** chi(x) of an optic element; a Zeeman magnet's field term grows linearly across

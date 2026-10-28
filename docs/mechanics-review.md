@@ -145,6 +145,19 @@
 > 33 %, one 18 %; a fourth adds nothing (the H analyzer is that look). 64² = 128² to
 > 0.002; `solve.js --net 0` finds 39.8 %. The analyzer strips are wide (x 23.8–34) with a
 > fixed observation at t = 9; the 6-5 circle caught too little for a product of two.
+>
+> **Thirteenth round.** **6-9 Eraser** on `worlds` + `postselect`: H and V polarizers on
+> two slits (d = 5, a = 2.5), launch at 45°, observed in momentum (far field, no timing).
+> The player's analyzer is a polarizing beam splitter whose two exits are the two worlds
+> (item `polOffset` 90 for the second): '+' scored on the bright stripes k_y = 2πn/d, '−'
+> on the stripes between. Visibility sin 2α in each exit; product 15 % with no analyzer
+> or α = 0, 36 % at 22.5°, 50 % at 45°, 1 % at −45°. The slit walls are crossed absorbing
+> polarizers, so blocked light is lost rather than reflected into the herald (an
+> absorbing `absorb` wall is refused with post-selection, and a reflecting one inflates
+> the survivors). k = 2 left strongly diffracted, slow components (k_x = √(k² − k_y²))
+> short of the analyzer at the observation, which diluted the conditional P_T (gain
+> 1.5–2.4×); k = 2.8 with the analyzer close behind the slits gives 3.4×. 64² vs 128²
+> within 0.01.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.
