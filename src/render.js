@@ -149,8 +149,27 @@ export class Renderer {
     }
   }
 
+  /** The complex absorbing potential along the edges: a hatched frame, so the "lost"
+   *  probability has a visible place to go. */
+  drawAbsorber() {
+    const ctx = this.ctx, W = this.canvas.width, A = (this.sim.absorbWidth || 0) * this.scale;
+    if (!A) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, W); ctx.rect(A, A, W - 2 * A, W - 2 * A); ctx.clip('evenodd');
+    ctx.fillStyle = 'rgba(7,9,15,0.35)'; ctx.fillRect(0, 0, W, W);
+    ctx.strokeStyle = 'rgba(140,150,190,0.13)'; ctx.lineWidth = 1;
+    for (let x = -W; x < W; x += 10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + W, W); ctx.stroke(); }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(140,150,190,0.28)'; ctx.setLineDash([3, 4]); ctx.strokeRect(A, A, W - 2 * A, W - 2 * A);
+    ctx.fillStyle = 'rgba(140,150,190,0.6)'; ctx.font = '11px "JetBrains Mono", ui-monospace, monospace';
+    ctx.fillText('absorbing edge', A + 4, W - A + 14);
+    ctx.restore();
+  }
+
   drawOverlays(session, ui) {
     const ctx = this.ctx, S = this.scale, lv = session.level;
+    this.drawAbsorber();
     ctx.save();
     if (session.optics?.length) this.drawOptics(session);
     if (!session.kSpace) this.drawRegions(lv, this.mapping(false));

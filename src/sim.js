@@ -48,7 +48,7 @@ export class Sim {
       }
     }
     // absorbing boundary: smooth quadratic ramp in each axis
-    const A = absorbWidth;
+    const A = absorbWidth; this.absorbWidth = A;
     for (let j = 0; j < N; j++) {
       const y = (j + 0.5) * this.dx;
       const wy = ramp(Math.min(y, L - y), A);

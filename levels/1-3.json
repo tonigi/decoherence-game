@@ -75,5 +75,30 @@
   0.3,
   0.38
  ],
- "expectThreshold": 0.25
+ "expectThreshold": 0.25,
+ "goal": "Steer the packet into the target. While it runs, click to kick it toward the cursor (2 charges) and hold the arrow keys or WASD to tilt the field. Observe at the peak.",
+ "physics": {
+  "point": "A kick changes the packet's momentum at once; a uniform force changes it steadily. Neither changes its shape: it spreads exactly as a free packet would.",
+  "eq": "dk/dt = F",
+  "learn": {
+   "idea": [
+    "A kick multiplies ψ by a phase that ramps steadily across space. That shifts every wavelength in the packet by the same amount, so the whole packet changes direction at once without being squeezed or stretched.",
+    "Tilting the field adds a uniform force, like a gentle slope. Under a uniform force the centre of the packet accelerates exactly like a classical ball, and the packet spreads exactly as a free one does.",
+    "So you can plan the path with classical mechanics and choose the width as in the earlier levels."
+   ],
+   "maths": [
+    {
+     "eq": "kick:  ψ → e^{i Δk·r} ψ,   |Δk| = 0.6\ntilt:  V = −F·r,   |F| ≤ 0.06,   dk/dt = F"
+    },
+    "The packet starts at (7, 30) moving right with k = 2. The target is at (31, 11.5), 18.5 units higher. Two kicks straight up give it an upward k of 1.2, and holding Up adds 0.06 per unit time.",
+    "Height gained: 1.2·t + 0.03·t². At t = 11.6 that is 17.9 units, and the packet has moved 23 units right: it is on the target. With σ₀ ≈ 2.4 (≈ √(11.6/2)), P<sub>T</sub> ≈ 39 %.",
+    "Kicks alone give 24 %. The tilt alone lifts the packet only 0.03·t² ≈ 4 units by then and gives almost nothing."
+   ],
+   "try": [
+    "Set σ ≈ 2.4. Right after pressing Play, click twice straight above the packet and hold Up until the meter peaks (t ≈ 11.6). Expect about 39 %.",
+    "Do the same without the tilt. The packet passes below the target and the best P<sub>T</sub> is about 24 %.",
+    "Repeat the full manoeuvre with σ = 1. The path is the same, but the packet arrives wider and the best P<sub>T</sub> falls to about 16 %."
+   ]
+  }
+ }
 }

@@ -106,5 +106,35 @@
   0.2,
   0.245
  ],
- "expectThreshold": 0.2
+ "expectThreshold": 0.2,
+ "goal": "Place up to five horizontal polarizers inside the rotator so the packet stays horizontal and passes the exit polarizer into the target.",
+ "physics": {
+  "point": "Check a slowly turning polarization often and it hardly turns. Each polarizer resets it to horizontal at a small cost, so many evenly spaced looks freeze the rotation.",
+  "eq": "P = cos²ᴺ(90°/N)",
+  "learn": {
+   "idea": [
+    "The slab turns the polarization at a steady rate. The packet spends 6.4 time units inside and comes out vertical, turned by 90°. The exit polarizer is horizontal, so it blocks.",
+    "A horizontal polarizer inside the slab asks: still horizontal? After a small turn α the answer is 'yes' with probability cos²α, and a 'yes' sets the polarization back to exactly horizontal. The turning starts again from zero.",
+    "Small turns cost very little, because cos²α ≈ 1 − α² for small α. Cut the 90° into many small steps and the total loss shrinks. Watching often freezes the evolution: the quantum Zeno effect.",
+    "Spacing matters. Equal spacing gives equal small steps. Bunched polarizers leave large turns between the bunches, and large turns are expensive."
+   ],
+   "maths": [
+    "Rotation inside the slab: rate ω times the time spent inside, w/v:",
+    {
+     "eq": "ω · w / v = 0.2454 × 16 / 2.5 = π/2 = 90°"
+    },
+    "With n polarizers equally spaced, the 90° is cut into N = n + 1 steps, and there are N looks (n polarizers plus the exit):",
+    {
+     "eq": "P = cos²ᴺ(90°/N)\nN = 1 … 6:  0, 0.25, 0.42, 0.53, 0.61, 0.66"
+    },
+    "For large N, P ≈ 1 − π²/(4N), which tends to 1.",
+    "Measured as a share of what reaches the target without the rotator (37%): 0.24, 0.42, 0.55, 0.63, 0.69 for 1 to 5 polarizers. They sit a little above the ideal law because each polarizer is 1 unit thick and keeps watching while the slab turns inside it. Five bunched in the middle give 0.50."
+   ],
+   "try": [
+    "Place one polarizer at the slab's centre (x = 19): P<sub>T</sub> ≈ 9%. Add more, evenly spaced, and watch P<sub>T</sub> grow.",
+    "Space all five evenly (x ≈ 13.7, 16.3, 19, 21.7, 24.3): P<sub>T</sub> ≈ 26%. Push them together in the middle: about 19%.",
+    "Put all five near the slab's far end: the polarization has already turned most of the way, and P<sub>T</sub> falls to about 3%."
+   ]
+  }
+ }
 }

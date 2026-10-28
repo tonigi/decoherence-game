@@ -81,5 +81,37 @@
   0.2,
   0.25
  ],
- "expectThreshold": 0.2
+ "expectThreshold": 0.2,
+ "goal": "Place the Stern–Gerlach magnet, then set its axis (dial) and field gradient (g handle) so the upper beam lands on the target and nothing goes down onto the mine.",
+ "physics": {
+  "point": "A Stern–Gerlach magnet splits a beam by polarization: the part along its axis goes up, the crossed part goes down. Align the axis with the packet and all of it goes up.",
+  "eq": "P(up) = cos²(θ − θ_in)",
+  "learn": {
+   "idea": [
+    "The magnet's field grows across it, so each polarization's energy depends on height. The part along the axis is pushed up and the crossed part down, with equal and opposite force. One beam becomes two.",
+    "Each beam carries a definite polarization: up is along the axis, down is crossed. Asking 'which beam?' measures the polarization along the axis, and the Born rule sets the odds: cos² of the angle between packet and axis goes up.",
+    "The packet is polarized at 60°. With the axis at 60° it is entirely 'along', so everything goes up. Any other axis sends part of it down onto the mine.",
+    "The gradient sets the strength of the push. Too weak and the upper beam passes below the target; too strong and it overshoots."
+   ],
+   "maths": [
+    "The magnet acts like a field on a spin: H = g · v · (n·σ), with v the height across the magnet and n the axis. The polarization along n feels a force g upward, the crossed one g downward.",
+    "Born weights for a packet at 60°:",
+    {
+     "eq": "axis 60°:  up 1\naxis 45°:  up cos²15° ≈ 0.93\naxis 0°:   up cos²60° = 0.25"
+    },
+    "Measured share of the packet above the centre line at t = 9: 0.96, 0.90 and 0.26 (a few percent is lost at the edges or still near the line).",
+    "Deflection: the packet spends 8 / 2.5 = 3.2 time units in the magnet, so the force gives a sideways momentum",
+    {
+     "eq": "Δk = g · w / v = 0.35 × 3.2 ≈ 1.1"
+    },
+    "That tilts the beam by about 24° and lifts it roughly 7 units by the target, which sits 8 units up and has radius 3 (a rough estimate that ignores spreading).",
+    "For a real spin-½ the rule is cos²(Θ/2), with Θ the angle between spin and magnet axis in space. Polarization angles count double on the Poincaré sphere, so cos²(θ − θ<sub>in</sub>) is the same law."
+   ],
+   "try": [
+    "Leave the axis at 0°: three quarters of the packet goes down onto the mine and P<sub>T</sub> ≈ 7%. Turn it to 60°: P<sub>T</sub> ≈ 27%.",
+    "Set the axis to −30°, crossed with the packet: everything goes down.",
+    "With the axis at 60°, sweep the gradient: about 19% at 0.2, 27% at 0.35, and under 3% at 0.8, where the beam overshoots."
+   ]
+  }
+ }
 }

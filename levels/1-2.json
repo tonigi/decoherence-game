@@ -65,5 +65,30 @@
   },
   "observeAt": 12.4,
   "events": []
+ },
+ "goal": "Aim the arrow at the target, set speed and width, then press Observe when the green meter peaks. Mines sit on either side of the target.",
+ "physics": {
+  "point": "You choose when to look. A tighter launch is not more precise: a narrow packet spreads faster, so it arrives wider than a moderately wide one.",
+  "eq": "best σ₀ = √(t/2), arrival width √t",
+  "learn": {
+   "idea": [
+    "Here you decide when the world looks. The meter P<sub>T</sub> is the chance that a look right now finds the particle in the target. It rises as the packet arrives, peaks, and falls as the packet passes and spreads.",
+    "Aiming is classical: the centre of the packet moves in a straight line at constant speed. Its size is not: a narrow packet carries a wide spread of speeds and smears out quickly.",
+    "Speed helps, because a packet that arrives sooner has had less time to spread. For a given flight time, the width rule from Rendezvous picks the best starting size."
+   ],
+   "maths": [
+    "The target centre is 30.5 units from the launch point, at an angle of about −41°. At the top speed k = 2.4 the flight takes t ≈ 12.7.",
+    "The width on arrival is smallest for σ₀ = √(t/2) ≈ 2.5, and is then √t ≈ 3.6, larger than the target (radius 2.6).",
+    {
+     "eq": "P_T = 1 − exp(−R²/2σ²) = 1 − exp(−2.6² / (2 · 12.7)) ≈ 23 %"
+    },
+    "The game's best is also about 23 %, at t ≈ 12.2. A tight start is worse: σ₀ = 0.8 arrives with a width of about 8 and peaks at only 6 %."
+   ],
+   "try": [
+    "With k = 2.4 and the arrow on the target, set σ = 0.8 and play. The best P<sub>T</sub> is about 6 %. Then try σ = 2.5: about 23 %.",
+    "Lower k to 1.8 and widen σ to about 2.9 for the longer flight. The best P<sub>T</sub> drops to about 18 %.",
+    "Observe late, at t ≈ 16. P<sub>T</sub> has fallen to about 3 %, and most of the probability has already been absorbed at the edge of the world."
+   ]
+  }
  }
 }

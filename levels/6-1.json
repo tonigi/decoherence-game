@@ -86,5 +86,36 @@
   0.17,
   0.215
  ],
- "expectThreshold": 0.12
+ "expectThreshold": 0.12,
+ "goal": "Place up to two polarizers between the source and the vertical guard and set their axes with the dial, so the packet gets through to the target.",
+ "physics": {
+  "point": "A polarizer keeps only the part along its axis and leaves it polarized along that axis. Crossed polarizers block everything, but polarizers in between let light through.",
+  "eq": "P = cos²(θ − θ_in)",
+  "learn": {
+   "idea": [
+    "Polarization is a direction carried by the wave. This packet starts horizontal (0°). A polarizer at angle θ lets it through with probability cos²(θ − θ<sub>in</sub>) and absorbs the rest. Whatever passes is now polarized along θ.",
+    "The guard is vertical (90°), crossed with the start: cos²90° = 0, so nothing gets through.",
+    "Put a polarizer at 45° in front of it. Half passes, now at 45°, and half of that passes the guard. A filter that only removes light has made more light arrive, because it changes the polarization of what it lets through.",
+    "For a single particle cos² is a probability. Each polarizer is a measurement that asks 'along θ or across?', and a 'yes' resets the state to θ."
+   ],
+   "maths": [
+    "Malus's law, applied once per polarizer:",
+    {
+     "eq": "P = cos²θ₁ · cos²(θ₂ − θ₁) · cos²(90° − θ₂)"
+    },
+    "With two polarizers the best is three equal 30° steps:",
+    {
+     "eq": "0° → 30° → 60° → 90°:  (cos²30°)³ = 27/64 ≈ 0.42"
+    },
+    "One at 45°: (cos²45°)² = 0.25. Reversed order, 60° then 30°: cos²60° · cos²30° · cos²60° ≈ 0.047.",
+    "Even with nothing in the way the target catches only about 55% of the packet, so P<sub>T</sub> is about 0.55 times these: measured 22.9% (30°, 60°), 13.5% (45°), 2.7% (reversed) and 0.03% with no polarizers.",
+    "With N equal steps the loss vanishes as N grows: cos²ᴺ(90°/N) → 1. Level 6-2 builds on this."
+   ],
+   "try": [
+    "Place one polarizer at 45°: P<sub>T</sub> ≈ 13%. Add the second and set the two to 30° and 60°: P<sub>T</sub> ≈ 23%.",
+    "Swap their axes so 60° comes first: P<sub>T</sub> drops to about 3%. Order matters.",
+    "Set a lone polarizer to 0° or 90°: it passes everything or nothing, and the guard still blocks."
+   ]
+  }
+ }
 }

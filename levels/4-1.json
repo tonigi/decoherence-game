@@ -54,5 +54,35 @@
  },
  "naive": {
   "setup": {}
+ },
+ "goal": "Choose the packet's width σ. The packet swings in the well, and the detector clicks by itself at t ≈ 14.1, when the packet passes the target.",
+ "physics": {
+  "point": "In a harmonic well one width, σ₀ = 1/√(2ω), swings back and forth without changing shape. This coherent state is the most classical motion quantum mechanics allows.",
+  "eq": "σ₀ = 1/√(2ω) = 1",
+  "learn": {
+   "idea": [
+    "The potential rises as the square of the distance from the centre, like a ball on a spring. A classical ball released at x = 26 swings to x = 14 and back with period T = 2π/ω, whatever the amplitude. The centre of the packet does exactly the same.",
+    "Its width behaves differently. A narrow packet contains a wide spread of momenta, so it spreads out, and the well then squeezes it back. A wide packet contains few momenta, and the well squeezes it first. Either way the width oscillates twice per period: the packet breathes.",
+    "One width balances the two: σ₀ = 1/√(2ω), the width of the well's ground state. That packet keeps its shape and its minimum uncertainty, Δx·Δk = ½, at every moment. It is called a coherent state, and it is the closest a quantum particle gets to a point mass on a spring.",
+    "The detector clicks at t = 9T/8, one eighth of a period after a full swing. A breathing packet is then wider than σ₀, so less of it falls in the target."
+   ],
+   "maths": [
+    "With ω = 0.5 the period is T = 2π/ω ≈ 12.57. The centre follows x(t) = 20 + 6 cos ωt, which at t = 9T/8 (ωt = 9π/4) is 20 + 6/√2 ≈ 24.24, the centre of the target.",
+    "A Gaussian of width σ released at rest has width s(t), with",
+    {
+     "eq": "s(t)² = σ² cos²ωt + (1/(2ωσ))² sin²ωt"
+    },
+    "so it alternates between σ and 1/(2ωσ). At ωt = 9π/4, cos² = sin² = ½ and s² = ½[σ² + 1/(4ω²σ²)], which is smallest at σ = 1/√(2ω) = 1.",
+    "The packet is round and the target is a disc of radius 1.5, so P_T = 1 − exp(−1.5²/(2s²)):",
+    {
+     "eq": "σ = 1:     s = 1.00   P_T ≈ 68%  (game 65%)\nσ = 2.5:   s ≈ 1.79   P_T ≈ 30%  (game 31%)\nσ = 0.4:   s ≈ 1.79   P_T ≈ 30%  (game 30%)"
+    },
+    "The game gives slightly less than the formula because the target's edge is soft rather than sharp."
+   ],
+   "try": [
+    "Set σ = 1 and watch: the blob swings without changing size, and P_T at the click is about 65%.",
+    "Set σ = 0.4. A quarter period later the packet has grown to 2.5, and by half a period it is narrow again. Then try σ = 2.5. At the click both packets have the same width and both give P_T ≈ 30%, because 1/(2ωσ) turns 0.4 into 2.5 and back."
+   ]
+  }
  }
 }

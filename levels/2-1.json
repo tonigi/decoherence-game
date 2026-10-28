@@ -56,5 +56,29 @@
   },
   "observeAt": 9.8,
   "events": []
+ },
+ "goal": "Choose the speed and width so the packet gets through the wall and into the target. Observe at the peak.",
+ "physics": {
+  "point": "A quantum particle can pass through a wall it lacks the energy to climb. The chance falls off exponentially with the wall's thickness and with how far the energy falls short.",
+  "eq": "T ~ e^{−2κa},  κ = √(2(V − E))",
+  "learn": {
+   "idea": [
+    "Classically, a ball with less energy than the height of a wall always bounces back. A wave does not stop at the wall's face. Inside the wall it decays exponentially, and if the wall is thin some of it is still there on the far side. That part carries on: this is tunnelling.",
+    "How fast it decays depends on how far the energy falls short of the wall. More energy means slower decay and more transmission, so here the fastest packet gets through best.",
+    "The packet also carries a spread of energies, and its faster parts get through more easily, so what emerges is slightly faster than what went in. In this level the spread barely changes the total, so the width choice is again about spreading on the way to the target."
+   ],
+   "maths": [
+    "The energy is E = k²/2 (ħ = m = 1). The wall is set to V = 3 with width 1; its soft edges make the actual peak about 2.7. At k = 1.8, E = 1.62 is well below it; at k = 2.2, E = 2.42 is just below.",
+    "Inside the wall ψ decays as e^{−κx} with κ = √(2(V − E)). For V = 3, κ ≈ 1.66 at k = 1.8 and 1.08 at k = 2.2, so the decay lengths are 0.6 and 0.9.",
+    "Integrating the Schrödinger equation through this wall and averaging over the packet's momenta gives transmission 7 % at k = 1.4, 22 % at k = 1.8, 36 % at k = 2.0 and 52 % at k = 2.2. The 2D simulation agrees to within a few percent.",
+    "At k = 2.2 with σ = 2.14 the momentum spread is 0.23, so about 30 % of the packet has enough forward energy, k<sub>x</sub>²/2, to clear the wall's peak. Those components make up about 40 % of what gets through, and the transmitted part has mean k<sub>x</sub> ≈ 2.29.",
+    "The target is 22 units away, t ≈ 10 at k = 2.2, so the best width is again near √(t/2) ≈ 2.2. The best P<sub>T</sub> is about 29 %."
+   ],
+   "try": [
+    "Set k = 1.4 and play. Only about 7 % leaks through, and the best P<sub>T</sub> is about 3 %.",
+    "Set k = 2.2 and σ ≈ 2.1. About half gets through, and P<sub>T</sub> peaks near 29 % around t ≈ 9.8.",
+    "At k = 2.2, compare σ = 1 with σ = 2.1. About the same fraction gets through, but the narrow packet has spread by the time it reaches the target: about 19 % against 29 %."
+   ]
+  }
  }
 }

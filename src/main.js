@@ -3,6 +3,8 @@ import { Renderer, dialPos } from './render.js';
 import { simulateCurveAsync } from './ghost.js';
 import { ledgerAsync } from './ledger.js';
 import { Sonifier } from './audio.js';
+import { startTitle, buildMap } from './screens.js';
+import { Tutorial } from './tutorial.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -16,66 +18,95 @@ const ui = {
   setup: null, phase: 'setup', playing: false, speed: 1, acc: 0, mode: 'born',
   selected: -1, ghost: null, ghostToken: 0, history: { t: [], pT: [], pM: [] },
   keys: new Set(), lastFire: {}, frame: 0, leak: 0, stars: store.get('stars', {}),
-  rebuildPending: false, drag: null,
+  rebuildPending: false, drag: null, screen: null, view: 'phase', resultShownAt: 0,
 };
 const audio = new Sonifier();
 
-// ---------------------------------------------------------------- loading
+// ---------------------------------------------------------------- loading and screens
 async function init() {
   ui.index = await (await fetch('levels/index.json')).json();
   await Promise.all(ui.index.levels.map(async (id) => { ui.levels[id] = await (await fetch(`levels/${id}.json`)).json(); }));
-  buildNav();
-  const want = location.hash.slice(1);
-  loadLevel(ui.levels[want] ? want : store.get('last', ui.index.levels[0]));
+  route();
+  addEventListener('hashchange', route);
   requestAnimationFrame(loop);
 }
 
-// Level picker: a chapter-grouped drop-down with stars, plus previous / next.
-const starText = (id) => {
-  const n = ui.stars[id] || 0, ex = ui.stars[starKey(id, 'expect')] || 0;
-  return '★'.repeat(n) + '☆'.repeat(3 - n) + (ex ? `  (E ${'★'.repeat(ex)})` : '');
-};
-function buildNav() {
-  const sel = $('lvlSelect'); sel.innerHTML = '';
-  let group = null, total = 0;
-  for (const id of ui.index.levels) {
-    const lv = ui.levels[id];
-    if (!group || +group.dataset.chapter !== lv.chapter) {
-      group = document.createElement('optgroup'); group.dataset.chapter = lv.chapter;
-      group.label = `Chapter ${lv.chapter} · ${ui.index.chapters.find(x => x.id === lv.chapter)?.name || ''}`;
-      sel.append(group);
-    }
-    const o = document.createElement('option'); o.value = id;
-    o.textContent = `${id}  ${lv.title}   ${starText(id)}`;
-    group.append(o); total += ui.stars[id] || 0;
+/** #title, #map or #<level id>; no hash: the title on a first visit, else the last level. */
+function route() {
+  const h = location.hash.slice(1);
+  if (ui.levels[h]) { if (ui.level?.id !== h || ui.screen !== 'game') openLevel(h); }
+  else if (h === 'map') showScreen('map');
+  else if (h === 'title' || !store.get('last', null)) showScreen('title');
+  else openLevel(store.get('last'));
+}
+function go(hash) { if (location.hash.slice(1) === hash) route(); else location.hash = hash; }
+
+function showScreen(name) {
+  ui.screen = name;
+  for (const n of ['title', 'map', 'game']) $(n + 'Screen').hidden = n !== name;
+  if (name !== 'game') { if (ui.session) audio.update(ui.session, 'done', false); ui.playing = false; updatePanelsSafe(); tutorial.active && ($('coachLayer').hidden = true); }
+  if (name === 'title') {
+    const last = store.get('last', null);
+    $('btnContinue').hidden = !last || !ui.levels[last];
+    if (last && ui.levels[last]) $('btnContinue').textContent = `Continue ${last} ${ui.levels[last].title}`;
+    $('btnStart').classList.toggle('prime', !last); $('btnContinue').classList.toggle('prime', !!last);
+    startTitle($('titleField'), () => ui.screen === 'title');
   }
-  if (ui.level) sel.value = ui.level.id;
-  const i = ui.level ? ui.index.levels.indexOf(ui.level.id) : 0;
-  $('lvlPrev').disabled = i <= 0; $('lvlNext').disabled = i >= ui.index.levels.length - 1;
-  $('starTotal').textContent = `★ ${total} / ${3 * ui.index.levels.length}`;
+  if (name === 'map') {
+    $('mapStars').textContent = `★ ${totalStars()} / ${3 * ui.index.levels.length}`;
+    $('mapBack').hidden = !ui.level;
+    buildMap($('chapters'), ui.index, ui.levels, ui.stars, ui.level?.id, (id) => go(id));
+  }
+}
+$('btnStart').onclick = () => go(ui.index.levels[0]);
+$('btnContinue').onclick = () => go(store.get('last'));
+$('btnChapters').onclick = () => go('map');
+$('mapHome').onclick = $('btnHome').onclick = () => go('title');
+$('mapBack').onclick = () => ui.level && go(ui.level.id);
+$('btnMap').onclick = () => go('map');
+
+const updatePanelsSafe = () => { if (ui.session) updatePanels(); };
+const totalStars = () => ui.index.levels.reduce((n, id) => n + (ui.stars[id] || 0), 0);
+function buildNav() {
+  const L = ui.index.levels, i = ui.level ? L.indexOf(ui.level.id) : 0, n = ui.stars[ui.level.id] || 0;
+  $('btnMap').innerHTML = `${ui.level.id} <span class="note">of ${L.length}</span> <span class="st">${'★'.repeat(n)}${'☆'.repeat(3 - n)}</span>`;
+  $('lvlPrev').disabled = i <= 0; $('lvlNext').disabled = i >= L.length - 1;
 }
 function stepLevel(d) {
   const L = ui.index.levels, i = L.indexOf(ui.level.id) + d;
-  if (i >= 0 && i < L.length) loadLevel(L[i]);
+  if (i >= 0 && i < L.length) go(L[i]);
 }
-$('lvlSelect').onchange = (e) => { loadLevel(e.target.value); e.target.blur(); };
 $('lvlPrev').onclick = () => stepLevel(-1);
 $('lvlNext').onclick = () => stepLevel(1);
 
+function openLevel(id) { showScreen('game'); loadLevel(id); }
+
 function loadLevel(id) {
-  ui.level = ui.levels[id]; store.set('last', id); history.replaceState(null, '', '#' + id);
+  ui.level = ui.levels[id]; store.set('last', id);
   ui.setup = defaultSetup(ui.level); ui.selected = -1;
-  $('lvlTitle').textContent = `${id} · ${ui.level.title}`;
-  $('lvlIntro').textContent = ui.level.intro;
-  buildNav(); buildStarTicks(); buildLaunchSliders(); buildInventory();
+  const lv = ui.level, chap = ui.index.chapters.find(x => x.id === lv.chapter);
+  $('crumb').innerHTML = `Ch ${lv.chapter} · ${chap?.name || ''} · <strong></strong>`;
+  $('crumb').querySelector('strong').textContent = `${id} ${lv.title}`;
+  $('lvlTitle').textContent = lv.title;
+  $('lvlGoal').textContent = lv.goal || lv.intro;
+  $('lvlGoal').title = lv.goal ? lv.intro : '';
+  const ph = lv.physics;
+  $('physCard').hidden = !ph;
+  if (ph) { $('physPoint').textContent = ph.point; $('physEq').textContent = ph.eq || ''; $('btnWhy').hidden = !ph.learn; }
+  closeDrawer();
+  buildNav(); buildLaunchSliders(); buildInventory();
   resetToSetup();
-  // momentum-measurement levels open in the (zoomed) momentum view
-  ui.renderer.kView = ui.level.kView;
-  // and polarization levels in the polarization view
-  const kLevel = ui.level.observe === 'momentum', pLevel = !!ui.level.spinor;
-  $('view_mode').querySelector('[value=polarization]').disabled = !pLevel;
-  if (kLevel || pLevel || ui.autoView) { $('view_mode').value = kLevel ? 'momentum' : pLevel ? 'polarization' : 'phase'; ui.renderer.view = $('view_mode').value; }
+  // momentum-measurement levels open in the (zoomed) momentum view, polarization levels in the polarization view
+  ui.renderer.kView = lv.kView;
+  const kLevel = lv.observe === 'momentum', pLevel = !!lv.spinor;
+  $('viewToggle').querySelector('[data-view=polarization]').hidden = !pLevel;
+  if (kLevel || pLevel || ui.autoView || ui.view === 'polarization') setView(kLevel ? 'momentum' : pLevel ? 'polarization' : 'phase');
+  else setView(ui.view);
   ui.autoView = kLevel || pLevel;
+  // guided levels run their tutorial the first time (and on request)
+  tutorial.stop();
+  if (lv.tutorial && !store.get('tut:' + id, false)) tutorial.start(lv);
+  updateTutorialChrome();
 }
 
 // Born-mode and expectation-mode stars are kept apart: expectation mode removes
@@ -87,11 +118,13 @@ function newSeed() { return (Math.random() * 2 ** 32) >>> 0; }
 function resetToSetup(keepSeed) {
   ui.setup = sanitizeSetup(ui.level, ui.setup);
   ui.seed = keepSeed ? ui.seed : newSeed();
+  if (tutorial.active && ui.phase !== 'setup') tutorial.reset();
   ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
   if (!ui.renderer) ui.renderer = new Renderer(canvas, ui.session.sim); else ui.renderer.setSim(ui.session.sim);
   ui.phase = 'setup'; ui.playing = false; ui.history = { t: [], pT: [], pM: [] };
   ui.lastFire = {}; ui.keys.clear();
   $('banner').hidden = true; $('ledgerPanel').hidden = true; ui.viewBranch = null;
+  clearTimeout(ui.resultTimer);
   buildActions(); updatePanels(); scheduleGhost();
 }
 
@@ -177,11 +210,6 @@ function buildActions() {
     b.onpointerup = b.onpointerleave = () => ui.keys.delete('act' + n);
     host.append(b);
   });
-  buildStarTicks();
-}
-
-function buildStarTicks() {
-  $('starTicks').innerHTML = (ui.level.stars || []).map(v => `<span style="left:${Math.min(100, v * 100)}%"></span>`).join('');
 }
 
 function updatePanels() {
@@ -194,20 +222,26 @@ function updatePanels() {
     b.textContent = `+ ${spec.label} (${left} left)`; b.disabled = left <= 0;
   }
   buildItemPanel();
-  $('btnPlay').textContent = ui.playing ? '⏸ Pause' : (ui.phase === 'setup' ? '▶ Play' : '▶ Resume');
+  $('playIcon').textContent = ui.playing ? '❚❚' : '▶';
+  $('btnPlay').setAttribute('aria-label', ui.playing ? 'Pause' : ui.phase === 'setup' ? 'Play' : 'Resume');
   $('btnPlay').disabled = ui.phase === 'done';
+  const worldLooks = lv.minObserveTime != null && lv.minObserveTime >= lv.tmax;
   $('btnObserve').disabled = ui.phase === 'done' || !s.canObserve();
-  $('phaseTag').textContent = ui.viewBranch ? `viewing branch ${pathLabel(ui.viewBranch.path)} · weight ${(ui.viewBranch.w * 100).toFixed(1)}% · P_T ${(ui.viewBranch.pT * 100).toFixed(0)}%` : ui.phase === 'setup' ? 'setup: drag the packet and items; handles change size, width and strength' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
+  $('btnObserve').title = worldLooks ? `In this level the world observes at t = ${(+lv.tmax).toFixed(1)}` : lv.minObserveTime ? `Allowed from t = ${(+lv.minObserveTime).toFixed(1)}` : 'Sample |ψ|² now';
+  $('phaseTag').textContent = ui.viewBranch ? `branch ${pathLabel(ui.viewBranch.path)} · weight ${(ui.viewBranch.w * 100).toFixed(1)}% · P_T ${(ui.viewBranch.pT * 100).toFixed(0)}%` : ui.phase === 'setup' ? 'setup · drag the packet, its arrow and ring' : ui.phase === 'run' ? (ui.playing ? 'running' : 'paused') : 'measured';
   const bits = [];
-  if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges - click the field (impulse toward the cursor).`);
-  if (inv.tilt) bits.push('Field tilt: hold arrow keys / WASD.');
-  if (lv.minObserveTime) bits.push(lv.minObserveTime >= lv.tmax ? `The detector clicks at t = ${(+lv.minObserveTime).toFixed(1)}.` : `Observation allowed after t = ${(+lv.minObserveTime).toFixed(1)}.`);
-  const dets = s.detectors.map((d, i) => `${d.label} ${d.shots} shots`).join(', ');
-  if (dets) bits.push(dets + (s.detectors.some(d => d.hold) ? ' - hold the key to pulse repeatedly.' : '.'));
+  if (inv.kick) bits.push(`Kick: ${s.kicksLeft}/${inv.kick.charges} charges. Click the field while running (impulse toward the cursor).`);
+  if (inv.tilt) bits.push('Field tilt: hold the arrow keys or WASD.');
+  if (lv.minObserveTime) bits.push(worldLooks ? `The world observes at t = ${(+lv.minObserveTime).toFixed(1)}.` : `Observation allowed after t = ${(+lv.minObserveTime).toFixed(1)}.`);
+  const dets = s.detectors.map((d) => `${d.label}: ${d.shots} shots`).join(', ');
+  if (dets) bits.push(dets + (s.detectors.some(d => d.hold) ? '. Hold the key to pulse repeatedly.' : '.'));
   $('rtInfo').textContent = bits.join(' ');
+  $('runCard').hidden = !bits.length && !s.actions().length;
   for (const b of document.querySelectorAll('#actions button')) {
     if (b.dataset.type === 'detector') b.disabled = s.detectors[+b.dataset.i].shots <= 0 || s.finished;
   }
+  $('rowM').hidden = !hasMines();
+  $('probEyebrow').textContent = s.result ? 'At the observation' : 'Probabilities now';
 }
 
 // ---------------------------------------------------------------- run control
@@ -219,6 +253,7 @@ function play() {
     ui.phase = 'run';
   }
   ui.playing = !ui.playing; updatePanels();
+  if (ui.playing) tutorial.signal('play');
 }
 function resetFromSetup() {
   ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
@@ -233,8 +268,9 @@ function observe() {
   if (!r) return;
   ui.phase = 'done'; ui.playing = false;
   audio.observed(r, ui.level.grid.L);
-  updatePanels();
-  if (!r.pending) { showResult(r); return; }
+  updatePanels(); tutorial.signal('observe');
+  // a beat of drama: the crosshair and the collapsed packet first, then the card
+  if (!r.pending) { const sess = ui.session; ui.resultTimer = setTimeout(() => { if (ui.session === sess) showResult(r); }, 700); return; }
   // detectors fired: score on the branch-averaged P_T (src/ledger.js)
   const sess = ui.session, b = $('banner');
   b.className = 'pending'; b.hidden = false;
@@ -258,7 +294,7 @@ function buildLedgerPanel(L) {
   if (!L) return;
   const rows = L.branches.slice(0, 12), wmax = Math.max(...rows.map(b => b.w));
   const mine = document.createElement('button'); mine.className = 'cur';
-  mine.innerHTML = `<span class="path">your run (the dice's pick)</span><span></span><span class="p">P<sub>T</sub> ${(ui.session.result.pT * 100).toFixed(0)}%</span>`;
+  mine.innerHTML = `<span class="path" title="the branch the dice picked">your run</span><span></span><span class="p">P<sub>T</sub> ${(ui.session.result.pT * 100).toFixed(0)}%</span>`;
   mine.onclick = () => viewBranch(-1, mine);
   host.append(mine);
   rows.forEach((b, i) => {
@@ -281,32 +317,45 @@ function viewBranch(i, el) {
   ui.renderer.setSim(L.sim); ui.viewBranch = b; updatePanels();
 }
 
+const OUTCOME = {
+  hit: ['Hit', 'The particle was found in the target.'], miss: ['Miss', 'The particle was found somewhere else.'],
+  mine: ['Mine', 'The measurement found the particle on a mine.'], lost: ['Lost', 'The particle had already been absorbed at the edge.'],
+  boom: ['Boom', 'The particle had already been absorbed by the bomb.'],
+};
 function showResult(r) {
   const b = $('banner'), lv = ui.level;
-  const txt = {
-    hit: r.stars >= 3 ? 'Direct hit!' : 'Hit!', miss: 'Missed - the particle was found elsewhere.',
-    mine: 'Boom - the measurement found the particle on a mine.', lost: 'Lost - the particle had already been absorbed at the boundary.',
-    boom: 'Boom - the particle had already been absorbed by the bomb.',
-  }[r.outcome];
-  b.className = r.hit ? 'win' : 'lose'; b.hidden = false;
   const idx = ui.index.levels.indexOf(lv.id), next = ui.index.levels[idx + 1];
-  const mode = ui.session.mode, L = r.ledger;
-  const expectNote = mode === 'expect' ? ` (expectation mode: score ${r.score >= (lv.expectThreshold ?? 0.5) ? '≥' : '<'} ${((lv.expectThreshold ?? 0.5) * 100).toFixed(0)}%)` : '';
-  const ledgerNote = L ? `<p>Detectors fired, so the stars come from the <b>skill score ${(r.score * 100).toFixed(1)}%</b>: P<sub>T</sub> averaged over all
-    ${L.branches.length} outcome branches of your inputs (${L.branches.slice(0, 4).map(q => `${q.path}: ${(q.w * 100).toFixed(0)}% × ${(q.pT * 100).toFixed(0)}%`).join(', ')}${L.branches.length > 4 ? ', …' : ''}${L.resampled ? `; the branch tree was compressed to its ${L.branches.length} leading density-matrix components, error ≤ ${(L.dropped * 100).toFixed(1)}%` : ''}).
-    Your own branch's P<sub>T</sub> was lucky or unlucky; the average is not.</p>` : '';
-  b.innerHTML = `<h2>${txt} ${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</h2>
-    <p>P<sub>T</sub> at observation = <b>${(r.pT * 100).toFixed(1)}%</b>, P<sub>M</sub> = ${(r.pM * 100).toFixed(1)}%, absorbed = ${(r.lost * 100).toFixed(1)}%${expectNote}.
-    ${L ? '' : 'The stars come from P<sub>T</sub> at the moment you observed, so skill is rewarded even when the dice are unkind.'}</p>${ledgerNote}
-    <div class="row"><button id="bRetry" class="primary">Retry (new dice)</button><button id="bSetup">Back to setup</button>
-    ${next && r.hit ? '<button id="bNext">Next level →</button>' : ''}<button id="bCopy">Copy replay JSON</button></div>`;
+  const mode = ui.session.mode, L = r.ledger, pct = (v) => (v * 100).toFixed(1) + '%';
+  const [head, sub] = OUTCOME[r.outcome] || ['Done', ''];
+  const th = lv.stars || [];
+  const nextStar = th.find(v => r.score < v);
+  const when = lv.minObserveTime != null && lv.minObserveTime >= lv.tmax ? 'The world looked' : 'You looked';
+  let body = `<p>${sub} ${when} at <b>t = ${ui.session.t.toFixed(1)}</b>, when P<sub>T</sub> was <b>${pct(r.pT)}</b>.`;
+  if (r.hit && nextStar != null) body += ` The next star needs ${(nextStar * 100).toFixed(0)}%.`;
+  body += '</p>';
+  if (mode === 'expect') {
+    body += `<p>Expectation mode: no dice. You win when the score reaches ${((lv.expectThreshold ?? 0.5) * 100).toFixed(0)}%.</p>`;
+  } else if (L) {
+    body += `<p>Detectors fired, so the stars come from the <b>skill score ${pct(r.score)}</b>: P<sub>T</sub> averaged over all ${L.branches.length} outcome branches of your inputs${L.resampled ? ` (compressed to the leading density-matrix components, error ≤ ${(L.dropped * 100).toFixed(1)}%)` : ''}. Your own branch was lucky or unlucky; the average is not. The Branches panel shows each one.</p>`;
+  } else {
+    // the Born rule as an ensemble: 100 runs of this exact state, P_T of them hits
+    const n = Math.round(r.pT * 100), me = r.hit ? Math.min(n - 1, Math.floor(n / 2)) : Math.min(99, n + Math.floor((100 - n) / 2));
+    body += `<p>If you ran this exact setup 100 times, about ${n} would find the particle in the target:</p>
+      <div class="dots" aria-hidden="true">${Array.from({ length: 100 }, (_, i) => `<i class="${i < n ? 'h' : ''}${i === me ? ' me' : ''}"></i>`).join('')}</div>
+      <p class="note">Outcome is chance. P<sub>T</sub> is skill. Stars come from P<sub>T</sub>, and only a hit earns them.</p>`;
+  }
+  b.className = r.hit ? 'win' : 'lose'; b.hidden = false;
+  b.innerHTML = `<h2>${head}</h2><div class="stars" aria-label="${r.stars} of 3 stars">${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</div>${body}
+    <div class="row">${next && r.hit ? '<button id="bNext" class="primary">Next level →</button>' : ''}<button id="bRetry" ${r.hit ? '' : 'class="primary"'}>Retry, new dice</button><button id="bSetup">Back to setup</button></div>
+    <button class="copy" id="bCopy">Copy replay JSON</button>`;
   $('bRetry').onclick = () => { resetToSetup(); play(); };
   $('bSetup').onclick = () => resetToSetup();
-  if ($('bNext')) $('bNext').onclick = () => loadLevel(next);
-  $('bCopy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(ui.session.solution(), null, 1)); $('bCopy').textContent = 'Copied'; };
+  if ($('bNext')) $('bNext').onclick = () => go(next);
+  $('bCopy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(ui.session.solution(), null, 1)).then(() => { $('bCopy').textContent = 'Copied'; }, () => {}); };
   const key = starKey(lv.id, mode);
   if (r.hit && r.stars > (ui.stars[key] || 0)) { ui.stars[key] = r.stars; store.set('stars', ui.stars); buildNav(); }
   buildLedgerPanel(L);
+  tutorial.signal('result');
 }
 
 function doAction(n, down) {
@@ -332,21 +381,26 @@ function tiltFromKeys() {
 }
 
 addEventListener('keydown', (e) => {
+  if (ui.screen !== 'game') return;
   if (e.target.tagName === 'INPUT' && e.target.type === 'range') e.target.blur();
+  if (e.target.tagName === 'SELECT') return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (key === 'Escape') { closeOverlays(); return; }
+  if (key === '?') { toggleKeys(); return; }
+  if (e.target.tagName === 'BUTTON' && (key === ' ' || key === 'Enter')) e.target.blur();
   if (e.repeat && /^[1-9]$/.test(key)) return;
   if (key === ' ') { e.preventDefault(); play(); return; }
   if (key === 'Enter') { e.preventDefault(); observe(); return; }
   if (key === 'r') { resetToSetup(true); return; }
   if (key === '[' || key === ']') { stepLevel(key === '[' ? -1 : 1); return; }
   if (key === 'v') {
-    const sel = $('view_mode');
-    do sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length; while (sel.options[sel.selectedIndex].disabled);
-    sel.onchange(); return;
+    const vs = [...document.querySelectorAll('#viewToggle button')].filter(b => !b.hidden).map(b => b.dataset.view);
+    setView(vs[(vs.indexOf(ui.view) + 1) % vs.length]); return;
   }
   if (key === 'c') { $('optCurrent').click(); return; }
   if (key === 'g') { $('optGhost').click(); return; }
   if (key === 'm') { $('optSound').click(); return; }
+  if (key === 'Tab') return;
   if (key === 'Delete' || key === 'Backspace') { if (ui.phase === 'setup') removeSelected(); return; }
   if (/^[1-9]$/.test(key)) { doAction(+key - 1, true); return; }
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(key)) {
@@ -467,12 +521,12 @@ canvas.addEventListener('pointermove', (e) => {
     return;
   }
   const l = ui.setup.launch;
-  if (ui.drag.kind === 'handle') setupHandles().find(h => h.id === ui.drag.id)?.drag(p);
+  if (ui.drag.kind === 'handle') { setupHandles().find(h => h.id === ui.drag.id)?.drag(p); if (ui.drag.id === 'k') ui.dragged = true; }
   else if (ui.drag.kind === 'pos') { l.x = p.x + ui.drag.dx; l.y = p.y + ui.drag.dy; }
   else if (ui.drag.kind === 'item') { const it = ui.setup.placed[ui.selected]; it.x = p.x + ui.drag.dx; it.y = p.y + ui.drag.dy; }
   setupChanged();
 });
-canvas.addEventListener('pointerup', () => { ui.drag = null; });
+canvas.addEventListener('pointerup', () => { ui.drag = null; if (ui.dragged) { ui.dragged = false; tutorial.signal('drag'); } });
 canvas.addEventListener('pointerleave', () => { if (!ui.drag) ui.hover = null; });
 
 $('btnPlay').onclick = play;
@@ -481,11 +535,92 @@ $('btnReset').onclick = () => resetToSetup(true);
 $('speed').onchange = (e) => { ui.speed = +e.target.value; };
 // the mode is fixed for the whole run (the checkbox is disabled outside setup)
 $('optExpect').onchange = (e) => { if (ui.phase !== 'setup') { e.target.checked = ui.mode === 'expect'; return; } ui.mode = e.target.checked ? 'expect' : 'born'; resetToSetup(true); };
-$('view_mode').onchange = () => { ui.renderer.view = $('view_mode').value; };
 $('optCurrent').onchange = (e) => { ui.renderer.showCurrent = e.target.checked; };
 $('optGhost').onchange = () => { scheduleGhost(); };
 audio.enabled = $('optSound').checked = store.get('sound', true);
 $('optSound').onchange = (e) => { store.set('sound', e.target.checked); audio.setEnabled(e.target.checked); };
+
+// ---------------------------------------------------------------- view switch and legend
+function setView(v) {
+  const btn = $('viewToggle').querySelector(`[data-view=${v}]`);
+  if (!btn || btn.hidden) v = 'phase';
+  ui.view = v; ui.renderer.view = v;
+  for (const b of document.querySelectorAll('#viewToggle button')) b.classList.toggle('on', b.dataset.view === v);
+  drawLegend(v);
+}
+for (const b of document.querySelectorAll('#viewToggle button')) b.onclick = () => setView(b.dataset.view);
+function drawLegend(v) {
+  const c = $('wheel'), g = c.getContext('2d'), N = c.width, img = g.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = i - N / 2 + 0.5, y = j - N / 2 + 0.5, r = Math.hypot(x, y) / (N / 2), k = 4 * (j * N + i);
+    if (r > 1) continue;
+    const a = Math.atan2(-y, x);
+    // phase: hue = arg psi, brightness = |psi|; polarization: hue = 2 x axis angle (axes are mod 180 deg), white at the centre = circular
+    const [R, G, B] = v === 'polarization' ? hsvMain(((2 * a) / (2 * Math.PI) + 1) % 1, 0.85 * r, 1)
+      : v === 'density' ? [0.35 * r, 0.8 * r, r] : v === 'momentum' ? [r, 0.75 * r, 0.25 * r] : hsvMain((a / (2 * Math.PI) + 1) % 1, 0.8, Math.min(1, r * 1.1));
+    img.data[k] = R * 255; img.data[k + 1] = G * 255; img.data[k + 2] = B * 255; img.data[k + 3] = 255;
+  }
+  g.clearRect(0, 0, N, N); g.putImageData(img, 0, 0);
+  $('legendText').innerHTML = { phase: 'hue = phase<br>brightness = |ψ|', density: 'brightness = |ψ|²<br>(phase hidden)', momentum: 'momentum space |φ(k)|²<br>centre = k 0', polarization: 'hue = polarization axis<br>white = circular' }[v];
+}
+function hsvMain(h, s, v) {
+  const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  return [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6];
+}
+
+// ---------------------------------------------------------------- settings, keys sheet, physics drawer
+$('btnSettings').onclick = (e) => { e.stopPropagation(); const p = $('settings'); p.hidden = !p.hidden; $('btnSettings').setAttribute('aria-expanded', !p.hidden); };
+addEventListener('pointerdown', (e) => { if (!$('settings').hidden && !e.target.closest('.popwrap')) { $('settings').hidden = true; $('btnSettings').setAttribute('aria-expanded', 'false'); } });
+function toggleKeys() { $('keysSheet').hidden = !$('keysSheet').hidden; }
+$('btnKeys').onclick = toggleKeys; $('keysClose').onclick = toggleKeys;
+$('keysSheet').onclick = (e) => { if (e.target === $('keysSheet')) toggleKeys(); };
+function closeOverlays() { $('keysSheet').hidden = true; $('settings').hidden = true; closeDrawer(); }
+
+function openDrawer(tab = 'idea') {
+  const lv = ui.level, ph = lv.physics; if (!ph?.learn) return;
+  $('drawerEyebrow').textContent = `${lv.id} · ${lv.title}`;
+  $('drawerTitle').textContent = 'The physics';
+  $('drawerPoint').textContent = ph.point;
+  for (const b of document.querySelectorAll('#drawerTabs button')) {
+    b.hidden = !ph.learn[b.dataset.tab]?.length;
+    b.classList.toggle('on', b.dataset.tab === tab); b.setAttribute('aria-selected', b.dataset.tab === tab);
+  }
+  const body = $('drawerBody'); body.innerHTML = '';
+  for (const item of ph.learn[tab] || []) {
+    if (typeof item === 'string') { const p = document.createElement('p'); p.innerHTML = item; body.append(p); }
+    else if (item.eq) { const d = document.createElement('div'); d.className = 'eqblk'; d.textContent = item.eq; body.append(d); }
+  }
+  $('drawer').hidden = false; ui.drawerTab = tab;
+}
+function closeDrawer() { $('drawer').hidden = true; }
+$('btnWhy').onclick = () => openDrawer('idea');
+$('drawerClose').onclick = closeDrawer;
+for (const b of document.querySelectorAll('#drawerTabs button')) b.onclick = () => openDrawer(b.dataset.tab);
+
+// ---------------------------------------------------------------- tutorial
+const tutorial = new Tutorial({
+  anchorRect(name) {
+    const el = { field: 'field', play: 'btnPlay', observe: 'btnObserve', ring: 'probCard', timeline: 'timeline', physics: 'physCard', goal: 'goalCard', result: 'banner', setup: 'setupPanel' }[name];
+    if (el) { const e = $(el); return e && !e.hidden && e.offsetParent !== null ? e.getBoundingClientRect() : null; }
+    if (name.startsWith('handle:')) {
+      const h = (ui.handles || []).find(q => q.id === name.slice(7)); if (!h) return null;
+      const r = canvas.getBoundingClientRect(), f = r.width / ui.level.grid.L, x = r.left + h.x * f, y = r.top + h.y * f;
+      return new DOMRect(x - 16, y - 16, 32, 32);
+    }
+    return null;
+  },
+  done(id) { store.set('tut:' + id, true); updateTutorialChrome(); },
+  changed() { updateTutorialChrome(); },
+});
+function updateTutorialChrome() {
+  const lv = ui.level, on = tutorial.active;
+  $('btnSkipTut').hidden = !on; $('btnTut').hidden = on || !lv?.tutorial;
+  $('tutDots').hidden = !on;
+  $('goalEyebrow').textContent = on ? 'Guided level' : 'Goal';
+  if (on) $('tutDots').innerHTML = tutorial.steps.map((_, i) => `<i class="${i < tutorial.i ? 'done' : i === tutorial.i ? 'cur' : ''}"></i>`).join('');
+}
+$('btnSkipTut').onclick = () => { const id = ui.level.id; tutorial.stop(); store.set('tut:' + id, true); };
+$('btnTut').onclick = () => { if (ui.phase !== 'setup') resetToSetup(); tutorial.start(ui.level); };
 // browsers start audio only after a user gesture
 for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => audio.unlock(), { capture: true });
 
@@ -522,17 +657,28 @@ function advance(budget) {
 
 function loop() {
   ui.frame++;
-  if (ui.rebuildPending && ui.phase === 'setup') {
-    ui.rebuildPending = false; resetToSetup(true); scheduleGhost();
+  if (ui.screen === 'game' && ui.session) {
+    if (ui.rebuildPending && ui.phase === 'setup') {
+      ui.rebuildPending = false; resetToSetup(true); scheduleGhost();
+    }
+    if (ui.phase === 'run' && ui.playing) {
+      ui.acc += ui.speed; const n = Math.floor(ui.acc); ui.acc -= n;   // fractional speeds accumulate
+      if (n > 0) advance(n);
+      updatePanels();
+    }
+    draw();
+    tutorial.tick(ui.session.t);
+    if (ui.frame % 4 === 0) audio.update(ui.session, ui.phase, ui.playing);
   }
-  if (ui.phase === 'run' && ui.playing) {
-    ui.acc += ui.speed; const n = Math.floor(ui.acc); ui.acc -= n;   // fractional speeds accumulate
-    if (n > 0) advance(n);
-    updatePanels();
-  }
-  draw();
-  if (ui.frame % 4 === 0) audio.update(ui.session, ui.phase, ui.playing);
   requestAnimationFrame(loop);
+}
+
+/** Size a canvas's backing store to its CSS box (device pixels). */
+function fitCanvas(c) {
+  const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+  const w = Math.max(1, Math.round(r.width * d)), h = Math.max(1, Math.round(r.height * d));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  return d;
 }
 
 function draw() {
@@ -540,48 +686,80 @@ function draw() {
   ui.handles = setupHandles();
   ui.renderer.draw(s, ui);
   $('clock').textContent = `t = ${s.t.toFixed(1)} / ${ui.level.tmax}`;
-  const pT = s.pT(), pM = s.pM(), lost = s.lost();
-  $('barT').style.width = (pT * 100) + '%'; $('valT').textContent = (pT * 100).toFixed(1) + '%';
+  // after an observation the meters hold the values at the moment of observation,
+  // not the collapsed state (which would read as P_T jumping after a miss)
+  const r = s.result, pT = r ? r.pT : s.pT(), pM = r ? r.pM : s.pM(), lost = r ? r.lost : s.lost();
+  $('valT').textContent = (pT * 100).toFixed(1) + '%';
   $('barM').style.width = (pM * 100) + '%'; $('valM').textContent = (pM * 100).toFixed(1) + '%';
   $('barL').style.width = (lost * 100) + '%'; $('valL').textContent = (lost * 100).toFixed(1) + '%';
-  if (ui.frame % 15 === 0) {
+  drawRing(pT);
+  if (ui.frame % 15 === 0 && !r) {
     ui.leak = s.sim.kLeak(0.6);
     const st = s.sim.stats();
-    $('readout').innerHTML = (st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> (≥ ½) &nbsp; Δx = ${st.sx.toFixed(2)}, Δk<sub>x</sub> = ${st.skx.toFixed(2)} &nbsp; ⟨E⟩ = <b>${st.E.toFixed(2)}</b>` : '')
+    $('readout').innerHTML = (st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> ≥ ½ · Δx ${st.sx.toFixed(2)} · Δk<sub>x</sub> ${st.skx.toFixed(2)} · ⟨E⟩ <b>${st.E.toFixed(2)}</b>` : '')
       + (s.sim.spinor ? polReadout(s.sim.stokes()) : '');
   }
   $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
   $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';
-  if (ui.frame % 3 === 0) drawPlot();
+  if (ui.frame % 2 === 0) drawPlot();
+}
+
+/** P_T as a ring with the star thresholds as gold ticks. */
+function drawRing(v) {
+  const c = $('ring'), g = c.getContext('2d'), W = c.width, cx = W / 2, R = W / 2 - 14;
+  if (ui.ringV === v && ui.ringLevel === ui.level.id) return;
+  ui.ringV = v; ui.ringLevel = ui.level.id;
+  g.clearRect(0, 0, W, W); g.lineCap = 'round';
+  g.lineWidth = 16; g.strokeStyle = '#ffffff14'; g.beginPath(); g.arc(cx, cx, R, 0, 2 * Math.PI); g.stroke();
+  if (v > 0.002) { g.strokeStyle = '#4ff59a'; g.beginPath(); g.arc(cx, cx, R, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, v)); g.stroke(); }
+  g.lineCap = 'butt'; g.lineWidth = 4;
+  for (const t of ui.level.stars || []) {
+    const a = -Math.PI / 2 + 2 * Math.PI * t;
+    g.strokeStyle = v >= t ? '#ffc44d' : '#ffc44d88';
+    g.beginPath(); g.moveTo(cx + (R - 13) * Math.cos(a), cx + (R - 13) * Math.sin(a)); g.lineTo(cx + (R + 13) * Math.cos(a), cx + (R + 13) * Math.sin(a)); g.stroke();
+  }
 }
 
 /** Mean polarization from the Stokes vector: linear angle, linear and circular fractions. */
 function polReadout([s1, s2, s3]) {
   const lin = Math.hypot(s1, s2), ang = (Math.atan2(s2, s1) * 90) / Math.PI;
-  return `<br>polarization: ${lin > 0.05 ? `linear <b>${ang.toFixed(0)}°</b> (${(lin * 100).toFixed(0)}%)` : 'no linear part'}${Math.abs(s3) > 0.05 ? `, circular ${(s3 * 100).toFixed(0)}%` : ''}`;
+  return `<br>polarization ${lin > 0.05 ? `linear <b>${ang.toFixed(0)}°</b> (${(lin * 100).toFixed(0)}%)` : 'no linear part'}${Math.abs(s3) > 0.05 ? `, circular ${(s3 * 100).toFixed(0)}%` : ''}`;
 }
 
 const hasMines = () => (ui.level.mines || []).length > 0 || ui.session.sim.hasWel;
 
+/** The transport timeline: clock, ghost preview, this run's P_T (and P_M), star lines,
+ *  the observation window and, on fixed-time levels, the moment the world observes. */
 function drawPlot() {
-  const c = $('plot'), g = c.getContext('2d'), W = c.width, H = c.height, tmax = ui.level.tmax;
+  const c = $('plot'), d = fitCanvas(c), g = c.getContext('2d'), W = c.width, H = c.height, lv = ui.level, tmax = lv.tmax;
   g.clearRect(0, 0, W, H);
   const gh = ui.ghost, h = ui.history;
   let ymax = 0.2;
-  for (const a of [gh?.pT, h.pT]) if (a) for (const v of a) ymax = Math.max(ymax, v * 1.15);
+  for (const a of [gh?.pT, h.pT, gh && hasMines() ? gh.pM : null]) if (a) for (const v of a) ymax = Math.max(ymax, v * 1.15);
   ymax = Math.min(1, ymax);
-  const X = (t) => 28 + (W - 36) * t / tmax, Y = (v) => H - 18 - (H - 28) * v / ymax;
-  g.font = '10px system-ui'; g.fillStyle = '#8b93a7'; g.strokeStyle = '#2a3245'; g.lineWidth = 1;
-  for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.5 ? 0.25 : 0.1) { g.beginPath(); g.moveTo(28, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); g.fillText((v * 100).toFixed(0) + '%', 2, Y(v) + 3); }
-  for (let t = 0; t <= tmax; t += 5) g.fillText(t, X(t) - 4, H - 4);
-  g.setLineDash([4, 3]); g.strokeStyle = '#ffd23f66';
-  for (const v of ui.level.stars || []) { if (v <= ymax) { g.beginPath(); g.moveTo(28, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); } }
+  const x0 = 4 * d, x1 = W - 4 * d, top = 4 * d, bot = H - 14 * d;
+  const X = (t) => x0 + (x1 - x0) * t / tmax, Y = (v) => bot - (bot - top) * v / ymax;
+  g.fillStyle = '#ffffff07'; g.fillRect(x0, top, x1 - x0, bot - top);
+  const mo = lv.minObserveTime;
+  if (mo && mo < tmax) { g.fillStyle = '#ffffff0d'; g.fillRect(x0, top, X(mo) - x0, bot - top); }
+  g.font = `${9.5 * d}px "JetBrains Mono", ui-monospace, monospace`; g.fillStyle = '#5c6383';
+  const tick = tmax > 30 ? 10 : tmax > 12 ? 5 : 2;
+  for (let t = 0; t <= tmax + 1e-9; t += tick) { g.textAlign = t === 0 ? 'left' : t >= tmax - 1e-9 ? 'right' : 'center'; g.fillText(t, X(t), H - 2 * d); }
+  g.textAlign = 'left';
+  g.setLineDash([3 * d, 3 * d]); g.lineWidth = d;
+  for (const v of lv.stars || []) { if (v <= ymax) { g.strokeStyle = '#ffc44d55'; g.beginPath(); g.moveTo(x0, Y(v)); g.lineTo(x1, Y(v)); g.stroke(); } }
   g.setLineDash([]);
-  const line = (ts, vs, color, w = 2) => { if (!ts || !ts.length) return; g.strokeStyle = color; g.lineWidth = w; g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vs[i])) : g.moveTo(X(t), Y(vs[i])))); g.stroke(); };
-  if (gh) { line(gh.t, gh.pT, 'rgba(76,255,124,0.3)', 3); if (hasMines()) line(gh.t, gh.pM, 'rgba(255,74,74,0.3)', 3); }
-  line(h.t, h.pT, '#4cff7c'); if (hasMines()) line(h.t, h.pM, '#ff4a4a');
-  g.strokeStyle = '#fff6'; g.beginPath(); g.moveTo(X(ui.session.t), 4); g.lineTo(X(ui.session.t), H - 16); g.stroke();
-  if (ui.level.minObserveTime) { g.fillStyle = '#ffffff10'; g.fillRect(28, 4, X(ui.level.minObserveTime) - 28, H - 20); }
+  const line = (ts, vs, color, w) => { if (!ts || !ts.length) return; g.strokeStyle = color; g.lineWidth = w * d; g.beginPath(); ts.forEach((t, i) => (i ? g.lineTo(X(t), Y(vs[i])) : g.moveTo(X(t), Y(vs[i])))); g.stroke(); };
+  if (gh) { line(gh.t, gh.pT, 'rgba(79,245,154,0.4)', 3); if (hasMines()) line(gh.t, gh.pM, 'rgba(255,93,108,0.4)', 3); }
+  line(h.t, h.pT, '#4ff59a', 2); if (hasMines()) line(h.t, h.pM, '#ff5d6c', 2);
+  if (mo != null && mo >= tmax) {
+    g.fillStyle = '#ffc44d'; g.fillRect(X(tmax) - 1.5 * d, top, 3 * d, bot - top);
+    g.textAlign = 'right'; g.fillText('world observes ▸', X(tmax) - 6 * d, top + 9 * d); g.textAlign = 'left';
+  }
+  const t = ui.session.t, xt = X(t);
+  g.strokeStyle = ui.session.result ? '#ffc44d' : '#fff'; g.lineWidth = 1.5 * d;
+  g.beginPath(); g.moveTo(xt, top); g.lineTo(xt, bot); g.stroke();
+  g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(xt, top + 2 * d, 3.5 * d, 0, 2 * Math.PI); g.fill();
 }
 
 init();

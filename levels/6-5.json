@@ -146,5 +146,37 @@
   0.09,
   0.14
  ],
- "expectThreshold": 0.12
+ "expectThreshold": 0.12,
+ "goal": "Place bomb stations in the gaps between the amber plates so the photon reaches the target still horizontal without setting off the bomb.",
+ "physics": {
+  "point": "Each bomb station asks 'horizontal?', and a 'yes' undoes the plates' turn. A photon that arrives horizontal proves the bomb is there, yet it never touched it.",
+  "eq": "P = cos⁸(22.5°) ≈ 0.53",
+  "learn": {
+   "idea": [
+    "Each amber plate turns the polarization by 22.5°. Four of them turn horizontal into vertical, and the horizontal analyzer at the target blocks vertical.",
+    "A bomb station passes horizontal and sends vertical into the bomb. After one plate the photon is at 22.5°. With probability cos²22.5° ≈ 0.85 it passes and is exactly horizontal again; otherwise the bomb goes off.",
+    "With a station in every gap the photon keeps being reset and arrives horizontal more than half the time. Without a bomb there would be no stations, and it would arrive vertical. So a horizontal photon at the target reveals the bomb, and that photon never entered the bomb's port.",
+    "This is Kwiat's version of the Elitzur–Vaidman bomb test, laid out in a line. With more, smaller steps the success probability approaches 1. The level shows only the world with the bomb; removing all stations shows the world without it."
+   ],
+   "maths": [
+    "Turn per plate: ω · w / v = 0.6136 × 1.6 / 2.5 = π/8 = 22.5°.",
+    "Three stations in the three gaps plus the analyzer at the target make four looks, each after a 22.5° turn:",
+    {
+     "eq": "P(arrive horizontal) = cos⁸(22.5°) ≈ 0.531\nP(boom) = 1 − cos⁶(22.5°) ≈ 0.378"
+    },
+    "The remaining 0.091 arrives vertical and misses. Two stations in one gap and none in another gives a 45° step, and cos²45° = ½:",
+    {
+     "eq": "cos⁴(22.5°) · cos²(45°) ≈ 0.36"
+    },
+    "With N steps of 90°/N the law is cos²ᴺ(90°/N), which tends to 1 as N grows.",
+    "Measured as a share of what reaches the target with no plates (32%): 0.48 with one station per gap (ideal 0.53) and 0.34 doubled up (ideal 0.36); booms 0.41 (ideal 0.38). The packet's 11% speed spread blurs each plate's angle. P<sub>T</sub> ≈ 15% for one station per gap.",
+    "A fourth station after the last plate leaves P<sub>T</sub> unchanged and turns the vertical leftover into booms (0.41 → 0.48). One before the first plate does nothing: the photon is still horizontal there."
+   ],
+   "try": [
+    "Remove all stations: the photon arrives vertical and P<sub>T</sub> ≈ 1%. This is the world without a bomb.",
+    "Place one station in each of the three gaps between plates: P<sub>T</sub> ≈ 15%, while the bomb goes off in about 41% of runs (the P<sub>M</sub> meter).",
+    "Put two stations in the first gap and one in the second, leaving the third gap empty: P<sub>T</sub> falls to about 11%."
+   ]
+  }
+ }
 }

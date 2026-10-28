@@ -47,5 +47,31 @@
  },
  "naive": {
   "setup": {}
+ },
+ "goal": "Set the packet's width. At t = 8 the world measures its momentum: land inside the small disc in the momentum view.",
+ "physics": {
+  "point": "Position and momentum cannot both be sharp. A packet narrow in space has a broad spread of momenta, so to land in a small momentum window it must be wide.",
+  "eq": "Δx · Δk ≥ ½",
+  "learn": {
+   "idea": [
+    "A wave packet is a sum of plane waves with different wavenumbers k. A narrow bump needs many different k; a long, smooth wave train needs only a few. So the spread in position and the spread in momentum trade off. This is Heisenberg's uncertainty relation.",
+    "Here the detector measures momentum. The target is a disc of radius 0.25 around the packet's own momentum, k = (1, 0). Only a packet with a small momentum spread puts most of its probability inside.",
+    "A free particle's momentum distribution does not change in time, so waiting does not help. The limit is the world: it is 40 units wide, and its absorbing edges eat the tails of a packet that is too wide, which also spreads its momentum."
+   ],
+   "maths": [
+    "A Gaussian sits exactly on the bound: if σ is the position spread of |ψ|² along an axis, the momentum spread along it is σ<sub>k</sub> = 1/(2σ).",
+    {
+     "eq": "σ = 1  →  σ_k = 0.5\nσ = 5  →  σ_k = 0.1"
+    },
+    "The chance of a momentum within r = 0.25 of the centre is 1 − exp(−r²/2σ<sub>k</sub>²) = 1 − exp(−σ²/8). In an infinite world that is 12 % at σ = 1 and 96 % at σ = 5.",
+    "On the game's grid, momenta come in steps of 2π/40 ≈ 0.16, close to the target's size, so σ = 5 starts at about 90 %. By t = 8 the packet has drifted to x ≈ 28, the edges have absorbed about 5 %, and 82 % is left.",
+    "Wider is worse again: σ = 8 loses 19 % to the edges and scores 72 %; σ = 10 loses 28 % and scores 64 %."
+   ],
+   "try": [
+    "Play with the default σ = 1. In the momentum view the blob is much larger than the disc, and P<sub>T</sub> ≈ 12 %. Before you press Play, the readout shows Δx·Δk<sub>x</sub> = 0.50: the packet is exactly on the bound.",
+    "Set σ = 5. The blob shrinks to fit the disc, and P<sub>T</sub> is about 82 % at t = 8.",
+    "Set σ = 10. The momentum blob is tiny, but the lost meter climbs to about 28 % by t = 8 and P<sub>T</sub> ends near 64 %."
+   ]
+  }
  }
 }

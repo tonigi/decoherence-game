@@ -64,5 +64,39 @@
  },
  "naive": {
   "setup": {}
+ },
+ "goal": "Press 1 to switch the harmonic trap on, and again to switch it off, so the packet ends up nearly at rest. Then observe: this level measures momentum, and the target is a small disc at k = 0.",
+ "physics": {
+  "point": "A spreading packet puts its fast parts on the outside. A pulse of the trap pushes each part back in proportion to its distance, cancelling those velocities and leaving a slow, cold packet.",
+  "eq": "tan ωτ = 1/(ω·t₁)",
+  "learn": {
+   "idea": [
+    "Squeezing a packet into a small region gives it a wide spread of momenta (Δx·Δk ≥ ½). Released, it spreads, but in free flight its momentum distribution never changes. A momentum measurement finds the same broad spread at any time.",
+    "The spreading does sort the packet, though. After a while the parts far to the right are the ones moving right fastest, and the parts on the left move left: position and momentum become correlated, x ≈ k·t.",
+    "The trap pushes every part toward the centre with a force proportional to its distance. Switched on for the right time, it slows each outer, fast part by just its own speed, and the packet ends up wide and nearly at rest. Too short a pulse leaves it hot; too long reverses the motion and heats it again.",
+    "This is delta-kick cooling, used on clouds of cold atoms. It does not beat the uncertainty principle: the momentum spread shrinks only because the packet has become much wider."
+   ],
+   "maths": [
+    "Here ω = 0.2 and σ = 0.7, so the momentum spread is Δk = 1/(2σ) ≈ 0.71 per axis. The target, a disc of radius 0.25 at k = 0, then holds 1 − exp(−0.25²/(2Δk²)) ≈ 6% (6.4% in the game).",
+    "After free flight for a time t₁ a part that started at x₀ with momentum k₀ is at x₀ + k₀t₁. The trap, on for a time τ, turns phase space by the angle θ = ωτ, and the momentum becomes",
+    {
+     "eq": "k = −ω sin θ·(x₀ + k₀t₁) + cos θ·k₀"
+    },
+    "The k₀ term, which carries the large initial spread, vanishes when",
+    {
+     "eq": "tan ωτ = 1/(ω·t₁)\nthen Δk = ωσ / √(1 + ω²t₁²)"
+    },
+    "Switching on at t₁ = 5 gives ωt₁ = 1, so θ = π/4 and τ = π/(4ω) ≈ 3.9 (the solution uses 3.8). Ideally Δk falls from 0.71 to 0.10, a factor of 7, and the 'temperature' ∝ Δk² by about 50. Measured P_T for a pulse starting at t = 5:",
+    {
+     "eq": "τ       1     2     3     4     5     6\nP_T     10%   20%   55%   81%   46%   16%"
+    },
+    "The formula would give about 96%. With a harmonic trap filling the whole box the game gives 89%; the trap's flat edge at r = 12 costs the rest, and the coarse k-grid (spacing 2π/40 ≈ 0.16) keeps even 89% below the formula."
+   ],
+   "try": [
+    "Do nothing: the momentum view shows the same broad blob at every time, and P_T stays between 6% and 7.5%.",
+    "Switch the trap on at t = 5 and off at t ≈ 8.9, then observe: P_T ≈ 81%. Switching off at t = 7 (too short) gives about 20%, at t = 11 (too long) about 16%.",
+    "Switch the trap on at t = 5 and leave it on, watching P_T: it peaks at about 81% near t ≈ 8.9 and falls again. That is the answer to the intro's question: once the trap is off nothing changes the momentum, so switching off only freezes the distribution at the moment you chose."
+   ]
+  }
  }
 }

@@ -1,0 +1,100 @@
+{
+ "id": "0-1",
+ "chapter": 0,
+ "title": "Meet ψ",
+ "intro": "This glow is one particle. Press Play, watch the green ring, and press Observe while it is high.",
+ "goal": "Press Play, then Observe while the green ring is high.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 20,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": 1.8,
+  "angle": 0,
+  "sigma": 1.6
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 27,
+   "y": 20,
+   "r": 5
+  }
+ ],
+ "stars": [
+  0.2,
+  0.4,
+  0.55
+ ],
+ "expectThreshold": 0.3,
+ "reference": {
+  "setup": {},
+  "observeAt": 10,
+  "events": []
+ },
+ "naive": false,
+ "naiveSkip": "tutorial: the launch is fixed, the level teaches the controls",
+ "tutorial": [
+  {
+   "anchor": "field",
+   "title": "Meet ψ",
+   "text": "This glow is the wavefunction ψ of one particle. Brightness shows |ψ|, colour shows its phase (the wheel in the corner).",
+   "phys": "There is no hidden dot inside. Until someone looks, ψ is the whole description of the particle.",
+   "wait": "next"
+  },
+  {
+   "anchor": "play",
+   "title": "Let it evolve",
+   "text": "Press <b>Play</b>. Nobody pushes the packet: the Schrödinger equation alone moves it and spreads it out.",
+   "phys": "The colour bands are the phase. Their spacing is the wavelength λ = 2π/k₀ = 3.5, and they march in the direction of travel.",
+   "wait": "play"
+  },
+  {
+   "anchor": "ring",
+   "title": "Read the odds",
+   "text": "The green ring is P<sub>T</sub>: the probability of finding the particle in the green circle if you looked right now. The timeline under the field records it.",
+   "phys": "P<sub>T</sub> is |ψ|² added up over the target. That is the Born rule.",
+   "wait": "t>=8"
+  },
+  {
+   "anchor": "observe",
+   "title": "Look",
+   "text": "Press <b>Observe</b> now, while the ring is high. The particle will be found at one spot, picked at random with probability |ψ|².",
+   "phys": "Looking changes ψ: right after the measurement it is a small blob where the particle was found.",
+   "wait": "observe"
+  },
+  {
+   "anchor": "result",
+   "title": "Chance and skill",
+   "text": "Hit or miss is chance. Stars come from P<sub>T</sub> at the moment you looked, so they rate your play, not your luck. A miss scores nothing: Retry rolls new dice.",
+   "wait": "next"
+  }
+ ],
+ "physics": {
+  "point": "A particle is described by a wave ψ. Where you will find it is random, with probability |ψ|²: the Born rule.",
+  "eq": "P(x) = |ψ(x, t)|²",
+  "learn": {
+   "idea": [
+    "In quantum mechanics a particle has no definite position until it is measured. What it does have is a wavefunction ψ, a complex number at every point of space that evolves smoothly and predictably by the Schrödinger equation.",
+    "When you measure the position, you get one definite answer. Which one is random. The probability of finding the particle in a region is the integral of |ψ|² over that region. Max Born proposed this in 1926, and it is the only rule of this game.",
+    "The colours show the phase of ψ, the part |ψ|² throws away. You cannot see phase in a single measurement, but it decides where waves add up and where they cancel, as later chapters show."
+   ],
+   "maths": [
+    "The packet starts as a Gaussian with width σ₀ = 1.6 and wavenumber k₀ = 1.8 (units ħ = m = 1):",
+    {
+     "eq": "ψ(x, y, 0) ∝ exp(−|r − r₀|² / 4σ₀²) · exp(i k₀ x)"
+    },
+    "It evolves by the free Schrödinger equation iħ ∂ψ/∂t = −(ħ²/2m)∇²ψ. Its centre moves at the group velocity k₀ = 1.8, so it covers the 19 units to the target centre in about t = 10.6. The meter peaks a little earlier, at t ≈ 10 (62%), because the spreading packet starts filling the circle before its centre arrives.",
+    "The meter shows P<sub>T</sub> = ∫<sub>T</sub> |ψ|² d²x. Observe draws one point from |ψ|²; the chance that it lands in the target is exactly P<sub>T</sub>."
+   ],
+   "try": [
+    "Observe very early (t ≈ 3). P<sub>T</sub> is near zero, so you will almost always miss.",
+    "Observe at the peak several times. You will hit in roughly 6 runs out of 10, and miss in the rest, with the same ψ every time.",
+    "Switch the view to |ψ|² to see only the probability density, without the phase colours."
+   ]
+  }
+ }
+}

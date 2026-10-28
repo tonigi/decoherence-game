@@ -54,5 +54,35 @@
  },
  "naive": {
   "setup": {}
+ },
+ "goal": "Choose the packet's width σ so that it focuses onto the small central target. The detector clicks by itself at t ≈ 19.6.",
+ "physics": {
+  "point": "A harmonic well is a lens: after a quarter period, the packet's spread in momentum has become its spread in position. A wide packet at rest focuses to a sharp spot.",
+  "eq": "σ_focus = 1/(2ωσ)",
+  "learn": {
+   "idea": [
+    "In a harmonic well every part of the packet oscillates with the same period, wherever it starts. A part released at rest a distance r from the centre reaches the centre a quarter period later, moving at speed ω·r. All parts arrive together.",
+    "What sets the size of that focus is the momentum the packet started with: it turns into position spread. A wide packet at rest has a small momentum spread, Δk = 1/(2σ), so it focuses tightly. A narrow one has a large momentum spread and focuses badly.",
+    "A glass lens does the same to light: a wide beam focuses to a small spot. The focus repeats every half period (T/4, 3T/4, 5T/4, …), and the detector clicks at the third one, t = 5T/4.",
+    "This lens has an edge. Beyond radius 9 the potential is flat, so the parts of a very wide packet out there are not pulled in and miss the focus."
+   ],
+   "maths": [
+    "With ω = 0.4, T = 2π/ω ≈ 15.71, and the click is at 5T/4 ≈ 19.63. A quarter period in a harmonic well swaps position and momentum:",
+    {
+     "eq": "x → k/ω,   k → −ω·x\nσ_focus = Δk/ω = 1/(2ωσ) = 1.25/σ"
+    },
+    "The game agrees: σ = 2 focuses to 0.63 (ideal 0.625), while σ = 1 is no sharper at the focus (1.25) than at the start.",
+    "For a sharp-edged disc of radius 0.8 the ideal lens would give P_T = 1 − exp(−0.8²/(2σ_focus²)), which approaches 100% as σ grows. In the game:",
+    {
+     "eq": "σ = 1     P_T ≈ 21%\nσ = 2     P_T ≈ 53%\nσ = 3.5   P_T ≈ 70%  (about the best)\nσ = 5     P_T ≈ 59%\nσ = 7     P_T ≈ 42%"
+    },
+    "The aperture causes the fall: a fraction exp(−9²/(2σ²)) of the packet starts beyond radius 9, 4% at σ = 3.5 and 20% at σ = 5. With the well extended to the whole box, σ = 5 would reach about 87%. The target's soft edge keeps even that below the ideal formula."
+   ],
+   "try": [
+    "Start with σ = 1: the packet stays about the same size and P_T ≈ 21%.",
+    "Set σ = 3.5 and watch it shrink to a dot a quarter period in, spread out, and come back into focus at each later quarter period. P_T ≈ 70% at the click.",
+    "Set σ = 7: the outer part of the packet lies on the flat ground beyond the rings and drifts off instead of focusing. P_T falls to about 42%."
+   ]
+  }
  }
 }

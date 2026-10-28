@@ -50,5 +50,31 @@
  "minObserveTime": 10,
  "naive": {
   "setup": {}
+ },
+ "goal": "Be in the green circle when the world looks at t = 10. Choose the speed so the packet arrives on time, then its width.",
+ "physics": {
+  "point": "A free wave packet spreads as it travels. Start it too narrow and it spreads fast; start it too wide and it is already big. The best start is in between.",
+  "eq": "σ(t) = σ₀ √(1 + (t / 2σ₀²)²)",
+  "learn": {
+   "idea": [
+    "A narrow packet is built from a wide range of wavelengths, and each wavelength travels at its own speed. The fast parts run ahead and the slow parts lag behind, so the packet spreads. The narrower you make it, the wider the range of speeds and the faster it spreads.",
+    "A wide packet has a narrow range of speeds and spreads slowly, but it starts big. For a fixed travel time there is one starting width that leaves the packet as small as possible on arrival.",
+    "The speed is not a choice here. The target is 24 units away and the world looks at t = 10, so the packet must move at 2.4. The width is the real decision."
+   ],
+   "maths": [
+    "With ħ = m = 1 a packet with wavenumber k moves at speed k. To get from x = 7 to x = 31 by t = 10 it needs k = 2.4.",
+    "A Gaussian packet whose |ψ|² has spread σ₀ along each axis grows as",
+    {
+     "eq": "σ(t) = σ₀ √(1 + (t / 2σ₀²)²)"
+    },
+    "For a fixed t this is smallest when σ₀² = t/2. At t = 10 that is σ₀ = √5 ≈ 2.24, and the width at the observation is then √t ≈ 3.16. Starting at σ₀ = 1 gives 5.1; starting at σ₀ = 4 gives 4.2.",
+    "For a packet centred on a circle of radius R, P<sub>T</sub> = 1 − exp(−R²/2σ²). With R = 3.5 and σ = 3.16 that is 46 %. The game shows 44 %, because the absorbing edge of the world begins just behind the target."
+   ],
+   "try": [
+    "Keep k = 2.4 and set σ to its minimum, 0.6. The packet arrives on time but smeared over much of the field, and P<sub>T</sub> at t = 10 is about 8 %.",
+    "Now try σ = 4 (about 30 %), then σ ≈ 2.2 (about 44 %, the best this level allows).",
+    "Leave σ at 2.24 and set k to 2.0 or 2.8. The packet is 4 units short or long at t = 10, and P<sub>T</sub> drops to about 27 % or 23 %."
+   ]
+  }
  }
 }

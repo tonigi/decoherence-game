@@ -140,5 +140,38 @@
     }
    ]
   }
+ },
+ "goal": "Place the detector over one arm and fire it (key 1) while the packet passes under it. Then observe with the packet in the target at the lower port.",
+ "physics": {
+  "point": "Knowing which path the particle took destroys the interference. Fire the which-way detector and the dark port, where the two paths used to cancel, lights up.",
+  "eq": "|a₁ + a₂|²  →  |a₁|² + |a₂|²",
+  "learn": {
+   "idea": [
+    "The first splitter sends the packet down both arms at once. At the lower port the two arms arrive with opposite phase and cancel, so that port stays nearly dark.",
+    "The detector asks one question: is the particle in this region? A 'yes' leaves the wave only in that arm. A 'no' removes that arm and leaves the rest. Either way one path is left, there is nothing to cancel against, and the second splitter sends part of it to the lower port.",
+    "The detector does not push the particle. Recording which way it went is enough. Interference needs paths that cannot be told apart.",
+    "Which answer you get is random, but your stars are not. The game replays your run along both answers and averages P<sub>T</sub>, each weighted by its Born probability. The Branches panel lists both."
+   ],
+   "maths": [
+    "Each path brings an amplitude to the lower port. With ideal 50/50 splitters they are a₁ = ½ and a₂ = −½. Amplitudes add first, then you square. With which-way information the probabilities add instead.",
+    {
+     "eq": "coherent:   |a₁ + a₂|² = |½ − ½|² = 0\nwhich-way:  |a₁|² + |a₂|² = ¼ + ¼ = ½"
+    },
+    "The detector is a pair of measurement operators built from its region m (1 inside, falling smoothly to 0 at the edge):",
+    {
+     "eq": "M_yes = m,   M_no = √(1 − m²)\nP(yes) = ∫ m² |ψ|²"
+    },
+    "This level's splitters are thin barriers whose transmission depends on speed, so the cancellation is not perfect: unwatched, the target still holds about 10% at t = 10.2.",
+    "Firing at t = 3.5 with the detector over the upper arm: 'yes' with probability 0.41, after which the target collects 37%; 'no' with probability 0.59, target 16%. The detector does not cover the whole packet, so the 'no' branch keeps a little of the upper arm and still interferes partly.",
+    {
+     "eq": "score = 0.41 × 0.37 + 0.59 × 0.16 ≈ 0.24"
+    }
+   ],
+   "try": [
+    "Fire with the detector over the upper arm at t ≈ 3.5 and observe at t ≈ 10: about 24%. Never fire it: about 10%.",
+    "Fire at t ≈ 0.5, before the packet reaches the first splitter. The detector almost surely says 'no', you learn nothing about the path, and the score stays near the unwatched 8–10%.",
+    "Move the detector onto the lower arm's horizontal stretch (y ≈ 23). That path arrives later, so fire around t ≈ 6.5: about 23%."
+   ]
+  }
  }
 }

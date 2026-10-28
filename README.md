@@ -2,7 +2,7 @@
 
 A wavefunction puzzle game. Each level gives you a potential landscape, an initial wavepacket and a target. You shape how ψ evolves, then pick the moment to measure. Waiting lets the packet travel *and* disperse, so the puzzle is arranging constructive interference over the target at the right time, and observing then.
 
-Prototype scope: chapters 1-4 (free propagation, tunnelling, interference, bound states), chapter 5's region detectors (which-way information, Zeno freezing) and chapter 6's polarization optics (two-component ψ: polarizers, rotators, waveplates, Stern–Gerlach magnets, an interaction-free bomb test). 18 levels.
+Prototype scope: chapters 1-4 (free propagation, tunnelling, interference, bound states), chapter 5's region detectors (which-way information, Zeno freezing) and chapter 6's polarization optics (two-component ψ: polarizers, rotators, waveplates, Stern–Gerlach magnets, an interaction-free bomb test). 21 levels, including a guided tutorial chapter 0 (First Light).
 
 ## Run
 
@@ -19,7 +19,7 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 
 | | |
 |---|---|
-| Levels | drop-down in the header (grouped by chapter, with your stars), ◀ ▶ or `[` `]` for previous / next |
+| Levels | the chapter map (title screen → Chapters, or the level button in the top bar), ◀ ▶ or `[` `]` for previous / next. Routes: `#title`, `#map`, `#<level id>` |
 | Setup | drag the packet (position) and every editable property on the playfield: the arrow head (momentum k₀), the round handle on the dashed ring (width σ); select a placed item to get square handles for width / height / radius and a ◆ stalk above it for its strength (V, or a detector's measurement strength). Sliders mirror all of them. Add items from the inventory, drag them, `Del` removes |
 | `Space` | play / pause (starts the run from setup) |
 | `Enter` | **Observe**: sample |ψ|², collapse, win or lose. At `t_max` the world observes for you |
@@ -28,8 +28,20 @@ npm run solve -- levels/2-2.json   # random-restart optimiser over the setup par
 | `1`-`9` | gates toggle; detectors fire (hold the key to pulse a "hold" detector repeatedly) |
 | Branches | after a run with detector firings, the Branches panel lists the outcome histories (`Y4 N`, …) with their Born weights and P_T; click one to see its wave function |
 | `R` | back to setup, same dice. `V` cycles view (domain colouring / |ψ|² / momentum |φ(k)|² / polarization on spinor levels), `C` current arrows, `G` ghost preview, `M` sound |
+| `?` / `Esc` | controls and legends sheet / close panels. Speed, expectation mode, ghost and current live under Settings |
 
 Win condition (hybrid): the live meter shows P_T = ∫_T |ψ|². The observation is a genuine Born-rule sample (P(hit) = P_T exactly); a hit wins, and **stars come from the skill score**, so skill is rewarded even when the dice are unkind. Without detectors the score is P_T at the moment of observation. If a detector fired, a single run's P_T is post-selected by the detector outcomes (a lucky "yes" can drop the packet onto the target), so the score is the **branch ledger** instead: P_T averaged over every detector outcome of your inputs (`src/ledger.js`). Mines are anti-targets. Probability absorbed at the boundary is a loss branch of the observation. "Expectation mode" wins iff the score ≥ the level's threshold, with no roll; it is fixed for the whole run and keeps its own stars.
+
+## Interface
+
+* **Title** (`#title`): a live, exact free Gaussian behind the title; Start goes to the tutorial chapter, Continue to the last level, Chapters to the map.
+* **Chapter map** (`#map`): one row per chapter with its idea; level cards show the real initial state and geometry (rendered through `Session` + `Renderer` at 64², lazily) and your stars.
+* **Playfield**: always fits the viewport (a square sized by the stage container, `cqw`/`cqh`), with the absorbing edge drawn as a hatched frame, a phase-wheel legend that follows the view, and a view switch. Under it the **transport bar** merges the clock and the P_T(t) timeline (ghost preview, this run, star lines, the observation window, a gold mark where the world observes on fixed-time levels) with Play and Observe always visible.
+* **Rail**: the goal, a one-line **physics point** with "Why?", the probabilities (P_T as a ring with star ticks; mines, lost and momentum budget as bars; the Heisenberg / energy / polarization readout), the Branches panel, real-time tools, then launch sliders and inventory. After an observation the meters hold their values at the moment of observation.
+* **Result card**: shown after a short pause on the crosshair and collapsed packet. Without detectors it shows the Born rule as an ensemble (100 dots, P_T·100 of them hits, yours outlined); with detectors it explains the branch-averaged score.
+* **Physics drawer**: "Why?" opens the level's long explanation (`physics.learn`: the idea, the maths, things to try), beside the running field.
+* **Tutorial** (`src/tutorial.js`): guided levels carry `tutorial` steps `{anchor, title, text, phys, wait}`. Each step spotlights one control and advances on what it waits for: `next`, a game signal (`play`, `observe`, `result`, `drag`) or a time (`t>=8`), so the player learns by doing. It runs the first time a guided level is opened; "Tutorial" in the top bar replays it.
+* Level text keys: `goal` (what to do, shown in the rail), `physics` `{point, eq, learn: {idea, maths, try}}` (items are HTML strings or `{eq}` formula blocks), and the older `intro` (now the goal's tooltip and the fallback).
 
 ## Design notes (how this maps to the plan)
 
@@ -50,6 +62,9 @@ Win condition (hybrid): the live meter shows P_T = ∫_T |ψ|². The observation
 
 | | |
 |---|---|
+| 0-1 Meet ψ | guided: what ψ is, Play, the P_T meter, Observe, stars from P_T |
+| 0-2 Look | guided: timing and the Born rule as odds; a mine behind the target punishes late looks |
+| 0-3 Aim | guided: aim with the momentum arrow, the ghost preview, the physics drawer |
 | 1-1 Rendezvous | measured at t = 10 sharp: speed is set by the distance, the width optimum is σ₀ = √(t/2) |
 | 1-2 Between the Mines | aiming with a mine on each side; choosing when to observe |
 | 1-3 Nudge | kicks and field tilt |

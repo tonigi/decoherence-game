@@ -1,0 +1,91 @@
+{
+ "id": "0-2",
+ "chapter": 0,
+ "title": "Look",
+ "intro": "A mine sits behind the target. Observe near the peak of the green curve, before the packet spreads onto the mine.",
+ "goal": "Observe while P_T is near its peak, before the packet reaches the mine.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 18,
+ "launch": {
+  "x": 8,
+  "y": 20,
+  "k": 1.6,
+  "angle": 0,
+  "sigma": 1.6
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 24,
+   "y": 20,
+   "r": 4
+  }
+ ],
+ "mines": [
+  {
+   "shape": "circle",
+   "x": 33,
+   "y": 20,
+   "r": 3
+  }
+ ],
+ "stars": [
+  0.15,
+  0.3,
+  0.42
+ ],
+ "expectThreshold": 0.3,
+ "reference": {
+  "setup": {},
+  "observeAt": 9.2,
+  "events": []
+ },
+ "naive": false,
+ "naiveSkip": "tutorial on timing: the naive check already observes at the best moment",
+ "tutorial": [
+  {
+   "anchor": "timeline",
+   "title": "Timing",
+   "text": "A mine sits behind the target. The faint curves preview the odds over time: green for the target, red for the mine.",
+   "phys": "Too early, the particle is probably still on its way. Too late, ψ has spread onto the mine. You choose when to roll the dice.",
+   "wait": "next"
+  },
+  {
+   "anchor": "observe",
+   "title": "Pick your moment",
+   "text": "Press <b>Play</b>, then <b>Observe</b> when the green ring is near its peak.",
+   "wait": "result"
+  },
+  {
+   "anchor": "result",
+   "title": "A hundred tries",
+   "text": "The dots are 100 runs of exactly this setup: about P<sub>T</sub> of them hit. Retry a few times. The outcome changes, P<sub>T</sub> does not.",
+   "wait": "next"
+  }
+ ],
+ "physics": {
+  "point": "The Born rule gives odds, not outcomes. The same ψ observed twice can give different answers, so judge a run by P_T, not by the result.",
+  "eq": "P(hit) = P_T",
+  "learn": {
+   "idea": [
+    "Quantum mechanics predicts frequencies. Prepare the same ψ many times, measure each copy, and the fraction found in the target approaches P<sub>T</sub>. A single run tells you almost nothing about whether P<sub>T</sub> was high.",
+    "That is why stars come from P<sub>T</sub> at the moment you observed. The dice only decide whether a hit happened.",
+    "Timing matters because ψ keeps moving. The probability flows into the target, peaks, and then flows on, here onto a mine."
+   ],
+   "maths": [
+    "Each observation is a Bernoulli trial with success probability P<sub>T</sub>. Over n runs the number of hits has mean nP<sub>T</sub> and standard deviation √(nP<sub>T</sub>(1 − P<sub>T</sub>)).",
+    {
+     "eq": "P_T = 0.49, n = 100  ⇒  hits = 49 ± 5"
+    },
+    "In this level P<sub>T</sub> peaks at 49% around t = 9.2. By t = 14 it is down to 14% while the mine holds 16%."
+   ],
+   "try": [
+    "Observe at the peak five times and count hits. Then observe at t ≈ 14 five times and count mines.",
+    "Turn on expectation mode in Settings: the dice are removed and you win when P<sub>T</sub> is above 30%. It shows what you control."
+   ]
+  }
+ }
+}

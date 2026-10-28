@@ -4,83 +4,189 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Born Rule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>Born Rule <small>a wavefunction puzzle</small></h1>
-  <nav id="levels" class="picker" aria-label="Levels">
-    <button id="lvlPrev" title="Previous level  [">◀</button>
-    <select id="lvlSelect" aria-label="Level"></select>
-    <button id="lvlNext" title="Next level  ]">▶</button>
-    <span id="starTotal" class="note"></span>
-  </nav>
-</header>
-<main>
-  <section id="stage">
-    <canvas id="view" width="800" height="800"></canvas>
-    <div id="banner" hidden></div>
-    <div id="hud">
-      <span id="clock">t = 0.0</span>
-      <span id="phaseTag">setup</span>
+
+<!-- ============================================================ title -->
+<section id="titleScreen" class="screen" hidden>
+  <canvas id="titleField" aria-hidden="true"></canvas>
+  <div class="titleInner">
+    <h1>Born<span>Rule</span></h1>
+    <p class="lede">You don't control the particle. You control its wavefunction. Then you look, and the universe rolls the dice.</p>
+    <p class="born">P(x) = |ψ(x, t)|²</p>
+    <div class="cta">
+      <button id="btnStart" class="big prime">Start: First Light</button>
+      <button id="btnContinue" class="big" hidden></button>
+      <button id="btnChapters" class="big">Chapters</button>
     </div>
-  </section>
-  <aside>
-    <section>
-      <h2 id="lvlTitle"></h2>
-      <p id="lvlIntro"></p>
-    </section>
+  </div>
+  <p class="foot">The 2D Schrödinger equation, solved live in your browser. ħ = m = 1.</p>
+</section>
 
-    <section id="meters">
-      <div class="meter"><label>P<sub>T</sub> target</label><div class="bar"><i id="barT"></i><span id="starTicks"></span></div><b id="valT">0</b></div>
-      <div class="meter"><label>P<sub>M</sub> mines</label><div class="bar mine"><i id="barM"></i></div><b id="valM">0</b></div>
-      <div class="meter"><label>lost (absorbed)</label><div class="bar lost"><i id="barL"></i></div><b id="valL">0</b></div>
-      <div class="meter" title="Probability at |k| above 60% of the grid's Nyquist momentum. High values alias."><label>momentum budget</label><div class="bar leak"><i id="barK"></i></div><b id="valK">ok</b></div>
-      <div id="readout" class="note" title="Spreads of the packet along x and its mean energy. Heisenberg: Δx·Δkₓ ≥ ½ (ħ = 1)."></div>
-      <canvas id="plot" width="420" height="150"></canvas>
-    </section>
+<!-- ============================================================ chapter map -->
+<section id="mapScreen" class="screen" hidden>
+  <header class="topbar">
+    <button class="logo" id="mapHome" title="Title screen"><span class="psi"></span>Born Rule</button>
+    <span class="sp"></span>
+    <span class="starTotal" id="mapStars"></span>
+    <button class="ghostbtn" id="mapBack" hidden>Back to level</button>
+  </header>
+  <div class="map">
+    <h2>Chapters</h2>
+    <p class="mapLede">Each chapter teaches one idea. Every level has a one-line physics point, and the full explanation is one click away.</p>
+    <div id="chapters" class="chapters"></div>
+  </div>
+</section>
 
-    <section id="ledgerPanel" hidden>
-      <h3>Branches</h3>
-      <div id="ledgerRows"></div>
-      <p class="note">Every detector outcome splits the run into branches, weighted by their Born probability. The skill score is their weighted P<sub>T</sub>. Click a branch to see its wave function; the dice only chose which one you are in.</p>
-    </section>
-
-    <section id="runControls">
-      <div class="row">
-        <button id="btnPlay">▶ Play <kbd>Space</kbd></button>
-        <button id="btnObserve" class="primary">👁 Observe <kbd>Enter</kbd></button>
-        <button id="btnReset">↺ Reset <kbd>R</kbd></button>
+<!-- ============================================================ game -->
+<section id="gameScreen" class="screen" hidden>
+  <header class="topbar">
+    <button class="logo" id="btnHome" title="Title screen"><span class="psi"></span>Born Rule</button>
+    <div class="crumb" id="crumb"></div>
+    <div class="stepdots" id="tutDots" hidden></div>
+    <span class="sp"></span>
+    <button class="ghostbtn" id="btnSkipTut" hidden>Skip tutorial</button>
+    <button class="ghostbtn" id="btnTut" hidden title="Show this level's tutorial again">Tutorial</button>
+    <div class="picker">
+      <button class="ghostbtn" id="lvlPrev" title="Previous level  [" aria-label="Previous level">◀</button>
+      <button class="ghostbtn" id="btnMap" title="All chapters"></button>
+      <button class="ghostbtn" id="lvlNext" title="Next level  ]" aria-label="Next level">▶</button>
+    </div>
+    <label class="ghostbtn toggle" title="Sonify the wavefunction  M"><input type="checkbox" id="optSound"> ♪ Sound</label>
+    <div class="popwrap">
+      <button class="ghostbtn" id="btnSettings" aria-expanded="false" aria-controls="settings">Settings</button>
+      <div class="pop" id="settings" hidden>
+        <label>Speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+        <label><input type="checkbox" id="optExpect"> Expectation mode (no dice)</label>
+        <label><input type="checkbox" id="optGhost" checked> Ghost preview <kbd>G</kbd></label>
+        <label><input type="checkbox" id="optCurrent"> Probability current <kbd>C</kbd></label>
       </div>
-      <div class="row">
-        <label>speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
-        <label><input type="checkbox" id="optExpect"> expectation mode (no dice)</label>
-      </div>
-      <div id="actions" class="row"></div>
-      <div id="rtInfo" class="note"></div>
-    </section>
+    </div>
+    <button class="ghostbtn" id="btnKeys" title="Controls and legends  ?">? Keys</button>
+  </header>
 
-    <section id="setupPanel">
-      <h3>Launch</h3>
-      <div id="launchSliders"></div>
-      <div id="inventory"></div>
-      <div id="itemPanel"></div>
-    </section>
-
-    <section>
-      <h3>View</h3>
-      <div class="row">
-        <select id="view_mode"><option value="phase">domain colouring</option><option value="density">|ψ|² only</option><option value="momentum">momentum |φ(k)|²</option><option value="polarization">polarization</option></select>
-        <label><input type="checkbox" id="optCurrent"> current <kbd>C</kbd></label>
-        <label><input type="checkbox" id="optGhost" checked> ghost preview <kbd>G</kbd></label>
-        <label><input type="checkbox" id="optSound"> sound <kbd>M</kbd></label>
+  <div class="play">
+    <div class="stagecol">
+      <div class="stage">
+        <div class="field" id="field">
+          <canvas id="view" width="800" height="800"></canvas>
+          <div class="hud"><span class="chip" id="clock">t = 0.0</span><span class="chip" id="phaseTag">setup</span></div>
+          <div class="viewtoggle" id="viewToggle" role="group" aria-label="View">
+            <button data-view="phase" title="Domain colouring: hue = phase, brightness = |ψ|  (V cycles)">ψ</button>
+            <button data-view="density" title="Probability density only">|ψ|²</button>
+            <button data-view="momentum" title="Momentum space">φ(k)</button>
+            <button data-view="polarization" title="Polarization">pol</button>
+          </div>
+          <div class="legend" id="legend"><canvas id="wheel" width="68" height="68"></canvas><div id="legendText"></div></div>
+          <div id="banner" hidden></div>
+        </div>
       </div>
-      <p class="note">Hue = phase, brightness = |ψ|. Orange tint = potential barrier, blue = well. Ghost preview shows the P<sub>T</sub>(t) curve for the current launch with no real-time actions.
-        Polarization view: hue = polarization axis (red horizontal, green 45°, cyan vertical, violet −45°), white = circular. Optics show their axis on a dial: violet polarizer, amber rotator, teal plate, pink Stern–Gerlach magnet (axis goes up), red bomb station.</p>
-      <p class="note">Sound: each horizontal band of the field is a note of a pentatonic scale, loud as √P in that band; on headphones a concentrated packet is heard from its x position (HRTF), a spread-out ψ from all around; faster packets sound brighter. The bells are Born-rule samples of |ψ|², a high halo grows with P<sub>T</sub>, a low beating drone with P<sub>M</sub>. Observation fades it all to silence.</p>
-    </section>
+      <div class="transport">
+        <div class="tgroup">
+          <button class="tbtn" id="btnPlay"><span id="playIcon">▶</span> <kbd>Space</kbd></button>
+          <button class="tbtn" id="btnReset" title="Back to setup  R" aria-label="Back to setup">↺</button>
+        </div>
+        <div class="timeline" id="timeline"><canvas id="plot"></canvas></div>
+        <div class="tgroup"><button class="tbtn observe" id="btnObserve">Observe <kbd>Enter</kbd></button></div>
+      </div>
+    </div>
+
+    <aside class="rail" id="rail">
+      <div class="card objective" id="goalCard">
+        <p class="eyebrow" id="goalEyebrow">Goal</p>
+        <h2 id="lvlTitle"></h2>
+        <p id="lvlGoal"></p>
+      </div>
+      <div class="card physics" id="physCard">
+        <p class="eyebrow">Physics point</p>
+        <p id="physPoint"></p>
+        <span class="eq" id="physEq"></span>
+        <button class="linkbtn" id="btnWhy">Why? The full explanation →</button>
+      </div>
+      <div class="card" id="probCard">
+        <p class="eyebrow" id="probEyebrow">Probabilities now</p>
+        <div class="prob">
+          <div class="ring"><canvas id="ring" width="184" height="184"></canvas><div class="v"><div><b id="valT">0%</b><small>P<sub>T</sub> target</small></div></div></div>
+          <div class="bars">
+            <div id="rowM">mines<span id="valM">0.0%</span><em><i id="barM" style="--c:var(--mine)"></i></em></div>
+            <div>lost<span id="valL">0.0%</span><em><i id="barL" style="--c:var(--faint)"></i></em></div>
+            <div title="Probability at |k| above 60% of the grid's Nyquist momentum. High values alias.">momentum budget<span id="valK">ok</span><em><i id="barK" style="--c:var(--warn)"></i></em></div>
+          </div>
+        </div>
+        <p id="readout" class="readout" title="Spreads of the packet along x and its mean energy. Heisenberg: Δx·Δkₓ ≥ ½ (ħ = 1)."></p>
+      </div>
+      <div class="card" id="ledgerPanel" hidden>
+        <p class="eyebrow">Branches</p>
+        <div id="ledgerRows"></div>
+        <p class="note">Every detector outcome splits the run into branches, weighted by their Born probability. The skill score is their weighted P<sub>T</sub>. Click a branch to see its wave function; the dice only chose which one you are in.</p>
+      </div>
+      <div class="card" id="runCard">
+        <p class="eyebrow">Real-time tools</p>
+        <div id="actions" class="row"></div>
+        <p id="rtInfo" class="note"></p>
+      </div>
+      <div class="card" id="setupPanel">
+        <p class="eyebrow">Launch</p>
+        <div id="launchSliders"></div>
+        <div id="inventory"></div>
+        <div id="itemPanel"></div>
+      </div>
+    </aside>
+  </div>
+
+  <aside class="drawer" id="drawer" hidden aria-label="Physics explanation">
+    <button class="close" id="drawerClose">Close <kbd>Esc</kbd></button>
+    <p class="eyebrow" id="drawerEyebrow"></p>
+    <h2 id="drawerTitle"></h2>
+    <p class="drawerPoint" id="drawerPoint"></p>
+    <div class="tabs" role="tablist" id="drawerTabs">
+      <button role="tab" data-tab="idea">The idea</button>
+      <button role="tab" data-tab="maths">The maths</button>
+      <button role="tab" data-tab="try">Try this</button>
+    </div>
+    <div id="drawerBody"></div>
   </aside>
-</main>
+
+  <div class="sheet" id="keysSheet" hidden role="dialog" aria-label="Controls and legends">
+    <div class="sheetInner">
+      <button class="close" id="keysClose">Close <kbd>Esc</kbd></button>
+      <h2>Controls</h2>
+      <table class="keys">
+        <tr><th>Setup</th><td>Drag the packet to move it, the arrow head to set its momentum, the ring to set its width σ. Inventory items: add, drag, resize with their handles; <kbd>Del</kbd> removes.</td></tr>
+        <tr><th><kbd>Space</kbd></th><td>Play / pause (starts the run from the setup)</td></tr>
+        <tr><th><kbd>Enter</kbd></th><td><b>Observe</b>: sample |ψ|², collapse, win or lose. At the end of the clock the world observes for you.</td></tr>
+        <tr><th>Click the field</th><td><b>Kick</b> (when the level has charges): a momentum impulse toward the cursor</td></tr>
+        <tr><th>Arrows / WASD</th><td><b>Field tilt</b> (when available): a uniform force while held</td></tr>
+        <tr><th><kbd>1</kbd>–<kbd>9</kbd></th><td>Toggle gates; fire detectors (hold to pulse a "hold" detector)</td></tr>
+        <tr><th><kbd>R</kbd></th><td>Back to setup, same dice</td></tr>
+        <tr><th><kbd>[</kbd> <kbd>]</kbd></th><td>Previous / next level</td></tr>
+        <tr><th><kbd>V</kbd> <kbd>C</kbd> <kbd>G</kbd> <kbd>M</kbd></th><td>Cycle view, probability current, ghost preview, sound</td></tr>
+        <tr><th><kbd>?</kbd> <kbd>Esc</kbd></th><td>This sheet; close panels</td></tr>
+      </table>
+      <h2>Reading the field</h2>
+      <p>Hue = phase, brightness = |ψ|. Orange tint = potential barrier, blue = well, rings = harmonic equipotentials, purple = absorber. The hatched frame is the absorbing edge: probability that reaches it is lost.</p>
+      <p>Polarization view: hue = polarization axis (red horizontal, green 45°, cyan vertical, violet −45°), white = circular. Optics show their axis on a dial: violet polarizer, amber rotator, teal plate, pink Stern–Gerlach magnet (axis goes up), red bomb station.</p>
+      <p>Timeline: the faint curve is the ghost preview of P<sub>T</sub>(t) for the current setup with no real-time actions, the bright one is this run, dashed lines are the star thresholds.</p>
+      <h2>Sound</h2>
+      <p>Each horizontal band of the field is a note of a pentatonic scale, loud as √P in that band; on headphones a concentrated packet is heard from its x position (HRTF), a spread-out ψ from all around; faster packets sound brighter. The bells are Born-rule samples of |ψ|², a high halo grows with P<sub>T</sub>, a low beating drone with P<sub>M</sub>. Observation fades it all to silence.</p>
+    </div>
+  </div>
+
+  <div id="coachLayer" hidden>
+    <div class="spot" id="coachSpot"></div>
+    <div class="coach" id="coach" role="dialog" aria-live="polite">
+      <p class="eyebrow" id="coachStep"></p>
+      <h3 id="coachTitle"></h3>
+      <p id="coachText"></p>
+      <p class="phys" id="coachPhys"></p>
+      <footer><span class="wait" id="coachWait"></span><span class="sp"></span><button class="go" id="coachNext">Next</button></footer>
+    </div>
+  </div>
+</section>
+
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

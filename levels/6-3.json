@@ -86,5 +86,35 @@
   0.4,
   0.5
  ],
- "expectThreshold": 0.4
+ "expectThreshold": 0.4,
+ "goal": "Place the birefringent plate and set its axis (dial) and thickness (width) so the horizontal packet arrives vertical and passes the vertical guard.",
+ "physics": {
+  "point": "A birefringent plate delays one polarization relative to the other and absorbs nothing. At the right thickness, a half-wave plate, it turns horizontal into vertical with no loss.",
+  "eq": "P = sin²2θ · sin²(Γ/2)",
+  "learn": {
+   "idea": [
+    "Split the polarization into a part along the plate's axis and a part across it. Inside the plate the two build up phase at different rates, so one falls behind the other. Nothing is absorbed.",
+    "The lag is the retardance Γ. It grows with the time spent inside, so a thicker plate gives a larger lag. At Γ = π, a half-wave plate, the crossed part flips sign, which mirrors the polarization about the plate's axis.",
+    "Mirror horizontal about a 45° axis and you get vertical. All of the light can then pass the vertical guard, against 25% for the best single polarizer (at 45°).",
+    "At Γ = π/2, a quarter-wave plate, a 45° axis makes the packet circularly polarized, and half of it passes any linear polarizer."
+   ],
+   "maths": [
+    "Here the plate builds up phase difference at rate δ = 2 per unit time, and the packet (speed v = 2.5) spends w/v inside a plate of thickness w:",
+    {
+     "eq": "Γ = δ · w / v = 0.8 · w\nhalf-wave:  w = π / 0.8 ≈ 3.93"
+    },
+    "For a horizontal input and a plate with axis θ, the share that comes out vertical is:",
+    {
+     "eq": "P_V = sin²(2θ) · sin²(Γ/2)"
+    },
+    "θ = ±45° and Γ = π give P<sub>V</sub> = 1. A half-wave plate turns linear polarization by 2θ, so θ = 22.5° gives 45° and P<sub>V</sub> = ½.",
+    "Measured as a share of the 55% that reaches the target with nothing in the way: 0.96 for w = 3.9 at 45° (P<sub>T</sub> ≈ 53%) and 0.50 for the quarter-wave plate, w ≈ 1.96 (P<sub>T</sub> ≈ 28%). The packet's speeds spread by about 10%, so not all of it sees exactly Γ = π."
+   ],
+   "try": [
+    "Set the axis to 45° and the thickness to about 3.9: P<sub>T</sub> ≈ 53%. Thin it to about 2: the packet leaves circular (white in the polarization view) and P<sub>T</sub> halves.",
+    "Keep w = 3.9 and turn the axis to 22.5°: the packet leaves at 45° and P<sub>T</sub> ≈ 26%. At 0° or 90° the plate does nothing to a horizontal packet.",
+    "Try −45°: it works as well as +45°, because mirroring about either diagonal turns horizontal into vertical."
+   ]
+  }
+ }
 }

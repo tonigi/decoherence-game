@@ -1,0 +1,91 @@
+{
+ "id": "0-3",
+ "chapter": 0,
+ "title": "Aim",
+ "intro": "The target is off the straight line. Drag the arrow head to aim the packet, watch the preview curve, then play and observe at the peak.",
+ "goal": "Drag the arrow head to aim at the target, then Play and Observe at the peak.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 20,
+ "launch": {
+  "x": 8,
+  "y": 31,
+  "k": 2.2,
+  "angle": [
+   0,
+   -80,
+   80
+  ],
+  "sigma": 1.8
+ },
+ "targets": [
+  {
+   "shape": "circle",
+   "x": 29,
+   "y": 13,
+   "r": 3.5
+  }
+ ],
+ "stars": [
+  0.12,
+  0.22,
+  0.3
+ ],
+ "expectThreshold": 0.2,
+ "reference": {
+  "setup": {
+   "launch": {
+    "angle": -40.6
+   }
+  },
+  "observeAt": 12.2,
+  "events": []
+ },
+ "naive": {
+  "setup": {}
+ },
+ "tutorial": [
+  {
+   "anchor": "handle:k",
+   "title": "Aim",
+   "text": "The target is up and to the right. Drag the white dot at the tip of the arrow to aim the packet.",
+   "phys": "The arrow is the momentum k₀. Its direction is where the packet goes; its length is how fast.",
+   "wait": "drag"
+  },
+  {
+   "anchor": "timeline",
+   "title": "Preview",
+   "text": "The faint curve updates as you aim: it previews P<sub>T</sub>(t) for your setup. Aim until it peaks high, then press <b>Play</b> and <b>Observe</b> at the peak.",
+   "wait": "result"
+  },
+  {
+   "anchor": "physics",
+   "title": "The long version",
+   "text": "Every level has a one-line physics point here. <b>Why?</b> opens the full explanation. That is the end of the tutorial: Chapter 1 starts with real puzzles.",
+   "wait": "next"
+  }
+ ],
+ "physics": {
+  "point": "Momentum sets where the packet goes. In free space its centre moves in a straight line at velocity k₀ (ħ = m = 1).",
+  "eq": "⟨r⟩(t) = r₀ + k₀ t",
+  "learn": {
+   "idea": [
+    "The arrow is the packet's average momentum. A plane wave exp(i k·r) has its wavefronts perpendicular to k, and the packet travels along k.",
+    "The centre of a free packet moves like a classical particle, in a straight line at constant speed (Ehrenfest's theorem). Only its width behaves quantum mechanically, spreading as it goes."
+   ],
+   "maths": [
+    "The target centre is at (29, 13) and the packet starts at (8, 31): a displacement of (21, −18), so the direction is atan2(−18, 21) = −40.6°, with y pointing down the screen.",
+    {
+     "eq": "|Δr| = √(21² + 18²) = 27.7,  t = 27.7 / 2.2 = 12.6"
+    },
+    "The meter peaks at t ≈ 12.2, slightly before the centre arrives, because the spreading packet starts filling the target early. The best P<sub>T</sub> is 33%."
+   ],
+   "try": [
+    "Aim 10° too high or too low and watch the preview peak drop: the packet is about 5 units wide on arrival, the target 7.",
+    "Leave the arrow flat (0°) and play: P<sub>T</sub> stays at zero."
+   ]
+  }
+ }
+}

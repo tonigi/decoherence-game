@@ -90,5 +90,40 @@
     }
    ]
   }
+ },
+ "goal": "Place the detector over the target and hold key 1 to pulse it while the packet would spread. Observe at t = 12 or later.",
+ "physics": {
+  "point": "Looking often enough can stop change. Each 'yes, still here' from the detector re-localises the spreading packet, so frequent looks hold it in place: the quantum Zeno effect.",
+  "eq": "loss ≈ N·c·(T/N)² = c·T²/N",
+  "learn": {
+   "idea": [
+    "Left alone, a narrow packet spreads: its momentum is uncertain, so its position soon is too. By t = 12 most of it has left the target.",
+    "The detector asks 'is the particle inside this circle?'. A 'yes' cuts the wave back to the circle and undoes the spreading so far. A 'no' means it was found outside, and that history is mostly lost for the target.",
+    "Look often and each gap is short, so little has leaked out and 'yes' is very likely. A long run of 'yes' answers keeps the packet in place. Frequent measurement slows change: the quantum Zeno effect.",
+    "Size matters. A small circle squeezes the packet hard, and a squeezed packet has a wide spread of momenta, so it escapes faster. A large circle holds it loosely, and much of it sits outside the target (radius 3).",
+    "Stars come from the branch average: P<sub>T</sub> over every sequence of answers your pulses could produce, weighted by its probability. A lucky run of 'yes' earns nothing extra."
+   ],
+   "maths": [
+    "Free spreading of a Gaussian packet (ħ = m = 1), with σ the width of |ψ|²:",
+    {
+     "eq": "σ(t) = σ₀ √(1 + (t / 2σ₀²)²)"
+    },
+    "Here σ₀ = 1.2, so σ(12) ≈ 5.1, and the chance of being within r = 3 falls from 96% at t = 0 to 16% at t = 12:",
+    {
+     "eq": "P_T = 1 − exp(−r² / 2σ²) ≈ 0.157"
+    },
+    "Textbook Zeno argument, for ideal instant measurements: during a short gap τ the chance of leaving grows like τ², not τ. Split a time T into N gaps and the total loss is about N·c·(T/N)², which shrinks as N grows. The game's detector has soft edges and needs 0.25 time units between pulses, so its hold is good but not perfect.",
+    "Measured here (circle r = 5, pulsing from t = 0, observed at t = 12):",
+    {
+     "eq": "pulse every 0.25 → 53%\nevery 0.5 → 48%   every 1 → 41%\nevery 2 → 33%     never → 16%"
+    },
+    "Radius, pulsing every 0.25: r = 2 gives 2%, 3 gives 22%, 4 gives 46%, 5 gives 53%, 6 gives 32%. With 48 pulses there are too many histories to follow one by one, so the game compresses them to 16 representative states; the weight it discards here is under 2%."
+   ],
+   "try": [
+    "Set the detector to radius 5, hold key 1 from the start until t ≈ 12, then observe: about 53%. Without pulsing: about 16%.",
+    "Shrink the detector to radius 2 and pulse the same way: the squeezed packet escapes and the score drops to a few percent.",
+    "Tap the key once every 2 time units instead of holding it: the sparser looks hold the packet less well (about 33%)."
+   ]
+  }
  }
 }

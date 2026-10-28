@@ -8,7 +8,7 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 18 levels in 6 chapters: free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 21 levels in 7 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-3), measurement (5-1, 5-2),
   and polarization (6-1…6-5, spinor ψ).
 * `npm test`: 45 tests, all passing (~1 min). `npm run verify`: every level passes. The

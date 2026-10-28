@@ -90,5 +90,32 @@
   },
   "observeAt": 11,
   "events": []
+ },
+ "goal": "Place the barrier in the packet's path so it bounces back into the target on the left. Set its thickness, length and strength V, then Observe at the peak.",
+ "physics": {
+  "point": "A barrier above the packet's energy reflects it, but a thin one is a leaky mirror: part of the wave tunnels through. Thick, strong and long enough makes a good mirror.",
+  "eq": "E = k²/2 = 2 < V",
+  "learn": {
+   "idea": [
+    "The packet has energy E = k²/2 = 2. A barrier with V well above 2 turns it around. A barrier below 2 lets most of it pass over the top.",
+    "Even above that, a thin barrier is not a perfect mirror. Inside it the wave decays exponentially, and whatever is left on the far side tunnels through, toward the mines. For a wave of the packet's mean energy, each extra unit of thickness cuts the leak by a factor of about e<sup>2κ</sup>.",
+    "The barrier must also be long enough. When the packet reaches it, its spread across is σ ≈ 2.1, so two σ either side makes it about 8.5 units tall. A shorter barrier lets the edges of the packet slip past."
+   ],
+   "maths": [
+    {
+     "eq": "κ = √(2(V − E)),   T ~ e^{−2κw}"
+    },
+    "For V = 3.4 and E = 2, κ ≈ 1.67, the decay length is 0.6 and e<sup>2κ</sup> ≈ 28. At exactly E = 2 this soft-edged barrier transmits 22 % at w = 1, 1 % at w = 2 and 0.04 % at w = 3.",
+    "Averaged over the packet's spread of energies, the 3-thick barrier transmits about 0.8 %. Most of that is the few fastest components (k > 2.6) passing over the top, not tunnelling.",
+    "The default barrier (w = 1, V = 3) leaks about 36 %, because its soft edges leave a peak of only 2.7.",
+    "With w = 3 and length 15, the best P<sub>T</sub> rises with V and then levels off: 28 % at V = 2, 46 % at V = 2.5, and 52–55 % for V from 3 to 6. At V = 3.4, w = 3, a length of 8 gives 33 %, 12 gives 51 % and 15 gives 54 %.",
+    "The round trip also costs spreading. With the barrier at x ≈ 25.5 the packet returns to the target at t ≈ 11. At x = 22 the trip is shorter, it returns at t ≈ 8, and P<sub>T</sub> reaches about 62 %."
+   ],
+   "try": [
+    "Place the barrier and keep its defaults (w = 1, V = 3, length 8). Much of the packet leaks through or slips past the ends, and the best P<sub>T</sub> is about 25 %.",
+    "Make it 3 thick and 15 long, then vary V. At V = 2 about 40 % of the packet goes through; from V ≈ 3 up the mirror is nearly perfect and P<sub>T</sub> levels off near 54 %.",
+    "Slide the strong, long barrier left, toward the packet. The packet comes back sooner and narrower: around x = 22, P<sub>T</sub> reaches about 62 % at t ≈ 8."
+   ]
+  }
  }
 }

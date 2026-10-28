@@ -136,5 +136,35 @@
  },
  "naive": {
   "setup": {}
+ },
+ "goal": "Place the phase plate in one arm of the interferometer and tune its strength V so the packet leaves through the lower exit onto the target, not the right-hand exit with the mine. Then observe.",
+ "physics": {
+  "point": "The particle takes both arms at once. Delaying one arm's wave by half a cycle (a phase of π) moves the bright exit from one port to the other.",
+  "eq": "Δφ ≈ (k − √(k² − 2V))·ℓ",
+  "learn": {
+   "idea": [
+    "The first thin wall is a beam splitter: it reflects about half of the wave and lets the rest through. The particle is not sent one way or the other. Its wave takes both arms, and the mirrors bring the two parts together at the second splitter.",
+    "There each arm's wave splits again, so each exit receives two contributions. With equal arms they add in the right-hand exit (the mine) and cancel in the lower one (the target).",
+    "The phase plate is a low bump of potential. Inside it the particle has less kinetic energy, so its wavelength is longer and its wave falls behind. Half a cycle behind turns adding into cancelling, and the two exits swap. A full cycle behind changes nothing.",
+    "The splitters here are not perfect, so the dark exit never goes completely dark. Without a plate about 7% still reaches the target."
+   ],
+   "maths": [
+    "Energy is conserved, E = k²/2. Inside a plate of height V the kinetic energy is E − V, so the wavenumber drops to k′ = √(k² − 2V). Over a path ℓ inside the plate the wave falls behind by",
+    {
+     "eq": "Δφ = (k − k′)·ℓ ≈ V·ℓ / k   (for V ≪ k²/2)"
+    },
+    "Here k = 3. The reference plate has V = 1.05, so k′ ≈ 2.63 and the wave falls behind by 0.37 rad per unit of path: a π shift takes about 8.4 units. For ideal 50/50 splitters the target would get sin²(Δφ/2) of the probability. With the reference plate, observed at t = 10.8:",
+    {
+     "eq": "plate V    0     0.5   1.05   1.6   2.0\nP_T        7%    22%   43%    22%   8%\nP_mine     41%   26%   4.5%   25%   37%"
+    },
+    "The pattern repeats: V = 2.0 gives (3 − √5)·8.4 ≈ 6.4 ≈ 2π, and the exits are back where they started.",
+    "Why not 100%? The splitter is a thin barrier whose transmission rises from 0.39 to 0.59 between k = 2.7 and 3.3, so the two beams carry slightly different mixes of speeds and overlap only about 70%. The plate also delays its beam by about Δφ/(k·k′) ≈ 0.4 time units, which spoils the overlap a little more."
+   ],
+   "try": [
+    "Run with no plate and observe near t ≈ 10.8: about 41% sits on the mine and only 7% on the target.",
+    "Place the plate in the corner of the upper arm, as in the solution (x ≈ 20.5, y ≈ 13.7, w = 6, h = 7.6), and step V through 0.5, 1.05 and 2.0. P_T goes about 22%, 43%, 8%: one full cycle of interference.",
+    "The plate works in the lower arm too. A 4 × 4 plate at x ≈ 18.5, y ≈ 23 with V = 2 shifts the phase by (3 − √5)·4 ≈ 3.1 ≈ π and gives P_T ≈ 33%."
+   ]
+  }
  }
 }
