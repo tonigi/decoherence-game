@@ -57,21 +57,55 @@ is open, and how to work on it without breaking anything.
 | 9-8 Bound Pair | a spring-bound pair in the loop mirror: window at Φ₀/8 (h/2e) | 85 % | 16 % (Φ₀/4) |
 | 9-9 Pauli Ring | two fermions in the cold square need Φ₀/2 (parity effect) | 100 % | 0 % |
 
-## 2. Architecture (src/, ~2000 lines)
+## 2. Architecture (src/, ~3100 lines)
 
 | File | Role |
 |---|---|
 | `fft.js` | radix-2 complex FFT. `pass()` is the transposed fast path used by the propagator; `forward`/`inverse` give the normal layout. |
-| `sim.js` | 2D TDSE solver, ħ = m = 1, Strang split-step (V/2 → T → V/2). Static V, gates (V and/or absorption W, ramped), tilt, boundary absorber W, element absorber Wel with exact `caught` bookkeeping, harmonic contours for display. Observables: `norm`, `mass`, `mass2`, `kMass` (k-space), `kDensity`, `stats` (Δx, Δkₓ, ⟨E⟩), `kLeak`. `step(n, others)` steps extra states in lock-step; `withState(st, fn)` runs any method on another state. Spinor mode (`spinor: true`) adds `re2/im2`; every per-state loop goes through `comps()`, `snapshot()`/`load()` copy states, and optics are a sparse per-cell 2×2 exponential (`spinExp`, exact for complex h) beside the scalar half-steps. `stokes()`, `polMass()` read the polarization. |
+| `sim.js` | 2D TDSE solver, ħ = m = 1, Strang split-step (V/2 → T → V/2). Static V, gates (V and/or absorption W, ramped), tilt, boundary absorber W, element absorber Wel with exact `caught` bookkeeping, harmonic contours for display. Observables: `norm`, `mass`, `mass2`, `kMass` (k-space), `kDensity`, `stats` (Δx, Δkₓ, ⟨E⟩), `kLeak`, `modeMass` (overlap with a Gaussian mode). Per-axis `periodic` boundaries and the `gauge` (twist / force on a ring, §2.1); `exchange(±1)` (anti)symmetrises ψ(x₁, x₂). `step(n, others)` steps extra states in lock-step; `withState(st, fn)` runs any method on another state. Spinor mode (`spinor: true`) adds `re2/im2`; every per-state loop goes through `comps()`, `snapshot()`/`load()` copy states, and optics are a sparse per-cell 2×2 exponential (`spinExp`, exact for complex h) beside the scalar half-steps. `stokes()`, `polMass()` read the polarization. |
 | `optics.js` | polarization optics as spin Hamiltonian terms h₀ + h·σ (polarizer: absorbing or reflecting projector; rotator ω σ_y; retarder (δ/2) n(θ)·σ; Stern–Gerlach `zeeman` g·v·n(θ)·σ, where Session scales the mask by the transverse coordinate v); `bomb: true` routes an optic's absorption into `caught`; `jones()` for launch polarizations. |
 | `shapes.js` | rasterisation with tanh edges of fixed physical width `SOFTNESS = 0.45` at every N (this keeps the 64² ghost consistent with the 128² game). Rects take `angle`; also `disc`, `wall` with slits, `harmonic`, and `lattice` (V sin²(πu/period), optionally in a soft rect window; also a placeable inventory item). `rasterKMask` builds momentum-space masks on the fft-shifted grid (dk = 2π/L, the same for every N). |
-| `session.js` | DOM-free game core: one playthrough = (level, setup, seed, event log). Setup sanitising, items, detectors (Kraus `M_yes = √s·m`, `M_no = √(1 − s m²)`), the observation (Born sample in x or k space; P(hit) = P_T exactly), scoring (`scoreWith`), `replay`. |
+| `session.js` | DOM-free game core: one playthrough = (level, setup, seed, event log). Setup sanitising, items, detectors (Kraus `M_yes = √s·m`, `M_no = √(1 − s m²)`), drains, the observation (Born sample in x or k space, or the projector onto a state target; P(hit) = P_T exactly), post-selection (`herald`), scoring (`scoreWith`), `replay`. |
 | `ledger.js` | skill score for runs with detector firings: replays the open-loop inputs, splits every branch at each firing, compresses beyond 16 branches to the leading eigenvectors of ρ (deterministic; the error is bounded by the reported `dropped`). Returns the branch states plus its 64² `Sim` for the Branches panel. |
 | `ghost.js` | low-res (64²) forward preview of P_T(t) for the current setup. |
-| `render.js` | canvas: domain colouring / \|ψ\|² / zoomed momentum view, potential tint, absorber tint, harmonic contours, overlays (rotated shapes, k-space regions), setup handles. |
+| `render.js` | canvas: domain colouring / \|ψ\|² / zoomed momentum view (kinetic momentum, crisp k cells on ring levels), potential tint, absorber tint or portal edges (with the flux), harmonic and pair contours, the exchange diagonal on two-particle levels, overlays (rotated shapes, k-space regions), setup handles. |
 | `audio.js` | Web Audio sonification: `analyse(sim)` (band weights, mean/sd of x, RMS k; pure, tested) drives a pentatonic pad, HRTF-placed by mean x, crossfading to a surround bed as sd(x) grows; Born-rule-sampled bells; event chimes; observation fades to silence plus one faint tone at the found position. Uses `Math.random` only, outside the session. |
-| Textbook-level mechanics | **State targets** (`{shape: "state", x, y, sigma}`): the observation is the projector onto a coherent state, P_T = Σ_c\|⟨φ\|ψ_c⟩\|² (`Sim.gaussianMode`, `modeMass`, `projectMode`); it must be the only target, with no mines. **Pulse gates** (`gate.pulse` = steps): a key press closes the gate for that long and it reopens by itself, inside `Sim._refresh`, so the ledger sees the same pulses; a pulse gate created closed fires at t = 0. **`launch.sigmaT`**: width across the motion. **`field`**: a constant force added to the player's tilt. **`particles: "bosons" \| "fermions"`**: the grid is ψ(x₁, x₂), (anti)symmetrised by `Sim.exchange`; the renderer draws the exchange diagonal and the axis labels. **`boundary`**: `"absorb"` (default), `"periodic"`, or `{x, y}` per axis. The FFT box is a torus; a periodic axis simply drops the absorber there (`Sim.periodic`, `absorbX/absorbY`), and the renderer draws portal edges instead of the hatched frame. On a periodic axis kicks are rounded to whole quanta 2π/L (anything else leaves a phase seam). **Gauge** (`Sim.gauge`, `_buildKinetic`): the kinetic propagator uses (k + g)²; a twist θ (`setTwist`, from `launch.flux` in flux quanta: θ = 2πΦ/Φ₀) sets g = θ/L, and a force (field or tilt) along a periodic axis drives g += F dt with the step using its midpoint, instead of a sawtooth potential (the kinetic part is then exact). The launch subtracts g so the physical packet does not depend on the flux. Everything in momentum is kinetic, k + g: the HUD, the momentum view (the canonical grid drawn shifted by g to a fraction of a cell, crisp on ring levels), k-space regions (`rasterKMask` adds `sim.gauge`; `Session._kRegions` rebuilds them whenever g moves) and the Born sample. `fluxAxis: "xy"` threads both axes. **Drains** (`drains: [{side, key}]`): a gate carrying an absorbing strip on one side, a smooth bump 2 sin²(πd/A) that vanishes at both its ends (a ramp ending at full strength at the seam of a periodic axis reflects and makes high k); its loss counts as lost. **Post-selection** (`postselect: {min}`, `Session.herald()`): P_T and P_M divided by max(norm, min), Born sample among survivors; refused with detectors or bombs (the ledger and `caught` are not conditioned). **`pair`** element: harmonic bond in the wrapped distance x₁ − x₂, drawn as contours (keep ½ω²R² off a multiple of 2, or the flat outside is drawn as one big contour). **Periodic launch**: `setGaussian` sums the packet over its periodic images on periodic axes (no seam for packets wider than the ring; this moved the earlier ring levels by ≤ 2 %). The flux slider steps by 0.025. 7-1 and 7-2 use x-periodic edges: an infinite grating (the scores moved by under 1 %). |
 | `main.js` | UI: level picker, sliders, inventory, playfield handles, input, run loop, result banner, Branches panel, HUD readouts. |
+
+### 2.1 Mechanics added for the textbook and ring levels (4-4, 6-6, chapters 7–9)
+
+* **State targets** (`{shape: "state", x, y, sigma}`): the observation is the projector
+  onto a coherent state, P_T = Σ_c |⟨φ|ψ_c⟩|² (`Sim.gaussianMode`, `modeMass`,
+  `projectMode`). It must be the only target, with no mines.
+* **Pulse gates** (`gate.pulse` = steps): a key press closes the gate for that long and it
+  reopens by itself. This happens inside `Sim._refresh`, so the ledger sees the same
+  pulses; a pulse gate created closed fires at t = 0.
+* **Launch and field**: `launch.sigmaT` (width across the motion); `field` (a constant
+  force added to the player's tilt).
+* **Elements**: `lattice` (V sin²(πu/period), optional soft window; also an inventory
+  item) and `pair` (a harmonic bond ω²u²/2 in u = (x₁ − x₂)/√2, wrapped round the box,
+  flat beyond R; drawn as contours, so keep ½ω²R² off a multiple of 2 or the flat
+  outside becomes one big contour).
+* **Two particles** (`particles: "bosons" | "fermions" | "distinguishable"`): the grid is
+  ψ(x₁, x₂), (anti)symmetrised by `Sim.exchange`.
+* **Boundaries** (`boundary`: `"absorb"` default, `"periodic"`, or `{x, y}`): the FFT box
+  is a torus, and a periodic axis drops the absorber (`Sim.periodic`, `absorbX/absorbY`).
+  `grid.L` is per level (9-6 uses L = 10).
+* **Gauge** (`Sim.gauge`, `_buildKinetic`): the kinetic propagator uses (k + g)². A twist
+  (`setTwist`, from `launch.flux` in flux quanta, θ = 2πΦ/Φ₀, on `fluxAxis` x, y or xy)
+  sets g = θ/L; a force (field or tilt) along a periodic axis drives g += F dt, with the
+  step using its midpoint, instead of a sawtooth potential. The launch subtracts g, so
+  the physical packet does not depend on the flux. Everything in momentum is kinetic,
+  k + g: the HUD, the momentum view (drawn shifted by g to a fraction of a cell), k-space
+  regions (`Session._kRegions` rebuilds them when g moves) and the Born sample. k regions
+  may set `edge` (softness; 0.005 resolves single teeth of the comb).
+* **Drains** (`drains: [{side, key}]`): a gate carrying an absorbing strip on one side, a
+  smooth bump 2 sin²(πd/A) that vanishes at both ends; its loss counts as lost.
+* **Post-selection** (`postselect: {min}`, `Session.herald()`): P_T and P_M are divided by
+  max(norm, min) and the observation samples among the survivors. Refused together with
+  detectors or bombs (the ledger and `caught` are not conditioned).
+* **Experiment names**: `experiment` is shown under the title, on the map card and in
+  the drawer.
 
 `tools/verify.js` checks every level (and `--replay file.json` re-verifies a saved run).
 `tools/solve.js` is a derivative-free optimiser over the setup parameters, used to find
@@ -87,12 +121,16 @@ references and calibrate stars.
 2. **Probability bookkeeping.** `norm + caught + boundary loss = 1` at all times (tested
    exactly). Detector outcomes condition `caught` via `conditionCaught`. Gate absorption
    (shutters) is counted as lost, not as `caught`.
-3. **Born rule.** The observation samples |ψ|² (or |φ(k)|²). Hit/mine use a second
-   uniform against the smooth masks, so P(hit) = P_T and P(mine) = P_M exactly.
+3. **Born rule.** The observation samples |ψ|² (or |φ(k)|², in kinetic momentum). Hit/mine
+   use a second uniform against the smooth masks, so P(hit) = P_T and P(mine) = P_M
+   exactly. A state target is a projective measurement with P(hit) = |⟨φ|ψ⟩|²; on a
+   post-selected level the sample is drawn among the survivors, so P(hit) = P_T/herald.
+   All three are Monte Carlo tested.
 4. **Scoring.** Stars come from P_T at the observation. After any detector firing they
    come from the ledger's branch average instead, which removes post-selection luck (a
-   test reproduces the old exploit). Expectation mode is fixed per run and keeps its
-   own star table (`id@expect` in localStorage).
+   test reproduces the old exploit). On a `postselect` level the score is the conditional
+   P_T. Expectation mode is fixed per run and keeps its own star table (`id@expect` in
+   localStorage).
 5. **Spinor parity.** Scalar levels must not pay for spinor mode, and anything that
    touches a state (new observables, operations, ledger copies) must go through
    `comps()` / `snapshot()` so the second component is never silently dropped. The
@@ -103,6 +141,11 @@ references and calibrate stars.
 7. **Level contract.** `verify.js` must pass: reference ≥ 2 stars, `naive` < 1 star
    (without `observeAt` the naive run is observed at its best moment).
    `"naive": false` needs a `naiveSkip` reason.
+8. **Seamless periodic axes.** Anything acting along a periodic axis must be continuous
+   across the seam: kicks are rounded to whole quanta 2π/L, forces go through the gauge,
+   drains are a bump that vanishes at the seam, the launch is summed over periodic images,
+   and full-length lattices fit a whole number of periods (tested). A jump at the seam
+   reflects and shows up as high k ("momentum budget" warning).
 
 ## 4. Level design workflow
 
@@ -112,8 +155,11 @@ references and calibrate stars.
    these; see the review log.
 2. Check 64² against 128² (the ghost and the ledger run at 64²).
 3. Write the JSON. Use `minObserveTime = tmax` for a fixed observation time (this kills
-   "max the speed slider" optima). Use `observe: "momentum"` plus `kView` for k-space
-   targets. Add `reference` and `naive`, and use `tools/solve.js` to refine the
+   "max the speed slider" optima, and "observe while the packet passes" optima on rings).
+   Use `observe: "momentum"` plus `kView` for k-space targets. When the objective is a
+   state rather than a place, use a state target (it also kills timing exploits: the
+   fidelity with a stationary state is conserved). When the mechanic removes probability,
+   absolute P_T cannot reward it: use `postselect`. Give each level its `experiment`. Add `reference` and `naive`, and use `tools/solve.js` to refine the
    reference and set the stars.
 4. `npm run verify`, `npm test`, then play it in the browser.
 
@@ -145,16 +191,16 @@ references and calibrate stars.
   magnets' entrance and exit edges give each beam a v-dependent longitudinal kick of
   opposite sign for H and V (g·d ≈ 1.5 against E ≈ 3), which tilts their wavefronts
   apart; the loop recombined only 1–10 %. The time-domain version (6-6) works. *Bloch
-  oscillations* in an open box (lattice item + `field`), now solved on a ring (9-2): in L = 40 there is no window where a shallow
+  oscillations* in an open box (lattice item + `field`; solved on a ring instead, 9-2): in L = 40 there is no window where a shallow
   lattice neither leaks by Zener tunnelling (F = 0.2–0.3, V = 0.6: 20–50 % lost) nor
   traps classically (V > F·a; F = 0.1, V = 1: periods 3.5–5 hold 55–63 % just as wells
   would). The oscillation itself is clean (a = 2: P_home 0.66 → 0.02 at t = 16 → 0.48 at
-  T_B = 31). It needs a larger box (WebGPU) or a scoring that rewards the return, not
-  the stay.
+  T_B = 31).
 * **Dropped ideas, so nobody repeats them blindly:** the "Shutter" (a reflecting shutter
   pumps energy and traps; an absorbing chopper is clean but gives only about 3 % vs 1.7 %),
   the "Energy filter" (barrier filtering does not change the absolute high-k
-  probability), and box revivals (T_rev = 4L²/π is too long at useful sizes).
+  probability). Box revivals with L = 40 (T_rev = 4L²/π is too long) became 9-6 on a
+  small torus (L = 10, T = L²/π = 31.8).
 * **Reflecting splitters inside a rotating medium form cavities.** A polarizing beam
   splitter overlapping a rotator reflects V backwards, which keeps rotating and leaks
   H forward between neighbouring splitters (6-5 prototype: 0.85 against the ideal
@@ -162,6 +208,14 @@ references and calibrate stars.
   absorbing / `bomb` optics. Likewise any polarizer *inside* a rotator watches the
   rotation continuously and beats the discrete Zeno law; 6-5 uses placement zones to
   keep its stations in the gaps.
+* **Ghost vs game on 9-5.** The drain level's 64² preview reads a few percent higher than
+  the 128² game (no drain: 11 % vs 7 %), because the thin wall's transmission differs
+  between the grids. Scores come from 128².
+* **Gate hotkey labels** are drawn at the top-left of the playfield and overlap the clock
+  badge on levels with gates (seen on 4-3, 4-4). Cosmetic.
+* **Pair levels need a stiff bond.** With ω = 1 the walls of 9-8 tear the pair apart
+  (about 10 % ends more than 3 apart after one hit); ω = 2 keeps it bound but its width (0.5) is under-resolved
+  at 64² (dx = 0.625). The ghost still agrees within 3 %.
 * **Performance.** CPU JS at 128² is about 1.4 ms/step. Ledger scoring of a 48-pulse
   Zeno run takes about 2.5 s (async, shows a "Scoring…" banner); the Jacobi
   eigen-solve on the 32×32 Gram embedding dominates.

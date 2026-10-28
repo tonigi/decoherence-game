@@ -100,6 +100,27 @@
 > **placement zones** (`area` as a list of rects) that keep the stations in the gaps;
 > with them the optimiser finds one per gap (0.160). `solve.js` needs `--net 0` here,
 > because booms count in P_M.
+>
+> **Ninth round (textbook levels).** Experiment names shown to the player. State targets
+> (projective fidelity) for **4-4 Bang-Bang** (96 % vs 0 %; the fidelity with B's ground
+> state is conserved in B, so no timing exploit). **6-6 Humpty Dumpty** as a time-domain
+> full-loop Stern–Gerlach (55 % vs 0 %); the spatial magnet loop failed (1–10 %: the edges
+> tilt H and V apart). Lattice element: **7-1 Kapitza–Dirac** (J_n² orders, 65 %),
+> **7-2 Talbot** with a pulsed phase grating (42 % vs 21 %; a slit grating caught only
+> 1–5 %), **7-3 Bragg Mirror** (59 % vs 3 %). Two particles on a line: **8-1
+> Hong–Ou–Mandel** (93 % vs 47 %). Bloch oscillations failed in the open box (Zener loss
+> vs classical trapping).
+>
+> **Tenth round (portals).** Per-axis periodic boundaries; the gauge (k + g)² for a flux
+> (twist) and for a force on a ring (a flux growing in time, no sawtooth); kinetic
+> momentum everywhere; drains; post-selection; the `pair` bond; periodic-image launches.
+> Chapter 9: **9-1 Loop Mirror** (Aharonov–Bohm in a Sagnac ring, 63 % vs 3 %), **9-2
+> Push Less** (Bloch oscillations on a ring, 61 % vs 8 %), **9-3 Half Steps** (flux shifts
+> the comb, 63 % vs 0 %), **9-4 Pairs** (total momentum, h/2e, 44 % vs 0 %), **9-5 Leak**
+> (interaction-free measurement with a timed drain, 20 % vs 6 %), **9-6 Revival** (L = 10
+> torus, 77 % vs 0 %), **9-7 Chopper** (post-selected velocity selection, 52 % vs 19 %),
+> **9-8 Bound Pair** (window at Φ₀/8, 85 % vs 16 %), **9-9 Pauli Ring** (parity effect,
+> 100 % vs 0 %). Details and the parked attempts are in `HANDOFF.md` §2.1, §5 and §8.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.
