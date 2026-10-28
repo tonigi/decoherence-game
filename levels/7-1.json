@@ -1,0 +1,85 @@
+{
+ "id": "7-1",
+ "chapter": 7,
+ "title": "Light Grating",
+ "experiment": "Kapitza–Dirac effect (diffraction of matter by a standing light wave)",
+ "intro": "A cloud at rest sits in the dark. Key 1 switches on a standing wave of light, a potential V sin²(πx/10) that ripples across the whole box. It exerts no net force, yet a short flash diffracts the cloud like a grating: momentum appears in steps of 2π/10. This level measures momentum. Put as much as you can into the first orders, ±0.63, and as little as possible into the undeflected order at k = 0 (the mine).",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 12,
+ "observe": "momentum",
+ "kView": 2,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 5
+ },
+ "elements": [
+  {
+   "type": "lattice",
+   "x": 20,
+   "y": 20,
+   "V": 2,
+   "period": 10,
+   "gate": {
+    "key": 1,
+    "label": "Light",
+    "open": true,
+    "ramp": 1
+   }
+  }
+ ],
+ "targets": [
+  { "shape": "circle", "x": 0.6283, "y": 0, "r": 0.3 },
+  { "shape": "circle", "x": -0.6283, "y": 0, "r": 0.3 }
+ ],
+ "mines": [
+  { "shape": "circle", "x": 0, "y": 0, "r": 0.3 }
+ ],
+ "stars": [
+  0.25,
+  0.45,
+  0.6
+ ],
+ "expectThreshold": 0.5,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 20, "type": "gate", "i": 0 },
+   { "step": 60, "type": "gate", "i": 0 }
+  ],
+  "observeAt": 4
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Flash the light grating (key 1 on, key 1 off) to kick the cloud into the first diffraction orders, the two green discs in momentum space, then observe. The undeflected order at k = 0 is a mine.",
+ "physics": {
+  "point": "A thin grating multiplies ψ by a phase e^{iφ cos qx}. Expanded in plane waves, that is a ladder of momentum orders nq, with probabilities J_n(φ)², set by the pulse area φ = Vτ/2.",
+  "eq": "P_n = J_n(Vτ/2)²",
+  "learn": {
+   "idea": [
+    "In 1933 Kapitza and Dirac predicted that electrons should diffract from a standing wave of light, as light diffracts from a ruled grating. The roles of matter and light are swapped: here the light is the grating. It was seen with atoms in the 1980s and with electrons only in 2001.",
+    "The standing wave is a periodic potential. A short flash does not give the cloud time to move, so its only effect is a phase that varies periodically across the cloud. A periodic phase is a sum of plane waves with momenta 0, ±q, ±2q, … where q = 2π/period: the cloud splits into diffraction orders and flies apart.",
+    "How much goes into each order depends only on the pulse area: the strength times the duration. Too short a flash leaves most of the cloud at rest; too long a flash pushes it into higher orders."
+   ],
+   "maths": [
+    "V sin²(qx/2) = V/2 − (V/2) cos qx. A flash of length τ (short compared with 1/recoil, the Raman–Nath regime) multiplies ψ by",
+    { "eq": "e^{−iVτ/2} · e^{i(Vτ/2) cos qx} = e^{−iVτ/2} Σₙ iⁿ Jₙ(Vτ/2) e^{inqx}" },
+    "(the Jacobi–Anger expansion), so order n carries probability Jₙ(φ)² with φ = Vτ/2.",
+    "Both first orders together carry 2J₁(φ)², at most 68% at φ = 1.84, i.e. τ ≈ 1.8 with V = 2. The undeflected order J₀(φ)² vanishes at φ = 2.405 (τ ≈ 2.4). Measured here (target / mine):",
+    { "eq": "τ      0.5   0.9   1.3   1.7   2.1   2.5   2.9   3.7\nP_T    12%   32%   52%   64%   64%   52%   35%   11%\nP_M    84%   62%   37%   16%    4%    2%    7%   22%" },
+    "The recoil energy is q²/2 ≈ 0.2, so for τ ≲ 2 the cloud hardly moves during the flash and the thin-grating formula holds."
+   ],
+   "try": [
+    "Do nothing: the cloud is at rest, all of it in the k = 0 mine.",
+    "Switch the light on and leave it on, watching P_T: the orders fill, peak near t ≈ 2 after switching on, then the cloud starts to oscillate in the wells and the orders mix again.",
+    "Flash for about 2 time units, then observe: two clean side peaks in the momentum view, and the k = 0 peak nearly empty."
+   ]
+  }
+ }
+}

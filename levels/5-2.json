@@ -2,6 +2,7 @@
  "id": "5-2",
  "chapter": 5,
  "title": "Hold Still",
+ "experiment": "Quantum Zeno effect (Misra & Sudarshan)",
  "intro": "A tight packet spreads quickly, and you may only observe after t = 12 (the grey band on the plot). Repeated 'yes' outcomes from a detector keep re-localising the packet: the quantum Zeno effect. Place the detector over the target and HOLD its key (1) to pulse it. Each pulse can also say 'no', which removes the packet from the target, so the detector's size is a trade-off: too small and it leaks, too large and it holds the packet loosely.",
  "grid": {
   "N": 128,

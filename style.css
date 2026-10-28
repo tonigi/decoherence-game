@@ -82,6 +82,8 @@ sub { font-size: .72em; }
 .objective h2 { font: 700 21px/1.15 var(--display); margin: 0 0 6px; text-wrap: balance; }
 .objective p:last-child { margin: 0; color: var(--dim); font-size: 14px; }
 .physics { border-color: #2f4170; background: linear-gradient(#18213d, var(--panel)); }
+.experiment { font-style: italic; color: var(--dim); margin: -4px 0 8px; font-size: 13px; }
+.experiment::before { content: "Experiment: "; font: 600 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; font-style: normal; color: var(--faint); }
 .physics .eyebrow { color: var(--phys); }
 .physics p { font-size: 14.5px; margin-bottom: 8px; }
 .physics .eq { font: 14px var(--mono); color: var(--phys); display: block; margin: 0 0 8px; }
@@ -200,6 +202,7 @@ sub { font-size: .72em; }
 .lv .th { width: 100%; aspect-ratio: 1; display: block; background: var(--void); }
 .lv div { padding: 7px 10px 9px; }
 .lv b { display: block; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.lv em { display: block; font-style: italic; font-size: 11.5px; line-height: 1.3; color: var(--dim); margin: 1px 0 3px; }
 .lv span { font-size: 12px; color: var(--obs); letter-spacing: 1px; }
 .lv.cur { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
 .lv .tag { color: #120d24; background: var(--obs); font: 600 9.5px var(--mono); padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; margin-left: 4px; vertical-align: 1px; }

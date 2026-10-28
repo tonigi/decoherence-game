@@ -2,6 +2,7 @@
  "id": "3-1",
  "chapter": 3,
  "title": "Two Slits",
+ "experiment": "Young's double slit",
  "intro": "Both slits are open, so the packet goes through both and interferes with itself. Bright fringes are where the two paths add; dark fringes are where they cancel. The mines sit near dark fringes. Faster packets spread less on the way, but the fringe pattern also fans out with time (spacing ≈ 2πt / slit separation), so watch where the dark bands are when you observe.",
  "grid": {
   "N": 128,

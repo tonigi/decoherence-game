@@ -2,6 +2,7 @@
  "id": "2-1",
  "chapter": 2,
  "title": "Thin Wall",
+ "experiment": "Quantum tunnelling through a barrier",
  "intro": "The packet's energy is lower than the wall, yet some probability leaks through: tunnelling. More energy, more leakage, but a wider (slower-dispersing) packet has a sharper energy. Find the best compromise.",
  "grid": {
   "N": 128,

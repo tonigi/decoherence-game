@@ -69,30 +69,34 @@ export class Sim {
   addAbsorber(W) { for (let i = 0; i < W.length; i++) this.Wel[i] += W[i]; this.hasWel = true; this.dirty = true; }
   /** A switchable element: potential V and/or absorption W (an absorbing
    *  shutter, whose swallowed probability counts as lost, not as `caught`). */
-  addGate(V, open, ramp = GATE_RAMP_STEPS, W = null, contour = false, spin = null) {
+  addGate(V, open, ramp = GATE_RAMP_STEPS, W = null, contour = false, spin = null, pulse = 0) {
     if (spin) spin = this._spinArrays(spin.chi, spin.term);
-    this.gates.push({ V, W, contour, spin, level: open ? 0 : 1, target: open ? 0 : 1, ramp: Math.max(1, ramp) });
+    // a `pulse` gate closes for `pulse` steps when set closed (or from the start, if
+    // created closed), then opens by itself
+    this.gates.push({ V, W, contour, spin, level: open ? 0 : 1, target: open ? 0 : 1, ramp: Math.max(1, ramp), pulse, left: pulse && !open ? pulse : 0 });
     if (spin && !this.spinH) this.spinH = Array.from({ length: 8 }, () => new Float64Array(this.N * this.N));
     if (contour) this.addContour(new Float64Array(this.N * this.N));
     if (W && !this.Wshow) this.Wshow = new Float64Array(this.N * this.N);
     this.dirty = true;
     return this.gates.length - 1;
   }
-  setGate(i, open) { this.gates[i].target = open ? 0 : 1; }
+  setGate(i, open) { const g = this.gates[i]; g.target = open ? 0 : 1; if (g.pulse && !open) g.left = g.pulse; }
   setTilt(fx, fy) { this.tilt = [fx, fy]; this.dirty = true; }
 
   /** Gaussian packet. In spinor mode `pol` is the Jones vector [aH, aV] (each
    *  a real number or [re, im]); default horizontal. */
-  setGaussian({ x, y, kx, ky, sigma, pol = [1, 0] }, add = false) {
-    const { N, dx, re, im } = this;
+  setGaussian({ x, y, kx, ky, sigma, pol = [1, 0], sigmaT = sigma, dir = Math.atan2(ky, kx) }, add = false) {
+    const { N, dx } = this;
     if (!add) for (const [r, m] of this.comps()) { r.fill(0); m.fill(0); }
     const tmpRe = new Float64Array(N * N), tmpIm = new Float64Array(N * N);
+    // sigma along the direction `dir` (that of k by default), sigmaT across it
+    const cd = Math.cos(dir), sd = Math.sin(dir);
     let norm = 0;
     for (let j = 0; j < N; j++) {
       const yy = (j + 0.5) * dx;
       for (let i = 0; i < N; i++) {
-        const xx = (i + 0.5) * dx;
-        const a = Math.exp(-((xx - x) ** 2 + (yy - y) ** 2) / (4 * sigma * sigma));
+        const xx = (i + 0.5) * dx, u = cd * (xx - x) + sd * (yy - y), v = -sd * (xx - x) + cd * (yy - y);
+        const a = Math.exp(-(u * u) / (4 * sigma * sigma) - (v * v) / (4 * sigmaT * sigmaT));
         const ph = kx * (xx - x) + ky * (yy - y);
         tmpRe[j * N + i] = a * Math.cos(ph); tmpIm[j * N + i] = a * Math.sin(ph);
         norm += a * a;
@@ -106,6 +110,20 @@ export class Sim {
     });
   }
 
+  /** Read psi(x, y) as two particles on a line, psi(x1, x2), and (anti)symmetrise it
+   *  under exchange x1 <-> x2 (sign +1: bosons, -1: fermions), then renormalise. */
+  exchange(sign) {
+    const { N } = this;
+    for (const [re, im] of this.comps()) for (let j = 0; j < N; j++) for (let i = 0; i < j; i++) {
+      // psi(a) + s psi(b) at a, and s times that at b (= psi(b) + s psi(a), as s^2 = 1)
+      const a = j * N + i, b = i * N + j;
+      re[a] += sign * re[b]; im[a] += sign * im[b];
+      re[b] = sign * re[a]; im[b] = sign * im[a];
+    }
+    for (const [re, im] of this.comps()) for (let i = 0; i < N; i++) { const d = i * N + i; if (sign < 0) { re[d] = 0; im[d] = 0; } else { re[d] *= 2; im[d] *= 2; } }
+    const n = this.norm();
+    if (n > 0) this.scale(1 / Math.sqrt(n));
+  }
   /** The wave function's components as [re, im] pairs: one, or two in spinor mode. */
   comps() { return this.re2 ? [[this.re, this.im], [this.re2, this.im2]] : [[this.re, this.im]]; }
 
@@ -172,6 +190,7 @@ export class Sim {
   _refresh() {
     let moving = false;
     for (const g of this.gates) {
+      if (g.left > 0 && --g.left === 0) g.target = 0;
       if (g.level !== g.target) {
         const d = g.target - g.level, st = 1 / g.ramp;
         g.level = Math.abs(d) <= st ? g.target : g.level + Math.sign(d) * st;
@@ -407,6 +426,39 @@ export class Sim {
   applyMask(m, f = 1) { for (const [re, im] of this.comps()) for (let i = 0; i < re.length; i++) { re[i] *= m[i] * f; im[i] *= m[i] * f; } }
   applyComplement(m, f = 1) {
     for (const [re, im] of this.comps()) for (let i = 0; i < re.length; i++) { const w = Math.sqrt(Math.max(0, 1 - m[i] * m[i])) * f; re[i] *= w; im[i] *= w; }
+  }
+  /** A normalised Gaussian mode {re, im} (a coherent state of width sigma, momentum kx, ky). */
+  gaussianMode({ x, y, sigma, kx = 0, ky = 0 }) {
+    const { N, dx } = this, re = new Float64Array(N * N), im = new Float64Array(N * N);
+    let n = 0;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const X = (i + 0.5) * dx - x, Y = (j + 0.5) * dx - y, a = Math.exp(-(X * X + Y * Y) / (4 * sigma * sigma)), ph = kx * X + ky * Y;
+      re[j * N + i] = a * Math.cos(ph); im[j * N + i] = a * Math.sin(ph); n += a * a;
+    }
+    const f = 1 / Math.sqrt(n);
+    for (let i = 0; i < re.length; i++) { re[i] *= f; im[i] *= f; }
+    return { re, im };
+  }
+  /** <phi|psi_c> for each component c, as [re, im] pairs. */
+  _amps(phi) {
+    return this.comps().map(([re, im]) => {
+      let r = 0, m = 0;
+      for (let i = 0; i < re.length; i++) { r += phi.re[i] * re[i] + phi.im[i] * im[i]; m += phi.re[i] * im[i] - phi.im[i] * re[i]; }
+      return [r, m];
+    });
+  }
+  /** Probability in the spatial mode phi (any polarization): sum_c |<phi|psi_c>|^2. */
+  modeMass(phi) { return this._amps(phi).reduce((s, [r, m]) => s + r * r + m * m, 0); }
+  /** Project onto the mode phi (keep = true) or onto its complement, unnormalised. */
+  projectMode(phi, keep) {
+    const amps = this._amps(phi);
+    this.comps().forEach(([re, im], c) => {
+      const [ar, ai] = amps[c];
+      for (let i = 0; i < re.length; i++) {
+        const pr = ar * phi.re[i] - ai * phi.im[i], pi = ar * phi.im[i] + ai * phi.re[i];
+        if (keep) { re[i] = pr; im[i] = pi; } else { re[i] -= pr; im[i] -= pi; }
+      }
+    });
   }
   /** Cell index sampled from the unnormalised density at cumulative position u. */
   sampleCell(u) {

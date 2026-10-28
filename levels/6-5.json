@@ -2,6 +2,7 @@
  "id": "6-5",
  "chapter": 6,
  "title": "Bomb Tester",
+ "experiment": "Elitzur–Vaidman bomb tester (Kwiat interaction-free measurement)",
  "spinor": true,
  "intro": "Kwiat's interaction-free bomb test, unrolled. Each amber plate turns the polarization by 22.5°, so after all four a horizontal photon would arrive vertical and miss the horizontal analyzer at the target. A bomb station is a polarizing beam splitter whose vertical port leads into the bomb: horizontal passes, vertical sets the bomb off. Each station sends the photon back to horizontal at the cost of sin² of the small angle turned since the last look. Stations fit in the gaps between plates, never inside one. Place them so the photon reaches the target having 'seen' the bomb without touching it: one look per cycle; a second look in the same gap sees nothing new.",
  "grid": {

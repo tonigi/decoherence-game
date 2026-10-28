@@ -2,6 +2,7 @@
  "id": "5-1",
  "chapter": 5,
  "title": "Which Way?",
+ "experiment": "Which-way detection (complementarity)",
  "intro": "The same interferometer: the lower port is dark because the two paths cancel there. A detector that asks 'is the particle in this arm?' reveals which way it went, and which-path information destroys the interference. Place the detector over one arm and fire it (key 1) while the packet is between the splitters. Whatever it answers, the particle is left in a single beam, which the second splitter divides evenly: the dark port lights up.",
  "grid": {
   "N": 128,

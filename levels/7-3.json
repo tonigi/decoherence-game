@@ -1,0 +1,70 @@
+{
+ "id": "7-3",
+ "chapter": 7,
+ "title": "Bragg Mirror",
+ "experiment": "Bragg reflection from a crystal (Davisson–Germer, distributed Bragg reflector)",
+ "intro": "To the right is a crystal: a row of low ridges, period 1.8, each 2 high. At most speeds the packet has more energy than any ridge and sails through. Yet at one speed the crystal is a near-perfect mirror. Tune the speed so the packet comes back to the target on the left.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 20,
+ "minObserveTime": 8,
+ "launch": {
+  "x": 17,
+  "y": 20,
+  "k": [2.8, 1.6, 3.0],
+  "angle": 0,
+  "sigma": 3
+ },
+ "elements": [
+  {
+   "type": "lattice",
+   "x": 30,
+   "y": 20,
+   "w": 14,
+   "h": 40,
+   "V": 2,
+   "period": 1.8
+  }
+ ],
+ "targets": [
+  { "shape": "rect", "x": 10, "y": 20, "w": 8, "h": 28 }
+ ],
+ "stars": [
+  0.3,
+  0.45,
+  0.55
+ ],
+ "expectThreshold": 0.45,
+ "reference": {
+  "setup": { "launch": { "k": 2.15 } }
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Choose the speed |k₀| at which the crystal reflects the packet back onto the target behind it. You may observe from t = 8.",
+ "physics": {
+  "point": "Each ridge reflects a little. When the round trip between neighbouring ridges is a whole wavelength, all those small echoes add in phase: the Bragg condition 2a = λ inside the crystal.",
+  "eq": "k_inside = π/a,  k_inside² = k₀² − V",
+  "learn": {
+   "idea": [
+    "In 1927 Davisson and Germer fired electrons at a nickel crystal and found them reflected strongly only at particular energies and angles, exactly where X-rays obey Bragg's law for the same crystal. It was the first proof that electrons are waves.",
+    "A single low ridge reflects almost nothing when the particle has more energy than the ridge is high. A row of them reflects a little at each one. Usually the echoes have random phases and cancel. When twice the spacing is a whole number of wavelengths, every echo returns in step with the others and they add up: the crystal becomes a mirror.",
+    "In band language, that wavelength sits at the edge of the Brillouin zone, where the periodic potential opens a gap: there is no travelling wave inside the crystal at that energy, only a decaying one, so the wave has to go back."
+   ],
+   "maths": [
+    "The ridges are V sin²(πx/a) = V/2 − (V/2) cos(2πx/a), with a = 1.8 and V = 2. The constant part V/2 raises the floor, so inside the crystal k_in² = k₀² − 2·V/2 = k₀² − V. The cosine couples k_in to k_in − 2π/a; the two match (a standing wave) when",
+    { "eq": "k_in = π/a = 1.75  →  k₀ = √(π²/a² + V) ≈ 2.26" },
+    "The gap in energy is V/2 = 1 (its Fourier component V/4, doubled), wide enough that the 8 periods here reflect a sizeable band of speeds around it. The soft edges of the crystal and the packet's speed spread (Δk = 1/(2σ) ≈ 0.17) move the measured optimum slightly down, to about k₀ ≈ 2.15:",
+    { "eq": "k₀    1.7   1.9   2.0   2.1   2.2   2.3   2.5   2.8\nP_T   19%   37%   48%   57%   58%   51%   24%    3%" },
+    "The energy E = k₀²/2 ≈ 2.3 at the optimum is above the ridge height 2: a classical particle would cross every ridge."
+   ],
+   "try": [
+    "Launch at k₀ = 2.8: the packet passes the crystal almost untouched.",
+    "Scan k₀ from 2.8 down to 1.9 and watch the reflected packet grow, peak and shrink again.",
+    "At the slowest speed allowed, k₀ = 1.6, the energy 1.28 is below the ridges, yet most of it gets through the thin ridges and only about 16% comes back."
+   ]
+  }
+ }
+}

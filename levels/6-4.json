@@ -2,6 +2,7 @@
  "id": "6-4",
  "chapter": 6,
  "title": "Stern–Gerlach",
+ "experiment": "Stern–Gerlach experiment",
  "spinor": true,
  "intro": "A Stern–Gerlach magnet has a field that grows across it, so it pushes the two polarizations along its axis in opposite directions: along the axis goes up, crossed goes down. It splits the beam, and the Born rule sets the split: cos² of the angle between the packet's polarization and the magnet's axis goes up. The packet here is polarized at 60° (the dial on the packet). Place the magnet, choose its axis to send everything up, and its field gradient to aim the upper beam at the target. The lower beam ends on a mine.",
  "grid": {

@@ -1,0 +1,115 @@
+{
+ "id": "4-4",
+ "chapter": 4,
+ "title": "Bang-Bang",
+ "experiment": "Bang-bang shortcut to adiabaticity (trap transport)",
+ "intro": "The particle sits in the ground state of trap A. Deliver it to the ground state of trap B, 12 units away, and quickly. The target is not a place but a state: the observation asks \"is the particle in the ground state of B?\" and says yes with probability |⟨B₀|ψ⟩|². Switching straight from A to B makes it slosh through B forever. A third trap halfway between, held for exactly half an oscillation period, swings the particle over and parks it at rest.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 20,
+ "launch": {
+  "x": 14,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 1.118
+ },
+ "elements": [
+  {
+   "type": "harmonic",
+   "x": 14,
+   "y": 20,
+   "omega": 0.4,
+   "R": 8,
+   "gate": {
+    "key": 1,
+    "label": "Trap A",
+    "open": false,
+    "ramp": 2
+   }
+  },
+  {
+   "type": "harmonic",
+   "x": 20,
+   "y": 20,
+   "omega": 0.4,
+   "R": 8,
+   "gate": {
+    "key": 2,
+    "label": "Trap M",
+    "open": true,
+    "ramp": 2
+   }
+  },
+  {
+   "type": "harmonic",
+   "x": 26,
+   "y": 20,
+   "omega": 0.4,
+   "R": 8,
+   "gate": {
+    "key": 3,
+    "label": "Trap B",
+    "open": true,
+    "ramp": 2
+   }
+  }
+ ],
+ "targets": [
+  {
+   "shape": "state",
+   "x": 26,
+   "y": 20,
+   "sigma": 1.118
+  }
+ ],
+ "stars": [
+  0.3,
+  0.6,
+  0.85
+ ],
+ "expectThreshold": 0.5,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 0, "type": "gate", "i": 0 },
+   { "step": 0, "type": "gate", "i": 1 },
+   { "step": 157, "type": "gate", "i": 1 },
+   { "step": 157, "type": "gate", "i": 2 }
+  ],
+  "observeAt": 12
+ },
+ "naive": {
+  "setup": {},
+  "events": [
+   { "step": 0, "type": "gate", "i": 0 },
+   { "step": 0, "type": "gate", "i": 2 }
+  ]
+ },
+ "goal": "Move the particle from trap A to the ground state of trap B (the dashed ring), then observe. Keys 1, 2, 3 switch traps A, M (the midpoint) and B on and off.",
+ "physics": {
+  "point": "In a harmonic trap every packet swings with the same period. Started at rest at one turning point, it arrives at rest at the other after exactly half a period: put that turning point on B.",
+  "eq": "τ = π/ω ≈ 7.85",
+  "learn": {
+   "idea": [
+    "Moving trapped atoms or ions from one place to another is a routine job in quantum technology. Moving the trap slowly (adiabatically) keeps the particle in the ground state, but takes a long time, and the particle meanwhile decoheres. A <i>shortcut to adiabaticity</i> reaches the same final state in a finite time.",
+    "The simplest shortcut is bang-bang control. Switch from trap A to a trap M halfway to B. The particle, at rest at A, is now at a turning point of M's oscillation, so it swings across and arrives at the other turning point, which is B, at rest, after half a period. Switch to trap B at that moment and it stays there, in B's ground state.",
+    "The target here is a quantum state, not a region: the measurement is the projector onto B's ground state |B₀⟩. Once the particle is in trap B the probability |⟨B₀|ψ⟩|² is constant (B₀ is a stationary state of B), so after a good switch you can observe whenever you like, and after a bad one waiting does not help."
+   ],
+   "maths": [
+    "In a harmonic trap of frequency ω every coherent state moves like a classical particle: x(t) = x_M + (x₀ − x_M) cos ωt. Starting at rest at x_A, the packet reaches x_B = 2x_M − x_A at t = π/ω, again at rest, and its width is unchanged because the ground states of A, M and B all have σ₀ = 1/√(2ω).",
+    "A coherent state displaced by δx with velocity δv relative to B₀ has fidelity",
+    { "eq": "F = |⟨B₀|ψ⟩|² = exp(−|α|²),  |α|² = (ω²δx² + δv²)/(2ω)" },
+    "Switching straight from A to B leaves δx = 12: |α|² = 0.4·144/2 ≈ 29 and F ≈ 10⁻¹³. Missing the half period by δt gives δv ≈ ω·6·ωδt, which costs about half the fidelity at δt ≈ 0.6.",
+    "Here ω = 0.4, so τ = π/ω ≈ 7.85. The traps are harmonic out to R = 8 and flat beyond (the edge costs about 4% of the fidelity)."
+   ],
+   "try": [
+    "Press 1 and 3 together at the start: the particle sloshes through B at full speed and the fidelity stays at zero.",
+    "Press 1 and 2 at t = 0, then 2 and 3 at t ≈ 7.85: the fidelity jumps to about 96% and stays there.",
+    "Switch at t = 7 or t = 9 instead and watch the P_T line settle lower: the leftover velocity is a coherent sloshing in B that never damps."
+   ]
+  }
+ }
+}

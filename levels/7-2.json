@@ -1,0 +1,95 @@
+{
+ "id": "7-2",
+ "chapter": 7,
+ "title": "Self-Image",
+ "experiment": "Talbot effect (self-imaging of a grating)",
+ "intro": "A wide cloud at rest; the world looks at t = 9 exactly. Key 1 fires a short flash of a light grating of period 4. It only imprints a phase, so at first nothing visible changes. Then the phase turns into stripes of probability, the stripes shift by half a period, and the whole pattern repeats itself every Talbot time T = d²/π ≈ 5.1. The targets are the stripes halfway between the grating's dark lines; the mines are on the dark lines. Fire the flash at the right moment so that the stripes stand on the targets at t = 9.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 9,
+ "minObserveTime": 9,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 6
+ },
+ "elements": [
+  {
+   "type": "lattice",
+   "x": 20,
+   "y": 20,
+   "V": 10,
+   "period": 4,
+   "gate": {
+    "key": 1,
+    "label": "Flash",
+    "open": true,
+    "ramp": 1,
+    "pulse": 6
+   }
+  }
+ ],
+ "targets": [
+  { "shape": "rect", "x": 6, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 10, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 14, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 18, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 22, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 26, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 30, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 34, "y": 20, "w": 0.8, "h": 24 }
+ ],
+ "mines": [
+  { "shape": "rect", "x": 8, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 12, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 16, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 20, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 24, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 28, "y": 20, "w": 0.8, "h": 24 },
+  { "shape": "rect", "x": 32, "y": 20, "w": 0.8, "h": 24 }
+ ],
+ "stars": [
+  0.26,
+  0.33,
+  0.39
+ ],
+ "expectThreshold": 0.33,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 114, "type": "gate", "i": 0 }
+  ],
+  "observeAt": 9
+ },
+ "naive": {
+  "setup": {},
+  "observeAt": 9
+ },
+ "goal": "Fire the grating flash (key 1) once, at the moment that makes the stripes of probability fall on the green lines at t = 9, when the world observes.",
+ "physics": {
+  "point": "A periodic wave rebuilds itself: after the Talbot time T = d²/π every momentum order nq is back in phase. Half-way, at T/2, the pattern reappears shifted by half a period.",
+  "eq": "T_Talbot = d²/π",
+  "learn": {
+   "idea": [
+    "In 1836 Henry Fox Talbot looked at sunlight behind a diffraction grating through a magnifier and saw sharp images of the grating repeating at regular distances behind it. Lord Rayleigh explained it in 1881. The same self-imaging happens to matter waves, in time instead of distance, and is the working principle of the Talbot–Lau interferometers that showed interference of big molecules such as C₆₀.",
+    "A wave that is periodic in space with period d is made only of momenta that are multiples of q = 2π/d. Each evolves with the phase e^{−in²q²t/2}. All the phases line up again at the Talbot time, when the wave is exactly what it was. At half that time the odd orders are flipped in sign, which moves the pattern by half a period.",
+    "Here the flash writes a phase grating (no stripes, only phase). Free evolution turns the phase into stripes of probability under the grating's dark lines first (each well of the flash acts like a lens), then on the bright lines half a Talbot time later, then back to a smooth cloud (the phase grating again) at the full Talbot time."
+   ],
+   "maths": [
+    "ψ(x, t) = Σₙ cₙ e^{inqx} e^{−in²q²t/2}. At t = 2π·2/q² = d²/π every phase n²·2π is 1, so ψ is restored; at t = d²/(2π) the phase is (−1)ⁿ, which is a translation by d/2.",
+    "Here d = 4: T ≈ 5.09. The flash (V = 10 for 0.3 time units) focuses the cloud under its potential minima about 1 time unit after it, and on the half-shifted lines (the targets) about half a Talbot time later, 3.0–4.0 after the flash. A strong grating focuses sooner than the quarter-Talbot time T/4 ≈ 1.3 of a weak one, but the half-period shift between the two foci is always T/2.",
+    "Without a flash the cloud covers the targets and the mines equally: P_T ≈ P_M ≈ 20%. The best timing gives P_T ≈ 42% and P_M ≈ 7%:",
+    { "eq": "flash at t   4.5   5.0   5.5   5.7   6.0   6.5   7.0   7.8\nP_T(9)       37%   34%   41%   42%   37%   15%    9%    7%\nP_M(9)        8%    5%    7%    7%   10%   29%   43%   40%" }
+   ],
+   "try": [
+    "Flash at the very start and watch the stripes come and go: dark-line stripes, then target stripes, then a smooth cloud at t ≈ 5.1, then the same again.",
+    "Flash at t ≈ 7.8: at t = 9 the stripes sit on the mines.",
+    "Flash at t ≈ 5.7, half a Talbot time plus the focusing time before t = 9."
+   ]
+  }
+ }
+}

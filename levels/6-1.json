@@ -2,6 +2,7 @@
  "id": "6-1",
  "chapter": 6,
  "title": "Three Polarizers",
+ "experiment": "Dirac's three polarizers",
  "spinor": true,
  "intro": "The packet now carries a polarization (the colour in the polarization view: red = horizontal, cyan = vertical). It leaves horizontal, and a vertical polarizer guards the target: crossed polarizers pass nothing. A polarizer at angle θ passes cos²(θ − θ_in) of what reaches it and leaves it polarized along θ, so adding polarizers can let more through. Place them between the source and the guard and set their axes (drag the dial handle). Order matters.",
  "grid": {

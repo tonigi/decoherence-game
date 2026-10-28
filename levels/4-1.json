@@ -2,6 +2,7 @@
  "id": "4-1",
  "chapter": 4,
  "title": "Coherent State",
+ "experiment": "Schrödinger's coherent state",
  "intro": "A harmonic well (the rings are equipotentials) pulls the packet back and forth with period T = 2π/ω. Released from rest, a Gaussian generally breathes as it swings: its width oscillates between σ and 1/(2ωσ) twice per period. Exactly one width, σ₀ = 1/√(2ω), keeps its shape at all times: the coherent state, the quantum state that moves most like a classical particle. The detector clicks at t = 9T/8, as the packet passes the target.",
  "grid": {
   "N": 128,

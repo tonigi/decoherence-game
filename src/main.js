@@ -88,6 +88,8 @@ function loadLevel(id) {
   $('crumb').innerHTML = `Ch ${lv.chapter} · ${chap?.name || ''} · <strong></strong>`;
   $('crumb').querySelector('strong').textContent = `${id} ${lv.title}`;
   $('lvlTitle').textContent = lv.title;
+  // the textbook name of the experiment the level re-enacts
+  $('lvlExperiment').textContent = lv.experiment || ''; $('lvlExperiment').hidden = !lv.experiment;
   $('lvlGoal').textContent = lv.goal || lv.intro;
   $('lvlGoal').title = lv.goal ? lv.intro : '';
   const ph = lv.physics;
@@ -133,7 +135,7 @@ function rebuildSetupView() { ui.rebuildPending = true; }
 // ---------------------------------------------------------------- setup UI
 function buildLaunchSliders() {
   const host = $('launchSliders'); host.innerHTML = '';
-  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width', pol: 'polarization °', ellip: 'ellipticity' };
+  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width', sigmaT: 'σ⊥ width', pol: 'polarization °', ellip: 'ellipticity' };
   for (const key of launchKeys(ui.level)) {
     const p = param(ui.level.launch[key]), deg = DEGREE_KEYS.has(key);
     const row = document.createElement('div'); row.className = 'slider' + (p.max > p.min ? '' : ' fixed');
@@ -175,7 +177,7 @@ function buildItemPanel() {
   const host = $('itemPanel'); host.innerHTML = '';
   const it = ui.setup.placed[ui.selected]; if (!it || ui.phase !== 'setup') return;
   const spec = ui.level.inventory.items.find(s => s.id === it.id);
-  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength', pol: 'axis °', omega: 'rotation rate ω', delta: 'retardance rate δ', gradient: 'field gradient' };
+  const names = { w: 'width', h: 'height', V: 'strength V', r: 'radius', strength: 'meas. strength', pol: 'axis °', omega: 'rotation rate ω', delta: 'retardance rate δ', gradient: 'field gradient', period: 'period' };
   host.innerHTML = `<h3>${spec.label || spec.kind}</h3>`;
   for (const k of itemKeys(spec)) {
     const p = param(spec[k]), deg = DEGREE_KEYS.has(k), fix = (v) => (+v).toFixed(deg ? 0 : 2);
@@ -578,7 +580,7 @@ function closeOverlays() { $('keysSheet').hidden = true; $('settings').hidden = 
 
 function openDrawer(tab = 'idea') {
   const lv = ui.level, ph = lv.physics; if (!ph?.learn) return;
-  $('drawerEyebrow').textContent = `${lv.id} · ${lv.title}`;
+  $('drawerEyebrow').textContent = `${lv.id} · ${lv.title}${lv.experiment ? ' · ' + lv.experiment : ''}`;
   $('drawerTitle').textContent = 'The physics';
   $('drawerPoint').textContent = ph.point;
   for (const b of document.querySelectorAll('#drawerTabs button')) {

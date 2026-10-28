@@ -2,6 +2,7 @@
  "id": "1-4",
  "chapter": 1,
  "title": "Sharp Momentum",
+ "experiment": "Heisenberg uncertainty, Δx·Δk ≥ ½",
  "intro": "This detector measures momentum, not position, and it clicks at t = 8. The view switches to momentum space |φ(k)|²: the target is a small disc around the packet's mean momentum. A packet of width σ has a momentum spread of 1/(2σ) (σ_x·σ_k ≥ ½), so landing in a sharp momentum window takes a packet that is wide in space. But the world is only so big: its edges swallow a packet that is too wide.",
  "grid": {
   "N": 128,

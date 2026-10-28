@@ -95,6 +95,7 @@ export function buildMap(host, index, levels, stars, current, onPick) {
       b.innerHTML = `<img class="th" alt=""><div><b></b><span></span></div>`;
       b.querySelector('b').textContent = `${id} · ${lv.title}`;
       if (lv.tutorial) b.querySelector('b').insertAdjacentHTML('beforeend', '<span class="tag">GUIDED</span>');
+      if (lv.experiment) { const e = document.createElement('em'); e.textContent = lv.experiment; b.querySelector('b').after(e); }
       b.querySelector('div > span').textContent = n ? '★'.repeat(n) + '☆'.repeat(3 - n) : id === suggested ? 'next up' : '☆☆☆';
       b.onclick = () => onPick(id);
       row.querySelector('.lvls').append(b);

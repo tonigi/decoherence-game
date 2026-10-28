@@ -2,6 +2,7 @@
  "id": "3-2",
  "chapter": 3,
  "title": "Mach–Zehnder",
+ "experiment": "Mach–Zehnder interferometer",
  "intro": "A thin wall splits the packet into two beams, mirrors bring them back together, and a second splitter recombines them. With equal arms the two paths add up in the right-hand port and cancel in the lower one, so every run ends on the mine. A slab of potential slows the wave inside it and shifts its phase by about (k − √(k² − 2V))·length. Place the phase plate in one arm and tune it to half a wavelength (π) to swap the ports.",
  "grid": {
   "N": 128,

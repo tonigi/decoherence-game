@@ -1,0 +1,89 @@
+{
+ "id": "6-6",
+ "chapter": 6,
+ "title": "Humpty Dumpty",
+ "experiment": "Full-loop Stern–Gerlach interferometer (the Humpty-Dumpty problem)",
+ "spinor": true,
+ "intro": "A spin at rest, polarized at 45°: half H, half V. At t = 0 a magnetic field gradient switches on by itself for 2 time units and pushes H up and V down. The two halves fly apart, and each now carries a record of which way it went. An analyzer at 45° on the starting spot only lets through what is still a coherent 45° spin. Use the two gradients (key 1 pushes H up for 2 time units, key 2 holds a reversed gradient while it is on) to bring both halves back to the start, at rest, on top of each other.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 12,
+ "minObserveTime": 8,
+ "launch": {
+  "x": 20,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 1.5,
+  "pol": 45
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 40,
+   "h": 24,
+   "optic": { "kind": "zeeman", "angle": 0, "gradient": 1 },
+   "gate": { "key": 1, "label": "Gradient + (pulse)", "open": false, "ramp": 2, "pulse": 40 }
+  },
+  {
+   "type": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 40,
+   "h": 24,
+   "optic": { "kind": "zeeman", "angle": 0, "gradient": -1 },
+   "gate": { "key": 2, "label": "Gradient −", "open": true, "ramp": 2 }
+  }
+ ],
+ "targets": [
+  { "shape": "circle", "x": 20, "y": 20, "r": 4, "pol": 45 }
+ ],
+ "stars": [
+  0.3,
+  0.45,
+  0.52
+ ],
+ "expectThreshold": 0.45,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 40, "type": "gate", "i": 1 },
+   { "step": 120, "type": "gate", "i": 1 },
+   { "step": 120, "type": "gate", "i": 0 }
+  ],
+  "observeAt": 8.1
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Put the spin back together: after the automatic split, use the reversed gradient (key 2, on and off) and one more forward pulse (key 1) so that H and V meet again at the start, at rest. Then observe (from t = 8) through the 45° analyzer.",
+ "physics": {
+  "point": "A gradient pulse gives H and V opposite momenta and so writes which-way information into the motion. Undoing it needs both the momentum and the position difference brought back to zero: forward τ, reversed 2τ, forward τ.",
+  "eq": "+τ, −2τ, +τ  ⇒  Δk = 0, Δy = 0",
+  "learn": {
+   "idea": [
+    "A Stern–Gerlach magnet splits a beam by spin. Can a second set of magnets put the two halves back together into the original spin state? In 1988 Englert, Schwinger and Scully called this the Humpty-Dumpty problem and showed how demanding it is: the two paths must be brought back together in position and in momentum to better than the packet's own uncertainties, or the spin stays partly entangled with the path and looks like a random mixture.",
+    "Here the field is switched in time rather than laid out in space, as in the atom-chip experiments of Ron Folman's group (2013–2019), which finally realized a full-loop Stern–Gerlach interferometer. One pulse pushes H up and V down. A reversed pulse of the same length stops them, but leaves them apart. A reversed pulse of twice the length sends them back toward each other, and a last forward pulse stops them, together, at rest, where they started.",
+    "If the loop closes, nothing records which way the spin went, and the analyzer at 45° sees the original coherent spin. If it does not close, the leftover offset in position or momentum is a which-way record, and the analyzer sees less."
+   ],
+   "maths": [
+    "The gradient adds ±g·y for H and V: a force ∓g, so each half moves like a classical particle with acceleration ∓g. With pulses +g for τ, −g for 2τ, +g for τ the velocity goes gτ → −gτ → 0 and the displacement ½gτ² → ½gτ² → 0, for each half.",
+    "Here g = 1 and τ = 2: the halves separate by up to 2gτ² = 8 units with momenta ±2, far more than the packet's width (σ = 1.5), so without recombination they share nothing.",
+    "If the halves end up displaced by δy and with momentum difference δk, the spin coherence (the overlap ⟨ψ_H|ψ_V⟩) is",
+    { "eq": "|⟨ψ_H|ψ_V⟩| = exp(−δy²/(8σ²) − δk²σ²/2)" },
+    "and the analyzer passes (1 + that)/2 of what is inside its circle. Measured, observing at t ≈ 8.1:",
+    { "eq": "no recombination        0%\nreversed for τ only    22%\nfull loop              55%\nfull loop, all 0.3 late 51%\nreversed 0.4 too long   33%" },
+    "55% is all there is: it is the share of an unsplit packet inside the circle by then."
+   ],
+   "try": [
+    "Do nothing: the halves leave the field and fly off.",
+    "Switch the reversed gradient on at t = 2 and off at t = 4: the halves stop, about 8 units apart. Look at the polarization view: two separate spins, H and V.",
+    "On at t = 2, off at t = 6, then key 1: the halves meet at the centre and the polarization view shows a 45° spin again."
+   ]
+  }
+ }
+}

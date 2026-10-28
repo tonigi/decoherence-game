@@ -2,6 +2,7 @@
  "id": "4-3",
  "chapter": 4,
  "title": "Delta-Kick Cooling",
+ "experiment": "Delta-kick cooling",
  "intro": "A tight packet at rest spreads out, and in free flight its momentum spread never changes. This detector measures momentum; the target is a small disc at k = 0. As the packet spreads, position and momentum become correlated: the outer parts are the fast ones (x ≈ k·t). Switch the harmonic trap on and off (key 1): it pushes each part back in proportion to its distance, so a pulse of the right length cancels that correlation and leaves a cold, slow packet. Too short leaves it hot; too long and it refocuses. Real atom clouds are cooled this way. (Leaving the trap on also works, if you measure at the right moment. Why?)",
  "grid": {
   "N": 128,

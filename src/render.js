@@ -113,6 +113,7 @@ export class Renderer {
   shapePath(sh, M = this.mapping(false)) {
     const ctx = this.ctx; ctx.beginPath();
     if (sh.shape === 'circle') ctx.arc(M.x(sh.x), M.y(sh.y), sh.r * M.s, 0, 2 * Math.PI);
+    else if (sh.shape === 'state') ctx.arc(M.x(sh.x), M.y(sh.y), 2 * sh.sigma * M.s, 0, 2 * Math.PI);
     else {
       const a = ((sh.angle || 0) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a), hw = sh.w / 2, hh = sh.h / 2;
       [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].forEach(([u, v], n) => {
@@ -126,7 +127,12 @@ export class Renderer {
   /** Targets and mines, in whichever space the level measures. */
   drawRegions(lv, M) {
     const ctx = this.ctx;
-    for (const t of lv.targets || []) { this.shapePath(t, M); ctx.fillStyle = 'rgba(80,255,120,0.12)'; ctx.fill(); ctx.strokeStyle = '#4cff7c'; ctx.lineWidth = 2; ctx.stroke(); }
+    for (const t of lv.targets || []) {
+      this.shapePath(t, M); ctx.fillStyle = 'rgba(80,255,120,0.12)'; ctx.fill(); ctx.strokeStyle = '#4cff7c'; ctx.lineWidth = 2;
+      // a state target (a coherent state at rest) is drawn as its 2-sigma ring, dashed
+      if (t.shape === 'state') ctx.setLineDash([6, 4]);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
     for (const m of lv.mines || []) {
       this.shapePath(m, M); ctx.fillStyle = 'rgba(255,60,60,0.15)'; ctx.fill(); ctx.strokeStyle = '#ff4a4a'; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.stroke();
       const rx = 0.5 * (m.r ?? m.w / 2), ry = 0.5 * (m.r ?? m.h / 2);
@@ -173,6 +179,14 @@ export class Renderer {
     ctx.save();
     if (session.optics?.length) this.drawOptics(session);
     if (!session.kSpace) this.drawRegions(lv, this.mapping(false));
+    // two particles on a line: the plane is (x1, x2); exchange mirrors it across the diagonal
+    if (lv.particles && !session.kSpace) {
+      const W = lv.grid.L * S;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, W); ctx.setLineDash([4, 6]); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+      label(ctx, 'x₁ →', W / 2 + 40, 22, 'rgba(220,225,255,0.8)');
+      label(ctx, 'x₂ ↓', 26, W / 2 + 40, 'rgba(220,225,255,0.8)');
+      label(ctx, 'x₁ = x₂', W * 0.72 + 30, W * 0.72, 'rgba(220,225,255,0.55)');
+    }
     for (const t of lv.targets || []) if (t.pol !== undefined) opticDial(ctx, t.x * S, (t.y - (t.r ?? t.h / 2)) * S - 16, { kind: 'polarizer', angle: t.pol }, '#4cff7c');
     ctx.setLineDash([6, 4]); ctx.lineWidth = 2;
     const acts = session.actions();
@@ -198,7 +212,7 @@ export class Renderer {
       const x = l.x * S, y = l.y * S, len = l.k * 22, hx = x + Math.cos(a) * len, hy = y + Math.sin(a) * len;
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(hx, hy);
       ctx.lineTo(hx - Math.cos(a - 0.4) * 9, hy - Math.sin(a - 0.4) * 9); ctx.moveTo(hx, hy); ctx.lineTo(hx - Math.cos(a + 0.4) * 9, hy - Math.sin(a + 0.4) * 9); ctx.stroke();
-      ctx.beginPath(); ctx.arc(x, y, l.sigma * 2 * S, 0, 2 * Math.PI); ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.ellipse(x, y, l.sigma * 2 * S, (l.sigmaT ?? l.sigma) * 2 * S, ((l.angle || 0) * Math.PI) / 180, 0, 2 * Math.PI); ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.stroke(); ctx.setLineDash([]);
       if (lv.spinor) opticDial(ctx, x, y - l.sigma * 2 * S - 16, { kind: 'source', angle: l.pol || 0, ellip: l.ellip || 0 }, '#fff');
       this.drawHandles(ui.handles || [], ui.hover);
     }

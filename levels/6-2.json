@@ -2,6 +2,7 @@
  "id": "6-2",
  "chapter": 6,
  "title": "Watched Pot",
+ "experiment": "Polarization Zeno effect",
  "spinor": true,
  "intro": "The long slab is a rotator: it turns the polarization steadily, so a horizontal packet leaves it vertical and the horizontal exit polarizer blocks it. Watch it on the way: each polarizer you insert projects the polarization back to horizontal, losing only sin² of the small angle turned since the last one. Many frequent looks freeze the rotation (the quantum Zeno effect, as in Kwiat's interaction-free measurement). How you space them matters.",
  "grid": {

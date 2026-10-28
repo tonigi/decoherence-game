@@ -2,6 +2,7 @@
  "id": "4-2",
  "chapter": 4,
  "title": "Fourier Lens",
+ "experiment": "Harmonic-trap Fourier lens (matter-wave focusing)",
  "intro": "In a harmonic well a quarter period swaps position and momentum: a packet of width σ, at rest, has width 1/(2ωσ) a quarter period later. So a wide packet comes to a sharp focus, like light through a lens. The detector clicks at t = 5T/4. But this lens has a finite aperture: beyond radius 9 the well goes flat, and the parts of a too-wide packet out there are not focused.",
  "grid": {
   "N": 128,

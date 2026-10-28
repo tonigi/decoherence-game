@@ -2,6 +2,7 @@
  "id": "1-1",
  "chapter": 1,
  "title": "Rendezvous",
+ "experiment": "Free spreading of a Gaussian wave packet",
  "intro": "The world measures the particle at t = 10 sharp, so the packet has to be over the target then. Pick the speed so it arrives on time (the target is 24 units away), then its width. A free packet spreads as σ(t) = σ₀·√(1 + (t / 2σ₀²)²): start narrow and it spreads fast; start wide and it is already big. Somewhere in between is best. Press Play and watch the meter.",
  "grid": {
   "N": 128,

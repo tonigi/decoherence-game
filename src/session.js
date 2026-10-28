@@ -14,10 +14,14 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const LAUNCH_KEYS = ['x', 'y', 'k', 'angle', 'sigma'];
 // spinor levels may also set the launch polarization: angle `pol` (deg) and ellipticity `ellip`
 const SPIN_LAUNCH_KEYS = ['pol', 'ellip'];
-export function launchKeys(level) { return [...LAUNCH_KEYS, ...(level.spinor ? SPIN_LAUNCH_KEYS.filter(k => level.launch[k] !== undefined) : [])]; }
+// any level may give the packet a different width across its direction of motion, `sigmaT`
+export function launchKeys(level) {
+  return [...LAUNCH_KEYS, ...(level.launch.sigmaT !== undefined ? ['sigmaT'] : []), ...(level.spinor ? SPIN_LAUNCH_KEYS.filter(k => level.launch[k] !== undefined) : [])];
+}
 export const ITEM_KEYS = {
   rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'],
   // optics (spinor levels): `pol` is the polarization axis in degrees, not a rotation of the shape
+  lattice: ['w', 'h', 'V', 'period'],
   polarizer: ['w', 'h', 'pol'], rotator: ['w', 'h', 'omega'], retarder: ['w', 'h', 'pol', 'delta'], zeeman: ['w', 'h', 'pol', 'gradient'],
 };
 export const OPTIC_KINDS = ['polarizer', 'rotator', 'retarder', 'zeeman'];
@@ -113,6 +117,8 @@ export class Session {
     this.kicksLeft = level.inventory?.kick?.charges || 0;
     this.tiltMax = level.inventory?.tilt?.max || 0;
     this.tilt = [0, 0];
+    // a level `field` [Fx, Fy] is a constant force (gravity) on top of the player's tilt
+    this.field = level.field || [0, 0];
 
     const sim = this.sim;
     this.gates = [];
@@ -123,9 +129,9 @@ export class Session {
       if (el.optic) {
         const spin = { chi: opticChi(sim, el, el.optic), term: opticTerm(el.optic) }, entry = { shape: shapeOf(el), optic: el.optic };
         if (el.gate) {
-          const i = sim.addGate(null, el.gate.open !== false, el.gate.ramp, null, false, spin);
+          const i = sim.addGate(null, el.gate.open !== false, el.gate.ramp, null, false, spin, el.gate.pulse || 0);
           entry.gate = this.gates.length;
-          this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Optic', open: el.gate.open !== false });
+          this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Optic', open: el.gate.open !== false, pulse: el.gate.pulse || 0 });
         } else sim.addSpin(spin.chi, spin.term, { bomb: !!el.optic.bomb });
         this.optics.push(entry);
         continue;
@@ -137,8 +143,8 @@ export class Session {
       if (el.type === 'harmonic' && !el.gate) sim.addContour(V);
       if (el.gate) {
         const W = el.absorb ? rasterV(sim, { ...el, V: el.absorb }) : null;
-        const i = sim.addGate(V, el.gate.open !== false, el.gate.ramp, W, el.type === 'harmonic');
-        this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Gate', open: el.gate.open !== false });
+        const i = sim.addGate(V, el.gate.open !== false, el.gate.ramp, W, el.type === 'harmonic', null, el.gate.pulse || 0);
+        this.gates.push({ index: i, key: el.gate.key, label: el.gate.label || 'Gate', open: el.gate.open !== false, pulse: el.gate.pulse || 0 });
       } else if (V) sim.addStatic(V);
     }
     this.detectors = [];
@@ -159,7 +165,8 @@ export class Session {
         const el = { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, angle: spec.tilt }, optic = itemOptic(spec, it);
         sim.addSpin(opticChi(sim, el, optic), opticTerm(optic), { bomb: !!spec.bomb });
         this.optics.push({ shape: { shape: 'rect', ...el }, optic, placed: true });
-      } else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
+      } else if (spec.kind === 'lattice') sim.addStatic(rasterV(sim, { type: 'lattice', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V, period: it.period, angle: spec.tilt }));
+      else if (spec.kind === 'absorber') sim.addAbsorber(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: spec.absorb ?? 3 }));
       else sim.addStatic(rasterV(sim, { type: 'rect', x: it.x, y: it.y, w: it.w, h: it.h, V: it.V }));
     }
     // level.observe === 'momentum': the final measurement is of momentum, and
@@ -168,21 +175,34 @@ export class Session {
     const raster = this.kSpace ? rasterKMask : rasterMask;
     // a target with `pol` (deg) is behind a polarization analyzer: it scores
     // |<pol|psi>|^2 instead of |psi|^2 (spinor levels, position space)
-    const plain = (level.targets || []).filter(t => t.pol === undefined);
+    const plain = (level.targets || []).filter(t => t.pol === undefined && t.shape !== 'state');
+    // a target {shape: 'state', x, y, sigma, kx?, ky?} is a quantum state, not a region: the
+    // observation asks "is the particle in this coherent state?", a projective measurement
+    // that says yes with probability F = |<phi|psi>|^2 (the fidelity), which is then P_T
+    const states = (level.targets || []).filter(t => t.shape === 'state');
+    if (states.length > 1 || (states.length && (this.kSpace || plain.length || (level.mines || []).length))) throw new Error(level.id + ': a state target must be the only target, in position space, without mines');
+    this.stateMode = states.length ? sim.gaussianMode(states[0]) : null;
     this.analyzers = (level.targets || []).filter(t => t.pol !== undefined).map(t => ({ mask: raster(sim, t), pol: t.pol }));
     if (this.analyzers.length && (this.kSpace || !level.spinor)) throw new Error(level.id + ': polarized targets need a spinor, position-space level');
     this.targetMask = unionMask(sim, plain, raster);
     this.mineMask = unionMask(sim, level.mines || [], raster);
 
+    if (level.field) sim.setTilt(this.field[0], this.field[1]);
     const l = this.setup.launch, a = (l.angle * Math.PI) / 180;
-    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma, pol: jones(l.pol, l.ellip) });
+    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma, sigmaT: l.sigmaT ?? l.sigma, dir: a, pol: jones(l.pol, l.ellip) });
+    // `particles: "bosons" | "fermions"`: the grid is psi(x1, x2) of two particles on a line,
+    // (anti)symmetrised under exchange; "distinguishable" (or nothing) keeps the product state
+    const ex = { bosons: 1, fermions: -1 }[level.particles];
+    if (ex) { if (level.spinor) throw new Error(level.id + ': exchange symmetry needs a scalar level'); sim.exchange(ex); }
     sim._refresh();
   }
 
   get t() { return this.stepCount * DT; }
   get finished() { return !!this.result; }
   _mass(m) { return this.kSpace ? this.sim.kMass(m) : this.sim.mass(m); }
-  pT() { let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p; }
+  pT() {
+    if (this.stateMode) return this.sim.modeMass(this.stateMode);
+    let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p; }
   /** Probability that cell idx, once found, counts as on target (analyzers pass |<pol|psi_idx>|^2 / |psi_idx|^2). */
   _targetAt(idx) {
     let t = this.targetMask[idx];
@@ -199,6 +219,7 @@ export class Session {
     if (this.result) return;
     this.sim.step(n);
     this.stepCount += n;
+    for (const g of this.gates) if (g.pulse) g.open = this.sim.gates[g.index].target === 0;
   }
 
   _log(ev) { this.events.push({ step: this.stepCount, ...ev }); }
@@ -220,13 +241,14 @@ export class Session {
     if (m > 1) { ux /= m; uy /= m; }
     if (ux === this.tilt[0] && uy === this.tilt[1]) return;
     this.tilt = [ux, uy];
-    this.sim.setTilt(ux * this.tiltMax, uy * this.tiltMax);
+    this.sim.setTilt(ux * this.tiltMax + this.field[0], uy * this.tiltMax + this.field[1]);
     this._log({ type: 'tilt', u: [ux, uy] });
   }
 
+  /** Switch gate i; a pulse gate (`gate.pulse` steps) fires one pulse instead. */
   toggleGate(i) {
     if (this.result || !this.gates[i]) return;
-    const g = this.gates[i]; g.open = !g.open;
+    const g = this.gates[i]; g.open = g.pulse ? false : !g.open;
     this.sim.setGate(g.index, g.open);
     this._log({ type: 'gate', i, open: g.open });
   }
@@ -261,7 +283,16 @@ export class Session {
     if (this.mode !== 'expect') {
       const u = this.rng();
       if (u >= S) outcome = u < S + sim.caught ? 'boom' : 'lost';
-      else if (this.kSpace) {
+      else if (this.stateMode) {
+        // the projective "is it in the target state?" measurement: yes with probability F
+        // (u < F <= S). The no branch is shown by a position sample of the remainder.
+        const hit = u < pT;
+        outcome = hit ? 'hit' : 'miss';
+        sim.projectMode(this.stateMode, hit);
+        const idx = sim.sampleCell(this.rng() * sim.norm()), N = sim.N;
+        sample = { x: ((idx % N) + 0.5) * sim.dx, y: (Math.floor(idx / N) + 0.5) * sim.dx };
+        if (!hit) sim.collapseTo(sample.x, sample.y, SIGMA_M); else sim.scale(1 / Math.sqrt(sim.norm()));
+      } else if (this.kSpace) {
         // momentum measurement: sample |phi(k)|^2 on the shifted k grid
         const dens = sim.kDensity(new Float64Array(sim.N * sim.N)), N = sim.N, dk = (2 * Math.PI) / sim.L;
         let idx = 0; for (let acc = 0; idx < dens.length - 1; idx++) { acc += dens[idx]; if (acc > u) break; }
