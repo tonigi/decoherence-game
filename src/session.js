@@ -151,8 +151,8 @@ export class Session {
       // `absorb` makes an element (e.g. a bomb) swallow probability: an imaginary potential
       // with a `gate` it is an absorbing shutter instead, whose loss counts as lost
       if (el.absorb && !el.gate) { sim.addAbsorber(rasterV(sim, { ...el, V: el.absorb })); if (!el.V) continue; }
-      const V = el.V || el.type === 'harmonic' ? rasterV(sim, el) : null;
-      if (el.type === 'harmonic' && !el.gate) sim.addContour(V);
+      const V = el.V || el.type === 'harmonic' || el.type === 'pair' ? rasterV(sim, el) : null;
+      if ((el.type === 'harmonic' || el.type === 'pair') && !el.gate) sim.addContour(V);
       if (el.gate) {
         const W = el.absorb ? rasterV(sim, { ...el, V: el.absorb }) : null;
         const i = sim.addGate(V, el.gate.open !== false, el.gate.ramp, W, el.type === 'harmonic', null, el.gate.pulse || 0);
@@ -191,6 +191,8 @@ export class Session {
     // level.observe === 'momentum': the final measurement is of momentum, and
     // targets / mines are regions of k-space ({x: kx, y: ky, ...})
     this.kSpace = level.observe === 'momentum';
+    if (level.postselect && ((level.detectors || []).length || level.inventory?.items?.some(i => i.kind === 'detector') || level.elements?.some(e => e.absorb && !e.gate)))
+      throw new Error(level.id + ': post-selection does not mix with detectors or bombs');
     const raster = this.kSpace ? rasterKMask : rasterMask;
     // a target with `pol` (deg) is behind a polarization analyzer: it scores
     // |<pol|psi>|^2 instead of |psi|^2 (spinor levels, position space)
@@ -235,9 +237,14 @@ export class Session {
     this.mineMask = unionMask(this.sim, this.level.mines || [], rasterKMask);
   }
   pT() {
-    if (this.stateMode) return this.sim.modeMass(this.stateMode);
+    if (this.stateMode) return this.sim.modeMass(this.stateMode) / this.herald();
     this._kRegions();
-    let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p; }
+    let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p / this.herald(); }
+  /** `postselect: {min}`: only particles that survive are detected, as behind a real
+   *  velocity selector, so the run's odds are conditional on survival: P_T and P_M are
+   *  divided by max(norm, min). The floor stops a selector that passes almost nothing
+   *  from scoring on a few stray atoms; below it the shortfall is a 'lost' outcome. */
+  herald() { return this.level.postselect ? Math.max(this.sim.norm(), this.level.postselect.min ?? 0.1) : 1; }
   /** Probability that cell idx, once found, counts as on target (analyzers pass |<pol|psi_idx>|^2 / |psi_idx|^2). */
   _targetAt(idx) {
     let t = this.targetMask[idx];
@@ -245,7 +252,7 @@ export class Session {
     return t;
   }
   /** Mines include probability already swallowed by absorbing elements (bombs). */
-  pM() { this._kRegions(); return this._mass(this.mineMask) + this.sim.caught; }
+  pM() { this._kRegions(); return (this._mass(this.mineMask) + this.sim.caught) / this.herald(); }
   alive() { return this.sim.norm(); }
   /** Probability lost at the boundary absorber. */
   lost() { return Math.max(0, 1 - this.sim.norm() - this.sim.caught); }
@@ -317,12 +324,13 @@ export class Session {
     let outcome = null, sample = null;
     const pending = this.events.some(e => e.type === 'detect');
     if (this.mode !== 'expect') {
-      const u = this.rng();
+      // post-selected levels draw among the survivors (and the floor's shortfall)
+      const u = this.rng() * this.herald();
       if (u >= S) outcome = u < S + sim.caught ? 'boom' : 'lost';
       else if (this.stateMode) {
         // the projective "is it in the target state?" measurement: yes with probability F
         // (u < F <= S). The no branch is shown by a position sample of the remainder.
-        const hit = u < pT;
+        const hit = u < pT * this.herald();
         outcome = hit ? 'hit' : 'miss';
         sim.projectMode(this.stateMode, hit);
         const idx = sim.sampleCell(this.rng() * sim.norm()), N = sim.N;

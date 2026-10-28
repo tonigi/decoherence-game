@@ -50,8 +50,8 @@
    ],
    "maths": [
     "With θ = 2πΦ/Φ₀ on both axes of the torus, the allowed (k₁, k₂) are a square grid shifted by (θ/L, θ/L). The totals K = k₁ + k₂ lie on lines of slope −1 in the momentum view, spaced 2π/L ≈ 0.157 in K and shifted by 2θ/L.",
-    "The target is the strip K = 9.5 · 2π/40 ≈ 1.492 of half-width 0.03 (drawn as a thin diagonal line). Particle 1 at speed 1.49 and particle 2 at rest, each with a momentum spread 0.1, give a spread in K of 0.14, so one line of totals carries about 41% of the probability:",
-    { "eq": "Φ/Φ₀    0    0.125   0.2   0.25   0.3   0.375   0.5\nP_T     0%     3%     41%   42%    41%     3%     0%" },
+    "The target is the strip K = 9.5 · 2π/40 ≈ 1.492 of half-width 0.03 (drawn as a thin diagonal line). Particle 1 at speed 1.49 and particle 2 at rest, each with a momentum spread 0.1, give a spread in K of 0.14, so one line of totals carries about 44% of the probability:",
+    { "eq": "Φ/Φ₀    0    0.125   0.2   0.25   0.3   0.375   0.5\nP_T     0%     3%     43%   44%    43%     3%     0%" },
     "The particles here do not interact, so this is only kinematics. In a superconductor the pairs are bound, and then the ring's whole spectrum, not only the total momentum, repeats every h/2e."
    ],
    "try": [

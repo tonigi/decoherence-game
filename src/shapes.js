@@ -36,7 +36,8 @@ export function rasterMask(sim, shape) {
 /** Potential V(x,y) contributed by one element:
  *  rect {x,y,w,h,V,angle?}, disc {x,y,r,V}, wall {x,w,V,slits:[{y,w}]} (full height),
  *  harmonic {x,y,omega,R}: V = omega^2 r^2 / 2 for r < R, flat (continuous) beyond,
- *  lattice {x,y,V,period,angle?,w?,h?}: V sin^2(pi u / period), optionally windowed by the rect w x h. */
+ *  lattice {x,y,V,period,angle?,w?,h?}: V sin^2(pi u / period), optionally windowed by the rect w x h,
+ *  pair {omega,R}: a harmonic bond between two particles on a line, in their wrapped distance. */
 export function rasterV(sim, el) {
   const { N, dx } = sim, s = softness(sim);
   const V = new Float64Array(N * N);
@@ -45,6 +46,19 @@ export function rasterV(sim, el) {
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const r = Math.hypot((i + 0.5) * dx - el.x, (j + 0.5) * dx - el.y);
       V[j * N + i] = k * Math.min(r, R) ** 2;
+    }
+    return V;
+  }
+  if (el.type === 'pair') {
+    // two particles on a line (the plane is (x1, x2)): a harmonic bond in their distance,
+    // V = omega^2 u^2 / 2 with u = (x1 - x2)/sqrt 2 the coordinate across the diagonal
+    // (unit mass, so the bound ground state is a Gaussian of width 1/sqrt(2 omega) across
+    // it), flat beyond |u| = R; the distance wraps, so the bond holds on a torus too
+    const k = 0.5 * el.omega * el.omega, R = el.R ?? Infinity, L = sim.L;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      let d = (i - j) * dx;
+      d -= L * Math.round(d / L);
+      V[j * N + i] = k * Math.min(Math.abs(d) / Math.SQRT2, R) ** 2;
     }
     return V;
   }

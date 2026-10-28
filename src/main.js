@@ -139,10 +139,12 @@ function buildLaunchSliders() {
   for (const key of launchKeys(ui.level)) {
     const p = param(ui.level.launch[key]), deg = DEGREE_KEYS.has(key);
     const row = document.createElement('div'); row.className = 'slider' + (p.max > p.min ? '' : ' fixed');
-    row.innerHTML = `<span>${names[key]}</span><input type="range" min="${p.min}" max="${p.max}" step="${deg ? 1 : 0.05}" value="${p.v}" ${p.max > p.min ? '' : 'disabled'}><output></output>`;
+    // flux in quanta: fine enough for 1/8 (the pair's window), shown to 3 places
+    const step = deg ? 1 : key === 'flux' ? 0.025 : 0.05, dp = deg ? 0 : key === 'flux' ? 3 : 2;
+    row.innerHTML = `<span>${names[key]}</span><input type="range" min="${p.min}" max="${p.max}" step="${step}" value="${p.v}" ${p.max > p.min ? '' : 'disabled'}><output></output>`;
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    out.textContent = (+p.v).toFixed(deg ? 0 : 2);
-    inp.oninput = () => { ui.setup.launch[key] = +inp.value; out.textContent = (+inp.value).toFixed(deg ? 0 : 2); rebuildSetupView(); };
+    out.textContent = (+p.v).toFixed(dp);
+    inp.oninput = () => { ui.setup.launch[key] = +inp.value; out.textContent = (+inp.value).toFixed(dp); rebuildSetupView(); };
     inp.dataset.key = key; host.append(row);
   }
 }

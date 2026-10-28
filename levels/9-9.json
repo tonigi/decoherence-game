@@ -1,0 +1,64 @@
+{
+ "id": "9-9",
+ "chapter": 9,
+ "title": "Pauli Ring",
+ "experiment": "Parity effect: an even number of fermions on a ring prefers half a flux quantum (Leggett)",
+ "intro": "Two identical fermions on one ring, at rest on opposite sides. This level measures both momenta at once (across: k₁, down: k₂), and the target is the small cold square |k₁|, |k₂| < 0.1, where both are nearly at rest. On a ring only one allowed momentum, k = 0, fits inside it, and two fermions cannot both have it. Find the flux that makes room for both.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": "periodic",
+ "particles": "fermions",
+ "fluxAxis": "xy",
+ "tmax": 4,
+ "observe": "momentum",
+ "kView": 1,
+ "launch": {
+  "x": 10,
+  "y": 30,
+  "k": 0,
+  "angle": 0,
+  "sigma": 8,
+  "flux": [0, 0, 1]
+ },
+ "targets": [
+  { "shape": "rect", "x": 0, "y": 0, "w": 0.2, "h": 0.2, "edge": 0.005 }
+ ],
+ "stars": [
+  0.4,
+  0.7,
+  0.85
+ ],
+ "expectThreshold": 0.7,
+ "reference": {
+  "setup": { "launch": { "flux": 0.5 } },
+  "observeAt": 0.1
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Set the flux Φ through the ring so that both fermions are found in the cold square (both momenta below 0.1). Without a flux the only allowed momentum there is 0, and the exclusion principle forbids both having it.",
+ "physics": {
+  "point": "Two fermions need two different momenta. Without a flux the cold square holds only k = 0; half a flux quantum shifts the comb to ±π/L, two teeth inside it, one for each fermion. An even number of fermions on a ring prefers half a flux quantum.",
+  "eq": "k = (2πn + θ)/L;  θ = π: k = ±π/L",
+  "learn": {
+   "idea": [
+    "The exclusion principle says two identical fermions never share a state. On a ring the states are the teeth of the momentum comb, so two fermions at rest cannot both have k = 0: one has to move. That costs energy, unless the comb itself shifts.",
+    "With half a flux quantum the comb is k = (2n + 1)π/L, symmetric about zero with no tooth at zero: the two lowest states are ±π/L, one for each fermion, and the pair is cold again. Leggett pointed out (1991) that this makes the ground state of a ring hold an even number of fermions most comfortably at half a flux quantum, and an odd number at zero: a parity effect seen in persistent currents of small metal rings. Twisting the boundary by π is the same as making the fermions' wave function antiperiodic.",
+    "Bosons have no such problem: both can sit at k = 0, and without a flux they fill the cold square."
+   ],
+   "maths": [
+    "The launch is two wide packets (σ = 8, wider than half the ring, so each is summed over its periodic images; that puts 92% of its momentum on the single tooth k = 0 without a flux, or on ±π/L with half a quantum) at x = 10 and x = 30, antisymmetrised: ψ(x₁, x₂) = g(x₁ − 10) g(x₂ − 30) − g(x₂ − 10) g(x₁ − 30). In momentum space this vanishes on the diagonal k₁ = k₂, and is largest where (k₁ − k₂)·20 = π, exactly the pair ±π/L for L = 40.",
+    "The target is |k₁|, |k₂| < 0.1 with sharp edges; the comb spacing is 2π/40 ≈ 0.157. Measured:",
+    { "eq": "Φ/Φ₀                 0     0.25    0.5    0.75\nfermions            0%     0%    100%     0%\nbosons             99%    96%    100%    96%\ndistinguishable    85%    68%    100%    68%" },
+    "With both particles threaded, a whole comb tooth of each needs a whole flux quantum, so the fermions' response repeats every Φ₀."
+   ],
+   "try": [
+    "Flux 0: the momentum view shows a grid of allowed (k₁, k₂) with the diagonal empty; the cold square holds only (0, 0), which is on it.",
+    "Flux 0.5: the grid slides by half a tooth, and the points (−π/L, +π/L) and (+π/L, −π/L) land in the square, off the diagonal.",
+    "Compare with 9-4: there the flux shifted the total momentum; here it is the individual momenta that matter."
+   ]
+  }
+ }
+}

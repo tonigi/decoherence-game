@@ -58,7 +58,7 @@
    "maths": [
     "With the portals the box is a ring of length L = 40. A flux Φ is a twist: ψ(x + L) = e^{iθ}ψ(x) with θ = 2πΦ/Φ₀, equivalently a kinetic momentum p = k + θ/L, which the solver uses exactly. The packet is launched with the same physical speed for every Φ, so only the phase per lap changes.",
     "The wall (height 5) transmits about half at this speed. Each half makes one full lap, in opposite senses, and their relative phase is 2θ. At the second pass through the wall the output towards the target is ∝ sin²θ and back towards the mine ∝ cos²θ, so the response repeats every half flux quantum:",
-    { "eq": "Φ/Φ₀      0    1/16   1/8   3/16   1/4   5/16   3/8   1/2\nP_T       5%   11%    31%   52%    63%   57%    37%    5%\nP_mine   56%   48%    28%    9%     1%    9%    28%   56%" },
+    { "eq": "Φ/Φ₀      0    1/16   1/8   3/16   1/4   5/16   3/8   1/2\nP_T       3%   10%    30%   52%    63%   56%    36%    3%\nP_mine   58%   50%    30%    9%     1%    9%    29%   58%" },
     "The rest of the probability is still on its way or spread in y. The wall's transmission depends on speed, so the halves are not exactly equal and the mirror is not perfect."
    ],
    "try": [

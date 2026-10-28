@@ -111,16 +111,24 @@ export class Sim {
     if (!add) for (const [r, m] of this.comps()) { r.fill(0); m.fill(0); }
     const tmpRe = new Float64Array(N * N), tmpIm = new Float64Array(N * N);
     // sigma along the direction `dir` (that of k by default), sigmaT across it
-    const cd = Math.cos(dir), sd = Math.sin(dir);
+    const cd = Math.cos(dir), sd = Math.sin(dir), L = this.L;
+    // along a periodic axis the packet is the sum of its periodic images, so a packet
+    // wider than the ring has no jump at the seam
+    const imgs = (p) => (p ? [-2, -1, 0, 1, 2] : [0]), nx = imgs(this.periodic?.[0]), ny = imgs(this.periodic?.[1]);
     let norm = 0;
     for (let j = 0; j < N; j++) {
       const yy = (j + 0.5) * dx;
       for (let i = 0; i < N; i++) {
-        const xx = (i + 0.5) * dx, u = cd * (xx - x) + sd * (yy - y), v = -sd * (xx - x) + cd * (yy - y);
-        const a = Math.exp(-(u * u) / (4 * sigma * sigma) - (v * v) / (4 * sigmaT * sigmaT));
-        const ph = kx * (xx - x) + ky * (yy - y);
-        tmpRe[j * N + i] = a * Math.cos(ph); tmpIm[j * N + i] = a * Math.sin(ph);
-        norm += a * a;
+        let re = 0, im = 0;
+        for (const mx of nx) for (const my of ny) {
+          const X = (i + 0.5) * dx - x - mx * L, Y = yy - y - my * L, u = cd * X + sd * Y, v = -sd * X + cd * Y;
+          const a = Math.exp(-(u * u) / (4 * sigma * sigma) - (v * v) / (4 * sigmaT * sigmaT));
+          if (a < 1e-300) continue;
+          const ph = kx * X + ky * Y;
+          re += a * Math.cos(ph); im += a * Math.sin(ph);
+        }
+        tmpRe[j * N + i] = re; tmpIm[j * N + i] = im;
+        norm += re * re + im * im;
       }
     }
     const J = this.spinor ? pol.map(c => (Array.isArray(c) ? c : [c, 0])) : [[1, 0]];

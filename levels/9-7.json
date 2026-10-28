@@ -1,0 +1,76 @@
+{
+ "id": "9-7",
+ "chapter": 9,
+ "title": "Chopper",
+ "experiment": "Time-of-flight velocity selection (chopper / Fizeau wheel)",
+ "intro": "A short packet carries a wide spread of speeds. This level measures momentum, and you want a beam whose speeds lie in the band 1.8–2.2 (green). Only the atoms that come out of your selector are detected: the score is the share of the surviving atoms that are in the band. The right edge can be switched into a drain (key 1). Fast atoms reach it first, slow ones later: use the drain as a chopper.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": {
+  "x": "periodic",
+  "y": "absorb"
+ },
+ "postselect": { "min": 0.15 },
+ "tmax": 30,
+ "minObserveTime": 30,
+ "observe": "momentum",
+ "kView": 4,
+ "launch": {
+  "x": 6,
+  "y": 20,
+  "k": 2,
+  "angle": 0,
+  "sigma": 0.6,
+  "sigmaT": 4
+ },
+ "drains": [
+  { "side": "right", "key": 1, "label": "Drain (right edge)" }
+ ],
+ "targets": [
+  { "shape": "rect", "x": 2, "y": 0, "w": 0.4, "h": 6 }
+ ],
+ "stars": [
+  0.3,
+  0.42,
+  0.5
+ ],
+ "expectThreshold": 0.42,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 0, "type": "gate", "i": 0 },
+   { "step": 240, "type": "gate", "i": 0 },
+   { "step": 400, "type": "gate", "i": 0 }
+  ],
+  "observeAt": 30
+ },
+ "naive": {
+  "setup": {},
+  "observeAt": 30
+ },
+ "goal": "Use the drain (key 1 switches it on and off) to remove the atoms that are too fast and those that are too slow, so that of the atoms still there at t = 30, as many as possible are in the speed band 1.8–2.2. If fewer than 15% survive, the beam is too weak to count.",
+ "physics": {
+  "point": "After a long flight, position sorts the atoms by speed: x ≈ x₀ + kt. A gate that opens only while the right speeds pass selects them. Removing atoms never adds any to the band, but it purifies the beam you detect.",
+  "eq": "t_arrive = distance / k",
+  "learn": {
+   "idea": [
+    "Fizeau measured the speed of light with a toothed wheel in 1849; the same idea, two rotating slotted disks, became the standard velocity selector for atomic and molecular beams (and neutron choppers): only particles that take exactly the time between the slots get through.",
+    "A short packet has a large momentum spread (Δk = 1/(2σ) ≈ 0.8 here). After it has flown a while, its fast parts are ahead and its slow parts behind, so arrival time at the edge sorts them by speed. Draining the edge early removes the fast ones, draining it late removes the slow ones; in between, the band passes.",
+    "The score is conditional: only atoms that survive are detected, as behind a real selector. A selector that blocks everything has no beam at all, so below 15% survival the shortfall counts as lost. Without any selection 19% of the atoms are in the band."
+   ],
+   "maths": [
+    "The packet starts at x = 6 and the drain covers the last 6 units before the right edge (x = 34 … 40, a smooth bump that also vanishes at the seam). An atom of speed k reaches it at about t = 28/k and leaves it at 34/k: the band 1.8–2.2 passes between t ≈ 12.7 and 18.9; atoms faster than 2.2 have entered by 12.7, slower than 1.8 not before 15.6. The arrival windows overlap, because the packet starts with a finite size and the drain is 6 units wide, so the selection is not perfect.",
+    "Measured at t = 30 (share of the survivors in the band, and the survivors):",
+    { "eq": "no drain                     19%   (99% survive)\ndrain on t = 0 … 12          29%   (72%)\ndrain on from t = 20         48%   (45%)\ndrain t = 0 … 12, then 20 …   52%   (45%)\ndrain always on               1%   (11%: below the floor)" },
+    "The fast band laps the ring and would come back to the drain at t ≈ 34, after the world has looked."
+   ],
+   "try": [
+    "Do nothing: the momentum view shows the whole broad spread, 19% in the band.",
+    "Switch the drain on at t = 20 and leave it: the slow tail is removed.",
+    "Have it on from the start, off at t ≈ 12, on again at t ≈ 20."
+   ]
+  }
+ }
+}

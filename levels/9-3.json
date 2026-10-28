@@ -51,8 +51,8 @@
    ],
    "maths": [
     "ψ(x + L) = e^{iθ}ψ(x) with θ = 2πΦ/Φ₀ allows e^{ikx} only for kL = 2πn + θ. The target is the line k = 9.5 · 2π/40 ≈ 1.492, of half-width 0.03 (a fifth of the tooth spacing), with sharp edges.",
-    "A packet of width σ = 5 has a momentum spread 1/(2σ) = 0.1, so the tooth nearest its centre carries about 0.157/(√(2π)·0.1) ≈ 62% of the probability. Measured, with the launch speed on the target:",
-    { "eq": "Φ/Φ₀    0    0.25   0.3   0.375   0.5   0.75\nP_T     0%    1%    21%    60%    62%    1%" },
+    "A packet of width σ = 5 has a momentum spread 1/(2σ) = 0.1, so the tooth nearest its centre carries about 0.157/(√(2π)·0.1) ≈ 62% of the probability (63% measured). Measured, with the launch speed on the target:",
+    { "eq": "Φ/Φ₀    0    0.25   0.3   0.375   0.5   0.75\nP_T     0%    1%    21%    60%    63%    1%" },
     "The response repeats every flux quantum."
    ],
    "try": [

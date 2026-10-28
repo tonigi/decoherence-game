@@ -1,0 +1,73 @@
+{
+ "id": "9-8",
+ "chapter": 9,
+ "title": "Bound Pair",
+ "experiment": "Interference of bound pairs: the superconducting flux period h/2e (Little–Parks 1962)",
+ "intro": "Two particles on one ring, tied together by a spring (the valley along the dashed diagonal: they stay close). As in 9-4 the square is the pair: across is particle 1, down is particle 2, and portals make it a torus. The pair runs along the diagonal into a wall, which it passes or bounces off as a whole, half the time each. The two halves go round the ring in opposite directions and meet at the wall again: the loop mirror of 9-1, for a pair. Find the flux that lets the pair through.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": "periodic",
+ "particles": "distinguishable",
+ "fluxAxis": "xy",
+ "tmax": 28,
+ "minObserveTime": 28,
+ "launch": {
+  "x": 13,
+  "y": 13,
+  "k": 2.8284,
+  "angle": 45,
+  "sigma": 3,
+  "sigmaT": 0.5,
+  "flux": [0, 0, 0.5]
+ },
+ "elements": [
+  { "type": "pair", "omega": 2, "R": 3.1 },
+  { "type": "rect", "x": 20, "y": 20, "w": 0.6, "h": 40, "V": 4.5 },
+  { "type": "rect", "x": 20, "y": 20, "w": 40, "h": 0.6, "V": 4.5 }
+ ],
+ "targets": [
+  { "shape": "rect", "x": 26, "y": 26, "w": 10, "h": 10 }
+ ],
+ "mines": [
+  { "shape": "rect", "x": 14, "y": 14, "w": 10, "h": 10 }
+ ],
+ "stars": [
+  0.4,
+  0.65,
+  0.8
+ ],
+ "expectThreshold": 0.65,
+ "reference": {
+  "setup": { "launch": { "flux": 0.125 } },
+  "observeAt": 28
+ },
+ "naive": {
+  "setup": { "launch": { "flux": 0.25 } },
+  "observeAt": 28
+ },
+ "goal": "Set the flux Φ through the ring so that, when the world looks at t = 28, the pair is past the wall (green) rather than back where it started (red). The answer for one particle (9-1) was Φ₀/4.",
+ "physics": {
+  "point": "Both particles go round the flux together, so the pair picks up twice the Aharonov–Bohm phase of one particle: its response repeats every half flux quantum, h/2e, and the window opens at Φ₀/8 instead of Φ₀/4.",
+  "eq": "Δφ = 2 · 2 · 2πΦ/Φ₀",
+  "learn": {
+   "idea": [
+    "In 1962 Little and Parks measured the critical temperature of a thin superconducting cylinder in a magnetic field and found it oscillating with period h/2e in the enclosed flux. Every interference effect of a superconducting ring, including the SQUID magnetometer, repeats every h/2e, not h/e: the particles going round are bound pairs of electrons, each pair carrying charge 2e.",
+    "Here the pair is two particles held together by a spring. The wall splits the pair as a whole (the spring is stiff enough that the wall does not break it). Each half goes round the ring, and with both particles each picking up the phase θ = 2πΦ/Φ₀ per lap, a half picks up 2θ; the two halves, going opposite ways, differ by 4θ.",
+    "So the pair's loop mirror opens at 4θ = π, Φ = Φ₀/8, and at Φ₀/4, the window of a single particle, it is a perfect mirror again."
+   ],
+   "maths": [
+    "The spring is V = ω²u²/2 in the coordinate u = (x₁ − x₂)/√2 across the diagonal, with ω = 2: the bound ground state is a Gaussian of width 1/√(2ω) = 0.5 across the diagonal, which is how the pair is launched. Its first excitation costs ω = 2, more than the wall can supply, so the pair stays bound. Each particle moves at speed 2; the walls (height 4.5 at x₁ = 20 and x₂ = 20) split the pair about 45/50.",
+    "One lap along the diagonal of the torus is 40√2 ≈ 57 long, about 20 time units. Measured at t = 28 (target / mine):",
+    { "eq": "Φ/Φ₀    0    1/16   1/8   3/16   1/4\nP_T    16%   47%    85%   54%    16%\nP_M    50%   25%     0%   25%    50%" },
+    "The response repeats every Φ₀/4 here, half the period of 9-1, because a pair of two charges winds the flux twice."
+   ],
+   "try": [
+    "Flux 0.25, the single-particle answer: the pair comes back to the mine.",
+    "Flux 0.125: the pair goes through.",
+    "Watch the diagonal valley: the pair never leaves it."
+   ]
+  }
+ }
+}

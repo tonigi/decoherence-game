@@ -1,0 +1,65 @@
+{
+ "id": "9-6",
+ "chapter": 9,
+ "title": "Revival",
+ "experiment": "Quantum revivals of a wave packet (Rydberg wave packets, Yeazell–Stroud 1990)",
+ "intro": "A small world: a torus only 10 wide, portals on every side. A tight packet at rest spreads out until it fills the whole box, and then, at the revival time T = L²/π ≈ 31.8, it reassembles itself exactly as it was. The world looks at that moment. The target is half a ring away. A flux through the ring (the x direction) cannot push the packet, but it can decide where it revives.",
+ "grid": {
+  "N": 128,
+  "L": 10
+ },
+ "boundary": "periodic",
+ "tmax": 31.83,
+ "minObserveTime": 31.83,
+ "launch": {
+  "x": 2.5,
+  "y": 5,
+  "k": 0,
+  "angle": 0,
+  "sigma": 0.5,
+  "flux": [0, 0, 1]
+ },
+ "targets": [
+  { "shape": "circle", "x": 7.5, "y": 5, "r": 1 }
+ ],
+ "mines": [
+  { "shape": "circle", "x": 2.5, "y": 5, "r": 1 }
+ ],
+ "stars": [
+  0.35,
+  0.6,
+  0.72
+ ],
+ "expectThreshold": 0.6,
+ "reference": {
+  "setup": { "launch": { "flux": 0.25 } },
+  "observeAt": 31.83
+ },
+ "naive": {
+  "setup": {},
+  "observeAt": 31.83
+ },
+ "goal": "Set the flux Φ through the ring so that the packet revives on the green circle, half a ring from where it starts, when the world looks at t = T_rev ≈ 31.8.",
+ "physics": {
+  "point": "On a ring every momentum is a whole number of quanta, so every phase e^{−ik²t/2} comes back to 1 at T = L²/π: the packet revives. A flux adds a phase 2nθ to mode n at that moment, which is a shift of the revived packet by θL/π.",
+  "eq": "T_rev = L²/π,  shift = (θ/π)·L",
+  "learn": {
+   "idea": [
+    "A wave packet in a box or on a ring spreads, interferes with itself all over, and looks like noise, but it is not noise: the energies are k_n²/2 with k_n = 2πn/L, all whole multiples of one quantum, so at T = L²/π every phase is back where it started and the packet reassembles. At T/2 it reappears half a ring away, at T/4 as two half-size copies (a cat state), and in between it draws a fractal quantum carpet.",
+    "Revivals were seen in Rydberg atoms by Yeazell and Stroud (1990), where an electron wave packet in a highly excited atom fades and comes back, and later with molecules and with cold atoms in traps.",
+    "A flux Φ through the ring shifts the comb of allowed momenta (9-3). At the revival time the extra phase of mode n is 2nθ with θ = 2πΦ/Φ₀, which is exactly a translation: the packet revives displaced by θL/π, without ever having been pushed. A quarter flux quantum moves the revival by half the ring."
+   ],
+   "maths": [
+    "With kinetic momenta k_n = (2πn + θ)/L the phase of mode n at time t is (2πn + θ)²t/(2L²). At t = L²/π this is 2πn² + 2nθ + θ²/(2π): the first term is 1, the last is common to all modes, and e^{−2inθ} moves ψ by Δx = −2θ/(2π/L) = −θL/π (mod L).",
+    "Here L = 10, so T = 100/π ≈ 31.8, and the packet (σ = 0.5) is far smaller than the ring. Measured at T (target / mine):",
+    { "eq": "Φ/Φ₀    0     0.125   0.25   0.375   0.5\nP_T     0%     1%     77%     1%      0%\nP_M    77%     1%      0%     1%     77%" },
+    "In 2D the packet spreads in y too and revives in y at the same moment, because the box is square. Since the target is a circle, 77% is all the revived packet holds."
+   ],
+   "try": [
+    "Flux 0: watch the packet dissolve into a carpet of interference and come back on the red circle.",
+    "Flux 0.25: the same carpet, but the packet comes back on the green circle.",
+    "Pause at t ≈ 8 (T/4) with no flux: two copies, half a ring apart."
+   ]
+  }
+ }
+}

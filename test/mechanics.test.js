@@ -209,3 +209,47 @@ test('drains: a switched edge absorbs only while closed, and what it swallows is
   near(one.alive() + one.lost() + one.sim.caught, 1, 1e-9, 'bookkeeping');
   assert.ok(one.pT() > 2 * none.pT(), `draining one half lights the dark way: ${one.pT()} vs ${none.pT()}`);
 });
+
+test('revival on a small torus: at T = L^2/pi the packet is back, a flux theta moves it by theta L / pi', () => {
+  const lv = load('9-6'), at = (flux) => { const st = defaultSetup(lv); st.launch.flux = flux; const s = new Session(lv, st, { N: 64 }); s.step(Math.round(lv.tmax / 0.05)); return s; };
+  const a = at(0), b = at(0.25);
+  assert.ok(a.pM() > 0.7 && a.pT() < 0.01, 'revived at the start');
+  assert.ok(b.pT() > 0.7 && b.pM() < 0.01, 'a quarter quantum: revived half a ring away');
+  near(a.alive(), 1, 1e-9, 'a closed torus loses nothing');
+});
+
+test('post-selection: P_T is conditional on survival, Born frequencies match, and a floor stops empty beams', () => {
+  const lv = load('9-7'), s = new Session(lv, defaultSetup(lv), { N: 64 });
+  s.step(400); s.toggleGate(0); s.step(200); // drain the slow tail
+  const S = s.alive(), pT = s.pT();
+  assert.ok(S < 0.8 && S > 0.15, 'part of the beam removed ' + S);
+  near(pT, s.sim.kMass(s.targetMask) / S, 1e-12, 'conditional on survival');
+  const re = s.sim.re.slice(), im = s.sim.im.slice(), M = 1500; let hit = 0;
+  for (let seed = 1; seed <= M; seed++) {
+    s.sim.re.set(re); s.sim.im.set(im); s.result = null; s.rng = mulberry32(seed);
+    if (s.observe().outcome === 'hit') hit++;
+  }
+  near(hit / M, pT, 4 * Math.sqrt(pT * (1 - pT) / M) + 1e-3, 'hit frequency among survivors');
+  const all = new Session(lv, defaultSetup(lv), { N: 64 }); all.toggleGate(0); all.step(600);
+  assert.ok(all.alive() < 0.15, 'nearly everything drained');
+  near(all.pT(), all.sim.kMass(all.targetMask) / 0.15, 1e-12, 'below the floor the shortfall is lost');
+});
+
+test('bound pair on a ring: the spring holds, and the loop mirror opens at a flux of h/2e per window (1/8, not 1/4)', () => {
+  const lv = load('9-8'), at = (flux) => { const st = defaultSetup(lv); st.launch.flux = flux; const s = new Session(lv, st, { N: 64 }); s.step(560); return s; };
+  const one = at(0.25), pair = at(0.125), none = at(0);
+  assert.ok(pair.pT() > 0.75 && pair.pM() < 0.05, 'Phi0/8 is the window ' + pair.pT());
+  assert.ok(one.pM() > 0.4 && one.pT() < 0.25, 'Phi0/4 (one particle\'s window) is a mirror for the pair');
+  near(none.pT(), one.pT(), 0.02, 'period Phi0/4 in this geometry');
+  // the pair stays bound: nothing far from the diagonal
+  const sim = pair.sim, N = sim.N; let far = 0;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { let d = Math.abs(i - j) * sim.dx; d = Math.min(d, 40 - d); if (d > 3) far += sim.re[j * N + i] ** 2 + sim.im[j * N + i] ** 2; }
+  assert.ok(far < 0.01, 'not dissociated ' + far);
+});
+
+test('parity effect: two fermions fit in the cold square only at half a flux quantum; bosons need none', () => {
+  const lv = load('9-9'), at = (particles, flux) => { const l = { ...lv, particles }, st = defaultSetup(l); st.launch.flux = flux; return new Session(l, st, { N: 64 }).pT(); };
+  assert.ok(at('fermions', 0) < 0.01, 'Pauli: only k = 0 inside, and it cannot hold two fermions');
+  assert.ok(at('fermions', 0.5) > 0.8, 'half a quantum: +-pi/L, one each');
+  assert.ok(at('bosons', 0) > 0.8, 'bosons share k = 0');
+});
