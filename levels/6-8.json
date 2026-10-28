@@ -1,0 +1,248 @@
+{
+ "id": "6-8",
+ "chapter": 6,
+ "title": "Two Worlds",
+ "experiment": "Elitzur–Vaidman bomb tester, scored with and without the bomb (Kwiat's interaction-free measurement)",
+ "spinor": true,
+ "intro": "6-5 again, but now a tester has to work. The same photon, the same plates and the same stations run in two worlds at once: in one the stations lead to a bomb, in the other there is no bomb and a station does nothing. With a bomb the photon must arrive horizontal (H analyzer), without one it must arrive vertical (V analyzer). The score is the chance of getting both right. This time you set how far each amber plate turns the polarization (rotation rate ω; a plate turns it by ω × 0.64 rad).",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 9,
+ "minObserveTime": 9,
+ "launch": {
+  "x": 6.5,
+  "y": 20,
+  "k": 2.5,
+  "angle": 0,
+  "sigma": 1.8,
+  "pol": 0
+ },
+ "inventory": {
+  "items": [
+   {
+    "id": "plate",
+    "kind": "rotator",
+    "label": "Rotator plate",
+    "count": 4,
+    "w": 1.6,
+    "h": 40,
+    "omega": [
+     0.6136,
+     0,
+     1.2
+    ],
+    "x": 10.0,
+    "y": 20,
+    "area": [
+     [
+      10.0,
+      20,
+      10.0,
+      20
+     ],
+     [
+      13.6,
+      20,
+      13.6,
+      20
+     ],
+     [
+      17.2,
+      20,
+      17.2,
+      20
+     ],
+     [
+      20.8,
+      20,
+      20.8,
+      20
+     ]
+    ]
+   },
+   {
+    "id": "st",
+    "kind": "polarizer",
+    "label": "Bomb station (PBS → bomb)",
+    "count": 4,
+    "w": 1,
+    "h": 40,
+    "pol": 0,
+    "bomb": true,
+    "x": 11.8,
+    "y": 20,
+    "area": [
+     [
+      11.5,
+      20,
+      12.1,
+      20
+     ],
+     [
+      15.1,
+      20,
+      15.7,
+      20
+     ],
+     [
+      18.7,
+      20,
+      19.3,
+      20
+     ],
+     [
+      22.3,
+      20,
+      22.9,
+      20
+     ]
+    ]
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 28.9,
+   "y": 20,
+   "w": 10.2,
+   "h": 26,
+   "pol": 0
+  }
+ ],
+ "worlds": [
+  {
+   "name": "bomb"
+  },
+  {
+   "name": "no bomb",
+   "items": {
+    "st": null
+   },
+   "targets": [
+    {
+     "shape": "rect",
+     "x": 28.9,
+     "y": 20,
+     "w": 10.2,
+     "h": 26,
+     "pol": 90
+    }
+   ]
+  }
+ ],
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "plate",
+     "x": 10.0,
+     "y": 20,
+     "omega": 0.4636
+    },
+    {
+     "id": "plate",
+     "x": 13.6,
+     "y": 20,
+     "omega": 0.4636
+    },
+    {
+     "id": "plate",
+     "x": 17.2,
+     "y": 20,
+     "omega": 0.4636
+    },
+    {
+     "id": "plate",
+     "x": 20.8,
+     "y": 20,
+     "omega": 0.4636
+    },
+    {
+     "id": "st",
+     "x": 11.8,
+     "y": 20
+    },
+    {
+     "id": "st",
+     "x": 15.4,
+     "y": 20
+    },
+    {
+     "id": "st",
+     "x": 19.0,
+     "y": 20
+    }
+   ]
+  }
+ },
+ "naive": {
+  "setup": {
+   "placed": [
+    {
+     "id": "plate",
+     "x": 10.0,
+     "y": 20,
+     "omega": 0.3068
+    },
+    {
+     "id": "plate",
+     "x": 13.6,
+     "y": 20,
+     "omega": 0.3068
+    },
+    {
+     "id": "plate",
+     "x": 17.2,
+     "y": 20,
+     "omega": 0.3068
+    },
+    {
+     "id": "plate",
+     "x": 20.8,
+     "y": 20,
+     "omega": 0.3068
+    }
+   ]
+  }
+ },
+ "stars": [
+  0.22,
+  0.33,
+  0.4
+ ],
+ "expectThreshold": 0.33,
+ "goal": "Set the plates and place bomb stations so that the photon arrives H when there is a bomb and V when there is none. The score is the product of the two worlds' P_T, taken at t = 9.",
+ "physics": {
+  "point": "A tester that never looks sees the same photon in both worlds, so it can be right in both at most ¼ of the time. Looking (without touching) is what tells the worlds apart, and the best plates turn a little less than a full quarter turn.",
+  "eq": "P = cos⁸θ · sin²4θ   (no looks: ≤ ¼)",
+  "learn": {
+   "idea": [
+    "Elitzur and Vaidman asked: can you learn that a bomb is there without setting it off? Kwiat's version uses a photon whose polarization is turned a little at a time. At every step a polarizing beam splitter sends the vertical part toward the bomb. If the bomb is there, it either explodes or, more likely, the photon is put back to horizontal: the quantum Zeno effect. If there is no bomb, nothing watches, and the small turns add up to vertical.",
+    "Level 6-5 scored only the bomb world, which hid a cheat: plates that do not turn at all keep the photon horizontal and score perfectly, without testing anything. A tester has to be judged in both worlds. Here the same setup runs with the bomb and without it, and you score the probability of being right in both.",
+    "Without stations the two worlds are identical, so the photon arrives in the same state in both. Then P(H) + P(V) ≤ 1, and the product of the two is at most ¼: no arrangement of plates alone can beat a coin flip in each world.",
+    "With stations, the bomb world keeps the photon horizontal with probability cos²θ per look, while the no-bomb world turns it by 4θ in all. More turning helps the no-bomb world and hurts the bomb world, so the best θ sits a little below the quarter turn (22.5° per plate)."
+   ],
+   "maths": [
+    "Four plates turn the polarization by θ each. In the no-bomb world the photon arrives at 4θ, and the V analyzer passes sin²4θ.",
+    "In the bomb world each look keeps the photon horizontal with probability cos²θ. Three stations plus the H analyzer at the end make four looks:",
+    {
+     "eq": "P(both right) = cos⁸θ · sin²4θ"
+    },
+    "This peaks at θ ≈ 18° (0.61), not 22.5° (0.53). Times the analyzer strips' capture (about 0.77 each, so 0.6 for both), measured at t = 9:",
+    {
+     "eq": "θ = 15°: 40%\nθ = 17°: 42%\nθ = 18°: 41%\nθ = 20°: 39%\nθ = 22.5°: 34%"
+    },
+    "Fewer stations, θ = 18°: 33% with two, 18% with one. A fourth station right after the last plate adds nothing: the H analyzer is already that look.",
+    "No stations: P(H)·P(V) = cos²4θ · sin²4θ ≤ ¼, at most 19% with the capture (θ = 11.25°, where the photon arrives at 45°)."
+   ],
+   "try": [
+    "Place no stations and set every plate to 11.25°: the photon arrives at 45°, a fair coin in each world, 19%. No plate setting does better.",
+    "Put stations in the first three gaps with the plates at 22.5° (the default): 34%. Now lower the plates to about 17°: 42%.",
+    "Switch the view between the two worlds. With the bomb, the photon stays horizontal (and the bomb sometimes goes off); without it, the polarization turns all the way."
+   ]
+  }
+ }
+}

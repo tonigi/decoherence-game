@@ -14,7 +14,7 @@ const store = {
 };
 
 const ui = {
-  index: null, levels: {}, level: null, session: null, renderer: null,
+  index: null, levels: {}, level: null, session: null, renderer: null, world: 0,
   setup: null, phase: 'setup', playing: false, speed: 1, acc: 0, mode: 'born',
   selected: -1, ghost: null, ghostToken: 0, history: { t: [], pT: [], pM: [] },
   keys: new Set(), lastFire: {}, frame: 0, leak: 0, stars: store.get('stars', {}),
@@ -105,7 +105,7 @@ function loadLevel(id) {
   $('physCard').hidden = !ph;
   if (ph) { $('physPoint').textContent = ph.point; $('physEq').textContent = ph.eq || ''; $('btnWhy').hidden = !ph.learn; }
   closeDrawer();
-  buildNav(); buildLaunchSliders(); buildInventory();
+  buildNav(); buildLaunchSliders(); buildInventory(); buildWorldToggle();
   resetToSetup();
   // momentum-measurement levels open in the (zoomed) momentum view, polarization levels in the polarization view
   ui.renderer.kView = lv.kView;
@@ -131,7 +131,7 @@ function resetToSetup(keepSeed) {
   ui.seed = keepSeed ? ui.seed : newSeed();
   if (tutorial.active && ui.phase !== 'setup') tutorial.reset();
   ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
-  if (!ui.renderer) ui.renderer = new Renderer(canvas, ui.session.sim); else ui.renderer.setSim(ui.session.sim);
+  if (!ui.renderer) ui.renderer = new Renderer(canvas, shown().sim); else ui.renderer.setSim(shown().sim);
   ui.phase = 'setup'; ui.playing = false; ui.history = { t: [], pT: [], pM: [] };
   ui.lastFire = {}; ui.keys.clear();
   $('banner').hidden = true; $('ledgerPanel').hidden = true; ui.viewBranch = null;
@@ -270,7 +270,7 @@ function play() {
 }
 function resetFromSetup() {
   ui.session = new Session(ui.level, ui.setup, { seed: ui.seed, mode: ui.mode });
-  ui.renderer.setSim(ui.session.sim); ui.history = { t: [], pT: [], pM: [] };
+  ui.renderer.setSim(shown().sim); ui.history = { t: [], pT: [], pM: [] };
 }
 
 function observe() {
@@ -324,7 +324,7 @@ function viewBranch(i, el) {
   const L = ui.session.result?.ledger; if (!L) return;
   for (const b of document.querySelectorAll('#ledgerRows button')) b.classList.toggle('cur', b === el);
   $('banner').hidden = i >= 0;   // the banner would cover the branch; "your run" brings it back
-  if (i < 0) { ui.renderer.setSim(ui.session.sim); ui.viewBranch = null; updatePanels(); return; }
+  if (i < 0) { ui.renderer.setSim(shown().sim); ui.viewBranch = null; updatePanels(); return; }
   const b = L.branches[i];
   L.sim.load(b.state);
   ui.renderer.setSim(L.sim); ui.viewBranch = b; updatePanels();
@@ -346,6 +346,10 @@ function showResult(r) {
   let body = `<p>${sub} ${when} at <b>t = ${ui.session.t.toFixed(1)}</b>, when P<sub>T</sub> was <b>${pct(r.pT)}</b>.`;
   if (r.hit && nextStar != null) body += ` The next star needs ${(nextStar * 100).toFixed(0)}%.`;
   body += '</p>';
+  if (r.worlds) {
+    const name = (w) => `<b>${w.name}</b>`;
+    body += `<p>The same setup ran in ${r.worlds.length} worlds, each observed on its own: ${r.worlds.map(w => `${name(w)} ${(OUTCOME[w.outcome]?.[0] || '').toLowerCase()} (P<sub>T</sub> ${pct(w.pT)})`).join(', ')}. The score is the chance of a hit in every world, ${r.worlds.map(w => pct(w.pT)).join(' × ')} = ${pct(r.pT)}.</p>`;
+  }
   if (mode === 'expect') {
     body += `<p>Expectation mode: no dice. You win when the score reaches ${((lv.expectThreshold ?? 0.5) * 100).toFixed(0)}%.</p>`;
   } else if (L) {
@@ -353,7 +357,7 @@ function showResult(r) {
   } else {
     // the Born rule as an ensemble: 100 runs of this exact state, P_T of them hits
     const n = Math.round(r.pT * 100), me = r.hit ? Math.min(n - 1, Math.floor(n / 2)) : Math.min(99, n + Math.floor((100 - n) / 2));
-    body += `<p>If you ran this exact setup 100 times, about ${n} would find the particle in the target:</p>
+    body += `<p>If you ran this exact setup 100 times, about ${n} would ${r.worlds ? 'hit the target in every world' : 'find the particle in the target'}:</p>
       <div class="dots" aria-hidden="true">${Array.from({ length: 100 }, (_, i) => `<i class="${i < n ? 'h' : ''}${i === me ? ' me' : ''}"></i>`).join('')}</div>
       <p class="note">Outcome is chance. P<sub>T</sub> is skill. Stars come from P<sub>T</sub>, and only a hit earns them.</p>`;
   }
@@ -553,6 +557,27 @@ $('optGhost').onchange = () => { scheduleGhost(); };
 audio.enabled = $('optSound').checked = store.get('sound', true);
 $('optSound').onchange = (e) => { store.set('sound', e.target.checked); audio.setEnabled(e.target.checked); };
 
+// ---------------------------------------------------------------- worlds
+/** The session the playfield shows: on a level with `worlds`, the chosen world. */
+const shown = () => ui.session?.worlds?.[ui.world] || ui.session;
+function buildWorldToggle() {
+  const host = $('worldToggle'), ws = ui.level.worlds;
+  host.hidden = !ws; host.innerHTML = ''; ui.world = 0;
+  (ws || []).forEach((w, k) => {
+    const b = document.createElement('button');
+    b.textContent = w.name; b.title = `Show the world "${w.name}": the same setup and inputs run in every world`;
+    b.onclick = () => setWorld(k); host.append(b);
+  });
+  markWorld();
+}
+function setWorld(k) {
+  ui.world = k; markWorld();
+  if (!ui.session) return;
+  if (ui.viewBranch) { ui.viewBranch = null; for (const b of document.querySelectorAll('#ledgerRows button')) b.classList.remove('cur'); }
+  ui.renderer.setSim(shown().sim); ui.frame = -1; updatePanels();
+}
+function markWorld() { [...$('worldToggle').children].forEach((b, k) => b.classList.toggle('on', k === ui.world)); }
+
 // ---------------------------------------------------------------- view switch and legend
 function setView(v) {
   const btn = $('viewToggle').querySelector(`[data-view=${v}]`);
@@ -697,20 +722,23 @@ function fitCanvas(c) {
 function draw() {
   const s = ui.session; if (!s) return;
   ui.handles = setupHandles();
-  ui.renderer.draw(s, ui);
+  const w = shown(), wr = w.result;
+  ui.renderer.draw(w, ui);
   $('clock').textContent = `t = ${s.t.toFixed(1)} / ${ui.level.tmax}`;
   // after an observation the meters hold the values at the moment of observation,
   // not the collapsed state (which would read as P_T jumping after a miss)
-  const r = s.result, pT = r ? r.pT : s.pT(), pM = r ? r.pM : s.pM(), lost = r ? r.lost : s.lost();
+  // with worlds, P_T is the product over the worlds; mines and losses are the shown world's
+  const r = s.result, pT = r ? r.pT : s.pT(), pM = wr ? wr.pM : w.pM(), lost = wr ? wr.lost : w.lost();
   $('valT').textContent = (pT * 100).toFixed(1) + '%';
   $('barM').style.width = (pM * 100) + '%'; $('valM').textContent = (pM * 100).toFixed(1) + '%';
   $('barL').style.width = (lost * 100) + '%'; $('valL').textContent = (lost * 100).toFixed(1) + '%';
   drawRing(pT);
   if (ui.frame % 15 === 0 && !r) {
-    ui.leak = s.sim.kLeak(0.6);
-    const st = s.sim.stats();
-    $('readout').innerHTML = (st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> ≥ ½ · Δx ${st.sx.toFixed(2)} · Δk<sub>x</sub> ${st.skx.toFixed(2)} · ⟨E⟩ <b>${st.E.toFixed(2)}</b>` : '')
-      + (s.sim.spinor ? polReadout(s.sim.stokes()) : '');
+    ui.leak = w.sim.kLeak(0.6);
+    const st = w.sim.stats();
+    $('readout').innerHTML = (s.worlds ? `P<sub>T</sub> = ${s.worlds.map((x, k) => `${k === ui.world ? '<b>' : ''}${x.level.world.name} ${(x.ownPT() * 100).toFixed(1)}%${k === ui.world ? '</b>' : ''}`).join(' × ')}<br>` : '')
+      + (st ? `Δx·Δk<sub>x</sub> = <b>${(st.sx * st.skx).toFixed(2)}</b> ≥ ½ · Δx ${st.sx.toFixed(2)} · Δk<sub>x</sub> ${st.skx.toFixed(2)} · ⟨E⟩ <b>${st.E.toFixed(2)}</b>` : '')
+      + (w.sim.spinor ? polReadout(w.sim.stokes()) : '');
   }
   $('barK').style.width = Math.min(100, ui.leak * 2000) + '%';
   $('valK').textContent = ui.leak > 0.01 ? 'ALIASING' : ui.leak > 1e-3 ? 'high' : 'ok';

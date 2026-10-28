@@ -132,6 +132,19 @@
 > first layout, with equal magnets, let that exploit score 26 %. Magnet gradients stay
 > moderate because the entrance and exit edges kick the beam along its motion (§5 of
 > HANDOFF). `solve.js` needs `--net 0` here (the H beam always lands on the mine).
+>
+> **Twelfth round (two-part objective).** `worlds`: one setup and one input log run in
+> several variants of the level, scored by the product of their P_T. Each world is
+> observed with its own dice and the run hits only if all do, so P(hit) = Π P_T exactly
+> (Monte Carlo tested, 3000 draws); a min or a mean would not be a Born probability. First
+> level: **6-8 Two Worlds**, the bomb tester scored with and without the bomb, with the
+> plate rotation now a player dial (in 6-5 it had to be fixed, since unturned plates
+> would ace the bomb world). Without stations both worlds hold the same photon, so
+> P(H)·P(V) ≤ ¼: 18.6 % at best (θ = 11.25°, capture 0.75). With stations,
+> cos⁸θ·sin²4θ peaks below the quarter turn: 41.8 % at 17° (34 % at 22.5°); two stations
+> 33 %, one 18 %; a fourth adds nothing (the H analyzer is that look). 64² = 128² to
+> 0.002; `solve.js --net 0` finds 39.8 %. The analyzer strips are wide (x 23.8–34) with a
+> fixed observation at t = 9; the 6-5 circle caught too little for a product of two.
 
 Every number below comes from the current code (`src/session.js` and the 9 shipped
 levels) on the 128² grid, unless it says otherwise.

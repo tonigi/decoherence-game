@@ -115,8 +115,18 @@ export class Session {
    * @param opts   {N, seed, mode:'born'|'expect'}
    */
   constructor(level, setup, opts = {}) {
-    this.level = level;
     this.setup = sanitizeSetup(level, setup);
+    // `worlds`: the same setup and inputs run in several variants of the level (this
+    // session is world 0, the others run in lock-step), scored by the product of their
+    // P_T: each world gets its own observation, and the run is a hit only if all are
+    if (level.worlds) {
+      if ((level.detectors || []).length || level.inventory?.items?.some(i => i.kind === 'detector'))
+        throw new Error(level.id + ': worlds do not mix with detectors (the ledger follows one world)');
+      const [w0, ...rest] = level.worlds;
+      this.worlds = [this, ...rest.map((w, k) => new Session(worldLevel(level, w, k + 1), this.setup, { ...opts, seed: worldSeed(opts.seed ?? 1, k + 1) }))];
+      level = worldLevel(level, w0, 0);
+    }
+    this.level = level;
     this.mode = opts.mode || 'born';
     this.seed = opts.seed ?? 1;
     this.rng = mulberry32(this.seed);
@@ -177,6 +187,7 @@ export class Session {
     for (const d of level.detectors || []) addDetector(d, d.shots ?? 1, d.label || 'Detector', d.cooldown, d.hold, d.strength ?? 1);
     for (const it of this.setup.placed) {
       const spec = level.inventory.items.find(s => s.id === it.id);
+      if (!spec) continue;   // an item this world does not have
       if (spec.kind === 'detector') {
         const shape = spec.shape === 'circle' ? { shape: 'circle', x: it.x, y: it.y, r: it.r } : { shape: 'rect', x: it.x, y: it.y, w: it.w, h: it.h };
         addDetector(shape, spec.shots ?? 1, spec.label || 'Detector', spec.cooldown, spec.hold, it.strength ?? 1);
@@ -236,7 +247,10 @@ export class Session {
     this.targetMask = unionMask(this.sim, (this.level.targets || []).filter(t => t.pol === undefined), rasterKMask);
     this.mineMask = unionMask(this.sim, this.level.mines || [], rasterKMask);
   }
-  pT() {
+  /** P_T; on a level with worlds, the product over the worlds (the chance that all hit). */
+  pT() { return this.worlds ? this.worlds.reduce((p, w) => p * w.ownPT(), 1) : this.ownPT(); }
+  /** P_T of this session's own world. */
+  ownPT() {
     if (this.stateMode) return this.sim.modeMass(this.stateMode) / this.herald();
     this._kRegions();
     let p = this._mass(this.targetMask); for (const A of this.analyzers) p += this.sim.polMass(A.mask, A.pol); return p / this.herald(); }
@@ -262,7 +276,10 @@ export class Session {
     this.sim.step(n);
     this.stepCount += n;
     for (const g of this.gates) if (g.pulse) g.open = this.sim.gates[g.index].target === 0;
+    this._others(w => w.step(n));
   }
+  /** Run fn on the other worlds (the player's inputs act in every world). */
+  _others(fn) { if (this.worlds) for (let k = 1; k < this.worlds.length; k++) fn(this.worlds[k]); }
 
   _log(ev) { this.events.push({ step: this.stepCount, ...ev }); }
 
@@ -273,6 +290,7 @@ export class Session {
     const v = [(dkx / m) * dk, (dky / m) * dk].map((c, a) => (this.periodic[a] ? Math.round(c / q) * q : c));
     this.kicksLeft--;
     this.sim.kick(v[0], v[1]);
+    this._others(w => w.kick(dkx, dky));
     this._log({ type: 'kick', dk: v });
     return true;
   }
@@ -285,6 +303,7 @@ export class Session {
     if (ux === this.tilt[0] && uy === this.tilt[1]) return;
     this.tilt = [ux, uy];
     this.sim.setTilt(ux * this.tiltMax + this.field[0], uy * this.tiltMax + this.field[1]);
+    this._others(w => w.setTilt(ux, uy));
     this._log({ type: 'tilt', u: [ux, uy] });
   }
 
@@ -293,6 +312,7 @@ export class Session {
     if (this.result || !this.gates[i]) return;
     const g = this.gates[i]; g.open = g.pulse ? false : !g.open;
     this.sim.setGate(g.index, g.open);
+    this._others(w => w.toggleGate(i));
     this._log({ type: 'gate', i, open: g.open });
   }
 
@@ -320,7 +340,7 @@ export class Session {
    *  completes it with scoreWith(). */
   observe() {
     if (!this.canObserve()) return null;
-    const sim = this.sim, S = sim.norm(), pT = this.pT(), pM = this.pM();
+    const sim = this.sim, S = sim.norm(), pT = this.ownPT(), pM = this.pM();
     let outcome = null, sample = null;
     const pending = this.events.some(e => e.type === 'detect');
     if (this.mode !== 'expect') {
@@ -357,7 +377,15 @@ export class Session {
     }
     this._log({ type: 'observe' });
     this.result = { outcome, hit: outcome === 'hit', pT, pM, lost: this.lost(), sample, stars: 0, step: this.stepCount, score: null, pending };
-    if (!pending) this.scoreWith(pT);
+    if (this.worlds) {
+      // every world is observed; the run reports the first world that did not hit
+      this._others(w => w.observe());
+      const rs = this.worlds.map(w => w.result), miss = rs.find(r => r.outcome !== 'hit');
+      this.result.worlds = rs.map((r, k) => ({ name: this.worlds[k].level.world.name, outcome: r.outcome, pT: r.pT, pM: r.pM }));
+      this.result.pT = rs.reduce((p, r) => p * r.pT, 1);
+      if (this.mode !== 'expect') { this.result.outcome = miss ? miss.outcome : 'hit'; this.result.hit = !miss; }
+    }
+    if (!pending) this.scoreWith(this.result.pT);
     return this.result;
   }
 
@@ -397,6 +425,22 @@ export class Session {
     }
   }
 }
+
+/** The level as seen in world k: a world may replace `elements`, `targets`, `mines`,
+ *  `field` or `drains`, and patch inventory items by id (`items: {id: {...} | null}`,
+ *  null: the item does not exist there, e.g. a bomb that is absent). */
+export const WORLD_KEYS = ['elements', 'targets', 'mines', 'field', 'drains'];
+export function worldLevel(level, w, k) {
+  const out = { ...level, worlds: undefined, world: { index: k, name: w.name || 'World ' + (k + 1) } };
+  for (const key of WORLD_KEYS) if (w[key] !== undefined) out[key] = w[key];
+  if (w.items && level.inventory?.items) {
+    const items = level.inventory.items.map(s => (!(s.id in w.items) ? s : w.items[s.id] && { ...s, ...w.items[s.id] })).filter(Boolean);
+    out.inventory = { ...level.inventory, items };
+  }
+  return out;
+}
+/** Each world rolls its own dice, derived from the run's seed. */
+const worldSeed = (seed, k) => (seed + Math.imul(k, 0x9e3779b9)) >>> 0;
 
 /** Replay a stored solution headlessly. */
 export function replay(level, solution, opts = {}) {

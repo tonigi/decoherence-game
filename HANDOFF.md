@@ -8,13 +8,13 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 37 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 38 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-4), measurement (5-1, 5-2),
-  polarization (6-1…6-7, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
+  polarization (6-1…6-8, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
   rings and flux (9-1…9-9, periodic boundaries).
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
-* `npm test`: 65 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
+* `npm test`: 68 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
   reference solution reaches 2 stars, and naive play stays below 1 star (3-1 is
   exempt, see §5).
 * Pure ES modules with no build step and no dependencies. `npm start` serves the game
@@ -44,6 +44,7 @@ is open, and how to work on it without breaking anything.
 | 6-5 Bomb Tester | Kwiat's interaction-free test: one bomb station per rotator cycle | 15 % | 1 % |
 | 6-6 Humpty Dumpty | full-loop Stern–Gerlach: gradient pulses +τ, −2τ, +τ restore the spin | 55 % | 0 % |
 | 6-7 Ask Again | sequential Stern–Gerlach: a 45° magnet between two 0° ones restores 50/50, if its gradient separates the beams | 30 % | 0 % |
+| 6-8 Two Worlds | bomb tester scored with and without the bomb (`worlds`): no looks ≤ ¼; Zeno looks with plates at 17° | 42 % | 19 % (best no-look) |
 | 7-1 Light Grating | Kapitza–Dirac: a flash fills the orders with J_n(Vτ/2)² | 65 % | 1 % |
 | 7-2 Self-Image | Talbot effect: fire a phase-grating flash half a Talbot time early | 42 % | 21 % |
 | 7-3 Bragg Mirror | weak ridges reflect where k_in = π/a, above the ridge height | 59 % | 3 % |
@@ -66,7 +67,7 @@ is open, and how to work on it without breaking anything.
 | `sim.js` | 2D TDSE solver, ħ = m = 1, Strang split-step (V/2 → T → V/2). Static V, gates (V and/or absorption W, ramped), tilt, boundary absorber W, element absorber Wel with exact `caught` bookkeeping, harmonic contours for display. Observables: `norm`, `mass`, `mass2`, `kMass` (k-space), `kDensity`, `stats` (Δx, Δkₓ, ⟨E⟩), `kLeak`, `modeMass` (overlap with a Gaussian mode). Per-axis `periodic` boundaries and the `gauge` (twist / force on a ring, §2.1); `exchange(±1)` (anti)symmetrises ψ(x₁, x₂). `step(n, others)` steps extra states in lock-step; `withState(st, fn)` runs any method on another state. Spinor mode (`spinor: true`) adds `re2/im2`; every per-state loop goes through `comps()`, `snapshot()`/`load()` copy states, and optics are a sparse per-cell 2×2 exponential (`spinExp`, exact for complex h) beside the scalar half-steps. `stokes()`, `polMass()` read the polarization. |
 | `optics.js` | polarization optics as spin Hamiltonian terms h₀ + h·σ (polarizer: absorbing or reflecting projector; rotator ω σ_y; retarder (δ/2) n(θ)·σ; Stern–Gerlach `zeeman` g·v·n(θ)·σ, where Session scales the mask by the transverse coordinate v); `bomb: true` routes an optic's absorption into `caught`; `jones()` for launch polarizations. |
 | `shapes.js` | rasterisation with tanh edges of fixed physical width `SOFTNESS = 0.45` at every N (this keeps the 64² ghost consistent with the 128² game). Rects take `angle`; also `disc`, `wall` with slits, `harmonic`, and `lattice` (V sin²(πu/period), optionally in a soft rect window; also a placeable inventory item). `rasterKMask` builds momentum-space masks on the fft-shifted grid (dk = 2π/L, the same for every N). |
-| `session.js` | DOM-free game core: one playthrough = (level, setup, seed, event log). Setup sanitising, items, detectors (Kraus `M_yes = √s·m`, `M_no = √(1 − s m²)`), drains, the observation (Born sample in x or k space, or the projector onto a state target; P(hit) = P_T exactly), post-selection (`herald`), scoring (`scoreWith`), `replay`. |
+| `session.js` | DOM-free game core: one playthrough = (level, setup, seed, event log). Setup sanitising, items, detectors (Kraus `M_yes = √s·m`, `M_no = √(1 − s m²)`), drains, the observation (Born sample in x or k space, or the projector onto a state target; P(hit) = P_T exactly), post-selection (`herald`), scoring (`scoreWith`), `replay`, and `worlds` (sibling sessions in lock-step, scored by the product). |
 | `ledger.js` | skill score for runs with detector firings: replays the open-loop inputs, splits every branch at each firing, compresses beyond 16 branches to the leading eigenvectors of ρ (deterministic; the error is bounded by the reported `dropped`). Returns the branch states plus its 64² `Sim` for the Branches panel. |
 | `ghost.js` | low-res (64²) forward preview of P_T(t) for the current setup. |
 | `render.js` | canvas: domain colouring / \|ψ\|² / zoomed momentum view (kinetic momentum, crisp k cells on ring levels), potential tint, absorber tint or portal edges (with the flux), harmonic and pair contours, the exchange diagonal on two-particle levels, overlays (rotated shapes, k-space regions), setup handles. |
@@ -107,6 +108,17 @@ is open, and how to work on it without breaking anything.
   detectors or bombs (the ledger and `caught` are not conditioned).
 * **Experiment names**: `experiment` is shown under the title, on the map card and in
   the drawer.
+* **Worlds** (the two-part objective; `worlds: [{name, elements?, targets?, mines?, field?,
+  drains?, items?: {id: patch | null}}, …]`, `worldLevel()`): one setup and one input log
+  run in several variants of the level, in lock-step. The Session is world 0 and keeps the
+  others in `worlds` (sibling Sessions; `_others()` forwards steps, kicks, tilt and gates).
+  An item patched to `null` does not exist in that world. `pT()` is the product of the
+  worlds' `ownPT()`; the observation samples each world with its own dice (seed derived
+  from the run's), and the run is a hit only if every world hits, so P(hit) = Π P_T
+  exactly. The HUD's ring shows the product, the readout each world's P_T, mines and
+  losses the shown world's; a toggle under the view switch picks the shown world.
+  Refused together with detectors (the ledger follows one world). A product, not a min or
+  a mean: it is the only combination that is itself a Born probability.
 
 `tools/verify.js` checks every level (and `--replay file.json` re-verifies a saved run).
 `tools/solve.js` is a derivative-free optimiser over the setup parameters, used to find
@@ -126,11 +138,12 @@ references and calibrate stars.
    use a second uniform against the smooth masks, so P(hit) = P_T and P(mine) = P_M
    exactly. A state target is a projective measurement with P(hit) = |⟨φ|ψ⟩|²; on a
    post-selected level the sample is drawn among the survivors, so P(hit) = P_T/herald.
-   All three are Monte Carlo tested.
+   On a level with `worlds` each world is observed on its own and P(hit) = Π_w P_T,w.
+   All four are Monte Carlo tested.
 4. **Scoring.** Stars come from P_T at the observation. After any detector firing they
    come from the ledger's branch average instead, which removes post-selection luck (a
    test reproduces the old exploit). On a `postselect` level the score is the conditional
-   P_T. Expectation mode is fixed per run and keeps its own star table (`id@expect` in
+   P_T; on a `worlds` level it is the product of the worlds' P_T. Expectation mode is fixed per run and keeps its own star table (`id@expect` in
    localStorage).
 5. **Spinor parity.** Scalar levels must not pay for spinor mode, and anything that
    touches a state (new observables, operations, ledger copies) must go through
@@ -183,8 +196,10 @@ references and calibrate stars.
 * **After an observation the meters show the collapsed state** (pre-existing behaviour;
   it can look surprising, e.g. P_T 52 % after a miss).
 * **Weak detectors have no level yet.** With a single P_T objective, Zeno's score is
-  monotone in the strength s. An information/disturbance trade-off needs a two-part
-  objective (see the eraser below).
+  monotone in the strength s. The two-part objective now exists (`worlds`), but worlds
+  refuse detectors, because the ledger follows one world. A fringe dial either marks the
+  path in the polarization (a rotator in one arm, read out by an analyzer in a second
+  world), or the ledger learns to branch every world at once.
 * **Textbook ideas tried and parked (numbers in the scratch runs behind 4-4…8-1):**
   *Spatial Talbot carpet* behind a slit grating: a short pulse only shows the temporal
   carpet as it moves, and the target slice catches 1–5 %; the pulsed phase grating
@@ -243,14 +258,13 @@ references and calibrate stars.
 ## 7. Roadmap (in suggested order)
 
 1. **More spinor levels on the new optics.** The solver, ledger and UI are done
-   (chapter 6, including Stern–Gerlach, sequential Stern–Gerlach (6-7, done) and the
-   bomb tester). Cheap next steps: (b) **the quantum
-   eraser**: orthogonal polarizers on two slits kill the fringes, a ±45° analyzer target
-   restores them in the post-selected half. Erasure never raises P_T above the
-   incoherent sum, so it needs the two-part objective (score fringes *and* a which-way
-   readout, or P_T − P_M) that weak detectors need too; (c) a **two-world bomb tester**
-   (with and without the bomb, scored together) needs the same two-part objective;
-   6-5 shows the bomb-present world only; (d) gated optics (already supported) as real-time player tools, e.g.
+   (chapter 6, including Stern–Gerlach, sequential Stern–Gerlach (6-7), the bomb tester
+   and the two-world bomb tester (6-8, on the `worlds` two-part objective)). Cheap next
+   steps: (b) **the quantum eraser**: orthogonal polarizers on two slits kill the
+   fringes, a ±45° analyzer target restores them in the post-selected half. Erasure
+   never raises P_T above the incoherent sum, so score it in two worlds, one per analyzer
+   (+45° and −45°, each with its own fringe targets, both post-selected): only an eraser
+   gets fringes in both; (d) gated optics (already supported) as real-time player tools, e.g.
    a polarizer you switch in at the right moment, or Zeno with a polarizer as the
    pulsed "detector".
 2. **Finer grid / WebGPU port.** The split-step maps directly onto compute shaders. 256²
@@ -270,9 +284,8 @@ Each still has to pass the §4 contract (interior optimum, ≥ 2× over naive pl
 
 | Idea | Lesson | Engine | Notes |
 |---|---|---|---|
-| Quantum eraser (5-6) | orthogonal polarizers on two slits kill fringes; a ±45° analyzer restores them post-selected | two-part objective | §7.1b; erasure never beats the incoherent sum |
-| Two-world bomb tester | with and without the bomb, scored together | two-part objective | §7.1c |
-| Fringe dial (5-5) | weak which-way detector: V² + D² ≤ 1 | two-part objective | weak detectors already exist |
+| Quantum eraser (5-6) | orthogonal polarizers on two slits kill fringes; a ±45° analyzer restores them post-selected | none (`worlds` + `postselect`) | §7.1b; erasure never beats the incoherent sum, so one world per analyzer |
+| Fringe dial (5-5) | weak which-way marker: V² + D² ≤ 1 | `worlds` with a polarization marker, or a ledger over worlds | worlds refuse detectors (§5) |
 | Bomb tester in Mach–Zehnder (3-5) | Elitzur–Vaidman with a real interferometer | 256² for a delta-like splitter | §5 dark-port leak |
 | Gated optics as tools | switch a polarizer in at the right moment; Zeno with a polarizer as the pulse | none | §7.1d |
 | Double barrier (2-4) | resonant tunnelling: two walls transmit more than one | none | needs σ_k below the resonance width |

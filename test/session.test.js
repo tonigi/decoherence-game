@@ -247,3 +247,43 @@ test('absorbing gate (shutter): what it swallows is lost, not caught by a bomb',
   const o = new Session(lv, defaultSetup(lv), { N: 64 }); o.toggleGate(0); o.step(120);
   assert.ok(o.lost() < 0.05, 'open shutter lets it pass: ' + o.lost());
 });
+
+test('worlds: one setup in every world, P_T is the product, an item can be absent in a world', () => {
+  const lv = load('6-8'), s = new Session(lv, lv.reference.setup, { N: 64 });
+  assert.equal(s.worlds.length, 2);
+  assert.equal(s.worlds[0], s);
+  assert.equal(s.worlds[1].setup.placed.filter(p => p.id === 'st').length, 0, 'no stations without the bomb');
+  s.step(120);
+  near(s.pT(), s.ownPT() * s.worlds[1].ownPT(), 1e-15, 'product');
+  assert.ok(s.sim.caught > 0.05, 'the bomb world loses photons to the bomb: ' + s.sim.caught);
+  assert.equal(s.worlds[1].sim.caught, 0, 'nothing to set off without the bomb');
+  near(s.worlds[1].alive() + s.worlds[1].lost(), 1, 1e-12, 'bookkeeping in the second world');
+});
+
+test('worlds: inputs reach every world, and replay reproduces all of them', () => {
+  const base = load('1-3'), lv = { ...base, worlds: [{ name: 'a' }, { name: 'b' }] };
+  const s = new Session(lv, defaultSetup(lv), { N: 64, seed: 5 });
+  s.kick(0, -1); s.step(20); s.setTilt(0, -1); s.step(37); s.setTilt(0, 0); s.step(5);
+  const [a, b] = s.worlds;
+  assert.deepEqual(b.sim.re, a.sim.re, 'identical worlds stay identical');
+  near(s.pT(), a.ownPT() ** 2, 1e-15, 'P_T of two identical worlds');
+  const plain = new Session(base, defaultSetup(base), { N: 64 });
+  plain.kick(0, -1); plain.step(20); plain.setTilt(0, -1); plain.step(37); plain.setTilt(0, 0); plain.step(5);
+  near(a.ownPT(), plain.pT(), 1e-15, 'a world is the plain level');
+  const r = s.observe(), again = replay(lv, JSON.parse(JSON.stringify(s.solution())), { N: 64 });
+  assert.deepEqual(again.result.worlds, r.worlds);
+  assert.equal(again.result.outcome, r.outcome);
+  assert.equal(r.hit, r.worlds.every(w => w.outcome === 'hit'));
+});
+
+test('worlds: P(hit) = product of the worlds\' P_T (each world rolls its own dice)', () => {
+  const lv = load('6-8'), base = new Session(lv, lv.reference.setup, { N: 64 });
+  base.step(180);
+  const pT = base.pT(), saved = base.worlds.map(w => w.sim.snapshot());
+  const M = 3000; let hit = 0;
+  for (let seed = 1; seed <= M; seed++) {
+    base.worlds.forEach((w, k) => { w.sim.load(saved[k]); w.sim.caught = saved[k].caught; w.result = null; w.rng = mulberry32(seed * 7919 + k); });
+    if (base.observe().hit) hit++;
+  }
+  near(hit / M, pT, 4 * Math.sqrt(pT * (1 - pT) / M) + 1e-3, 'hit frequency');
+});
