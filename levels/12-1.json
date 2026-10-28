@@ -1,0 +1,204 @@
+{
+ "id": "12-1",
+ "chapter": 12,
+ "title": "Tagged",
+ "intro": "Two slits, and a horizontally polarized packet (H) that goes through both. In the upper slit sits a rotator that turns the polarization by 90°: the half that took the upper slit leaves vertical (V), the lower half stays H. Nothing is absorbed and nothing is measured, yet the far-field pattern has lost its fringes, because the polarization now carries a record of the path. You have one rotator of your own, as wide as a slit; set how fast it turns the polarization and where it goes. The score is the share of what passes the slits that lands on the three central bright stripes of the momentum pattern.",
+ "spinor": true,
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 8,
+ "minObserveTime": 8,
+ "observe": "momentum",
+ "kView": 5,
+ "postselect": {
+  "min": 0.002
+ },
+ "launch": {
+  "x": 6,
+  "y": 20,
+  "k": 2.8,
+  "angle": 0,
+  "sigma": 1.5,
+  "sigmaT": 4,
+  "pol": 0
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 8.125,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 8.125,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 20.0,
+   "w": 1,
+   "h": 2.5,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 20.0,
+   "w": 1,
+   "h": 2.5,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 31.875,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 0
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 31.875,
+   "w": 1,
+   "h": 16.25,
+   "optic": {
+    "kind": "polarizer",
+    "angle": 90
+   }
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 17.5,
+   "w": 2,
+   "h": 2.5,
+   "optic": {
+    "kind": "rotator",
+    "omega": 2.1991
+   }
+  }
+ ],
+ "inventory": {
+  "items": [
+   {
+    "id": "rot",
+    "kind": "rotator",
+    "count": 1,
+    "w": 2,
+    "h": 2.5,
+    "omega": [
+     0,
+     -2.5,
+     2.5
+    ],
+    "x": 17,
+    "y": 20,
+    "area": [
+     10,
+     12,
+     22,
+     28
+    ],
+    "label": "Rotator"
+   }
+  ]
+ },
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": -1.2566,
+   "w": 4,
+   "h": 0.3
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": 0.0,
+   "w": 4,
+   "h": 0.3
+  },
+  {
+   "shape": "rect",
+   "x": 2.5,
+   "y": 1.2566,
+   "w": 4,
+   "h": 0.3
+  }
+ ],
+ "stars": [
+  0.37,
+  0.42,
+  0.46
+ ],
+ "expectThreshold": 0.42,
+ "reference": {
+  "setup": {
+   "placed": [
+    {
+     "id": "rot",
+     "x": 12,
+     "y": 17.5,
+     "omega": -2.1991
+    }
+   ]
+  }
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Bring the fringes back by making the two paths' polarizations the same again: place your rotator and set its rate (ω, polarization turns per unit time inside). Measured in momentum at t = 8, among what passes the slits.",
+ "physics": {
+  "point": "The fringes need the two paths to end in the same state of everything else. A tag that leaves H on one path and V on the other makes them orthogonal: no fringes, though nothing collapsed. Undo the tag, or copy it onto the other path, and they come back.",
+  "eq": "P(k) ∝ |φ_A|² + |φ_B|² + 2 Re(φ_A* φ_B ⟨e_A|e_B⟩)",
+  "learn": {
+   "idea": [
+    "This is decoherence in its smallest form. The particle's path got entangled with another degree of freedom, its polarization, which here plays the environment. ψ as a whole is still a pure, coherent state: no measurement happened, no probability was lost. But the position alone, with the polarization ignored, behaves like a mixture of \"went through A\" and \"went through B\", and mixtures do not interfere.",
+    "The size of the fringes is the overlap of the two environment states, ⟨e_A|e_B⟩. Orthogonal records (H and V) mean no fringes; identical records mean full fringes; a record of the wrong sign gives fringes shifted by half a period, bright where dark should be.",
+    "Because the tag is a rotation, it can be undone: a rotator turning back by 90° on the same path, or one turning the other path the same way. The polarizations then carry no information about the path, and the interference returns. A real environment (air molecules, thermal photons) is a record spread over countless particles you cannot reach, and that is why decoherence in practice cannot be undone. Compare 6-9 Eraser, where the record is not undone but read out in a basis that hides the path."
+   ],
+   "maths": [
+    "A rotator of rate ω turns the polarization by θ = ω w / v for a dwell time w/v (w = 2, v = 2.8): the fixed one has ω = π v/(2w) ≈ 2.2, so θ_A = 90°. With your rotator turning path B by θ_B (or adding to θ_A), the environment states are linear polarizations at θ_A and θ_B and",
+    {
+     "eq": "⟨e_A|e_B⟩ = cos(θ_A − θ_B)"
+    },
+    "so the visibility is cos(θ_A − θ_B). Its sign matters: turning B by −90° gives the same polarization as A up to an overall sign, cos 180° = −1, and the bright and dark stripes swap.",
+    "Measured (score among what passes the slits; the slits pass about a quarter of the packet):",
+    {
+     "eq": "no tag at all                        49%\ntagged, nothing placed               29%\nyour rotator on A, ω = −2.2 (undo)   49%\nyour rotator on B, ω = +2.2 (copy)   45%\nyour rotator on B, ω = +1.1 (45°)    41%\nyour rotator on B, ω = −2.2         12%\nbetween the beams, ω = +2.2         24%"
+    },
+    "Copying the tag is a little worse than undoing it: the rotation inside a slit is not perfectly uniform, so two separate rotators leave slightly different records."
+   ],
+   "try": [
+    "Look at the momentum view without placing anything: a smooth hump with only faint ripples.",
+    "Put your rotator on the upper slit with ω ≈ −2.2: it cancels the tag and the stripes return.",
+    "Put it on the lower slit with ω ≈ +2.2, then −2.2: the same polarization, but the fringes flip."
+   ]
+  }
+ }
+}

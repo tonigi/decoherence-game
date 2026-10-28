@@ -1,0 +1,121 @@
+{
+ "id": "10-2",
+ "chapter": 10,
+ "title": "Steering",
+ "experiment": "EPR steering (Schrödinger, 1935) by heralding",
+ "intro": "The collision from Collide, at the speed where bouncing and passing are equally likely. Afterwards particle 2 (down the square) is on the upper side (x₂ < 20, the green band) only if the pair passed through each other. You cannot touch particle 2. You can only switch on an absorber on particle 1: key 1 swallows particle 1 wherever it is left of the middle (x₁ < 20, a vertical band), key 2 wherever it is right of it. A swallowed run does not count: the score is P_T among the runs where particle 1 survived.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 11,
+ "minObserveTime": 11,
+ "postselect": {
+  "min": 0.25
+ },
+ "launch": {
+  "x": 13,
+  "y": 27,
+  "k": 1.88,
+  "angle": -45,
+  "sigma": 2
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 0.6,
+   "h": 60,
+   "V": 3,
+   "angle": -45
+  },
+  {
+   "type": "rect",
+   "x": 10,
+   "y": 20,
+   "w": 20,
+   "h": 40,
+   "absorb": 2,
+   "gate": {
+    "key": 1,
+    "label": "Absorb 1 left",
+    "open": true,
+    "ramp": 2
+   }
+  },
+  {
+   "type": "rect",
+   "x": 30,
+   "y": 20,
+   "w": 20,
+   "h": 40,
+   "absorb": 2,
+   "gate": {
+    "key": 2,
+    "label": "Absorb 1 right",
+    "open": true,
+    "ramp": 2
+   }
+  }
+ ],
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 20,
+   "y": 10,
+   "w": 40,
+   "h": 20
+  }
+ ],
+ "stars": [
+  0.65,
+  0.85,
+  0.94
+ ],
+ "expectThreshold": 0.85,
+ "reference": {
+  "setup": {},
+  "events": [
+   {
+    "step": 180,
+    "type": "gate",
+    "i": 0
+   }
+  ],
+  "observeAt": 11
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Make particle 2 end up in the green band (x₂ < 20) among the runs that count, by switching an absorber on particle 1 (key 1: left, key 2: right) at the right moment. The world observes at t = 11.",
+ "physics": {
+  "point": "Throwing away the runs where particle 1 is on one side leaves particle 2 almost surely on the other: that is steering. But the absolute chance of finding particle 2 in the band hardly moves. What you did to particle 1 only shows once the runs are sorted by particle 1's fate.",
+  "eq": "P(2 in band | 1 survived) ≈ 96 %,   P(2 in band) ≈ 50 % either way",
+  "learn": {
+   "idea": [
+    "In 1935 Einstein, Podolsky and Rosen pointed out that for an entangled pair a measurement on one particle seems to decide the state of the other, however far away. Schrödinger, replying, called this steering, and found it deeply troubling. It is real: a choice made at particle 1 sorts particle 2 into one state or another.",
+    "After the collision the pair is r|bounced⟩ + t|passed⟩. If the pair passed through each other, particle 1 is on the right and particle 2 on the upper side; if it bounced, the other way round. The absorber on particle 1 is a detector that removes every run in which it found particle 1 on its side. Swallow particle 1 on the left, and every surviving run is a \"passed\" run: particle 2 is in the band.",
+    "Yet nothing reached particle 2. Its own statistics, counted over all runs, are the same with or without the absorber (the absorber acts on x₁ only, and for a pair that no longer interacts nothing done to x₁ changes the distribution of x₂). The effect lives entirely in the sorting, and sorting needs to know what happened to particle 1, information that can travel no faster than light. This is the no-signalling theorem, and why entanglement cannot send messages.",
+    "Timing matters: switch on before the collision has finished and you swallow the \"passed\" runs as well (and before t ≈ 5 nearly everything, which is scored as a loss); switch on too late and the absorber has not finished its job when the world observes."
+   ],
+   "maths": [
+    "Long after the collision ψ ≈ r φ_L(x₁) φ_R(x₂) + t φ_R(x₁) φ_L(x₂). Particle 2's distribution on its own is the partial trace over particle 1:",
+    {
+     "eq": "ρ₂ = |r|² |φ_R⟩⟨φ_R| + |t|² |φ_L⟩⟨φ_L|"
+    },
+    "Any operation on particle 1 alone, including a measurement or an absorber, satisfies Σₖ Mₖ†Mₖ = 1 summed over its outcomes (\"absorbed\" is one of them), so it leaves ρ₂ unchanged. Conditioned on the outcome \"particle 1 survived the left absorber\", the state is φ_R(x₁) φ_L(x₂): particle 2 is steered into φ_L.",
+    "Measured at t = 11 (score among survivors; P(2 in band) over all runs; surviving share):",
+    {
+     "eq": "absorber          score   P(2 in band)  survived\nnone               53%        52%         100%\nleft, on at t = 4  53%*       13%          14%\nleft, on at t = 6  94%        34%          36%\nleft, on at t = 9  96%        49%          51%\nleft, on at t = 10 95%        50%          53%\nright, on at t = 8  5%         2%          41%"
+    },
+    "* below the post-selection floor of 25%: a run of survivors that small is not trusted."
+   ],
+   "try": [
+    "Watch without touching anything: two blobs, and the band catches half.",
+    "Switch the left absorber on at the start: it swallows the whole pair.",
+    "Wait until the two blobs are clearly apart (about t = 9), then key 1: the upper-left blob fades and what is left is all in the band."
+   ]
+  }
+ }
+}

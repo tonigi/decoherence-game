@@ -8,12 +8,12 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 41 levels in 12 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 43 levels in 13 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-4), measurement (5-1, 5-2),
   polarization (6-1…6-9, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1),
-  rings and flux (9-1…9-9, periodic boundaries), entanglement (10-1) and Schrödinger's cat
-  (11-1). Chapters 10 and 11 are openers; the rest of them, and a decoherence chapter, are
-  planned in §8.2.
+  rings and flux (9-1…9-9, periodic boundaries), entanglement (10-1, 10-2), Schrödinger's
+  cat (11-1) and decoherence (12-1). Chapters 10–12 are openers; the rest of them is planned
+  in §8.2.
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
 * `npm test`: 69 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
@@ -62,7 +62,9 @@ is open, and how to work on it without breaking anything.
 | 9-8 Bound Pair | a spring-bound pair in the loop mirror: window at Φ₀/8 (h/2e) | 85 % | 16 % (Φ₀/4) |
 | 9-9 Pauli Ring | two fermions in the cold square need Φ₀/2 (parity effect) | 100 % | 0 % |
 | 10-1 Collide | distinguishable pair, contact ridge on x₁ = x₂; two `worlds` (bounced, passed) score R·T = C²/4 | 23 % | 9 % |
+| 10-2 Steering | 10-1's pair; an absorber on particle 1 (x₁ < 20) switched on after the collision heralds particle 2 into the band (`postselect`); P(2 in band) over all runs stays ≈ 50 % (no-signalling) | 96 % | 53 % |
 | 11-1 Cat in a Trap | spin-dependent kick in a harmonic trap (Monroe 1996); the same kick again at T/2 restores the 45° spin | 92 % | 7 % |
+| 12-1 Tagged | a fixed 90° rotator in one slit tags the path (fringes gone, nothing measured); the player's rotator undoes or copies the tag (visibility cos(θ_A − θ_B)) | 49 % | 29 % |
 
 ## 2. Architecture (src/, ~3100 lines)
 
@@ -282,9 +284,9 @@ references and calibrate stars.
 5. **An adjoint solver** for hints and difficulty ratings (the dynamics are linear and
    differentiable), replacing the random-restart `solve.js`.
 6. **More textbook levels** (the full pending list is §8). Everything in §8.1 is built.
-7. **Entanglement, decoherence and cat chapters** (§8.2): finish chapters 10 and 11 with
-   the levels that need no engine work, then build the stochastic environment ("gas"),
-   which opens a decoherence chapter 12 and the cat-size level.
+7. **Entanglement, decoherence and cat chapters** (§8.2): the entanglement meter and the
+   cat-state target, then the stochastic environment ("gas"), which fills chapter 12 and
+   unlocks the cat-size level.
 
 ## 8. Pending level ideas (all of them, one place)
 
@@ -334,9 +336,9 @@ estimates, not yet prototyped.
 
 ### 8.2 Entanglement, Schrödinger's cat and decoherence (chapters 10–12)
 
-Chapter 10 (Entanglement) and chapter 11 (Schrödinger's cat) exist with one level each
-(10-1, 11-1). Decoherence is planned as chapter 12. The ideas below are estimates, not
-yet prototyped, unless a number says otherwise.
+Chapter 10 (Entanglement) has 10-1 and 10-2, chapter 11 (Schrödinger's cat) has 11-1,
+chapter 12 (Decoherence) has 12-1. The ideas below are estimates, not yet prototyped,
+unless a number says otherwise.
 
 **What the engine already gives these chapters.**
 
@@ -359,7 +361,7 @@ yet prototyped, unless a number says otherwise.
 | Idea | Lesson | Engine | Notes |
 |---|---|---|---|
 | 10-1 Collide (built) | a contact collision makes r\|bounced⟩ + t\|passed⟩; R·T is largest at R = T | none | k = 1.88 gives 23 % (max ¼), default 1.2 gives 9 %; 64² agrees to 0.01 |
-| Spooky steering | a detector strip on x₁ after the collision collapses particle 2's slice; the branch-averaged score shows particle 2's marginal does **not** move (no-signalling); only a joint or conditional target can be won | none (two-particle level + detectors; the ledger enforces no-signalling) | needs a puzzle where steering *looks* useful; the lesson is that it is not |
+| 10-2 Steering (built) | a gated absorber on particle 1 (x₁ < 20) heralds particle 2 into the band; scored among survivors (`postselect: {min: 0.25}`) | none | on at t ≈ 9: 96 %; none 53 %; the right absorber 5 %; on before t ≈ 5 falls under the floor. Fixed observation at t = 11, before the boundaries matter. A plain detector cannot do this: the ledger averages its outcomes, which is no-signalling itself, and the ledger replays open-loop inputs, so feedback on a detector's outcome (LOCC) is not credited either. Heralding through `postselect` is the honest way to sort runs |
 | Tied together | the `pair` bond gives narrow x₁ − x₂ and narrow k₁ + k₂: the EPR state | none for the state; a measurement basis per particle (x for one, k for the other) for the full EPR argument | `observe: "momentum"` is per level today |
 | Entanglement meter | Schmidt values / entanglement entropy of ψ(x₁, x₂) in the HUD | SVD of the N×N ψ every few frames (128² is cheap) | makes 10-1's two blobs a number |
 | Bell / CHSH | real nonlocality | two particles that each carry polarization: a 4-component state (generalise `comps()`) | large; a single-particle path ⊗ polarization CHSH is cheaper but shows contextuality, not nonlocality, and must say so |
@@ -385,13 +387,13 @@ the second order at about 2π/σ, above 0.6 k_max of the 64² grid, so it breaks
 
 | Idea | Lesson | Engine | Notes |
 |---|---|---|---|
-| Tagged | a fixed rotator in one slit arm tags the path and kills the fringes; the player places a compensating optic so the environment states overlap again (recoherence); visibility = \|⟨e₁\|e₂⟩\| | none (spinor + rotator) | close to 6-9 Eraser; the difference is undoing the tag rather than post-selecting it |
+| 12-1 Tagged (built) | a fixed rotator in the upper slit tags the path and kills the fringes; the player's rotator undoes it (same slit, −ω: 49 %) or copies it (other slit, +ω: 45 %); −ω on the other slit flips the fringes (12 %) | none (spinor + rotator) | tagged 29 %. The rotators sit *in* the slits (w = 2 across the 1-wide wall): placed just behind a slit, the diffracting beam partly misses a slit-sized rotator and the tag is only partial. Contrast is 1.7×, capped by the incoherent sum being half the coherent peak; 64² agrees to 0.005 |
 | Fringe dial | weak which-way marking: V² + D² ≤ 1 | `worlds` with a partial polarization marker | already listed as 5-5 in §8 |
 | Echo | a position-dependent precession (gated `zeeman` across a static packet) dephases the spin when you trace over x; a π flip at T/2 refocuses (Hahn echo) | none | close to 6-6 and 11-1; needs its own twist (e.g. fast vs quasi-static noise, which needs the gas) |
 | Collisional decoherence ("gas") | random kicks e^{iq·x} from a background gas: a which-way record that nobody reads. Coherence of a split packet decays as exp(−Λt(1 − cos q·d)). Puzzle: cross the gas fast, or keep the arms close | **new mechanic**: average over K noise realisations, re-using the ledger's rank-16 ρ compression | deterministic seeds keep replays exact; P_T stays linear in ρ, so scoring is the ledger's |
 | Environment in the plane | particle 2 scatters off particle 1 in one arm; fringes in x₁ (a full-height strip target) depend on whether the two scattered states of particle 2 overlap | none (two-particle level, contact ridge) | decoherence as entanglement, drawn |
 | Drains as environments | 9-5 already makes an edge record an escape | built | worth a cross-reference from chapter 12's text |
 
-Suggested order: Spooky steering and Tagged (no engine work), then the entanglement
-meter, the cat-state target, and the gas, which unlocks the rest of chapter 12 and Big
-cats die fast. Bell / CHSH last.
+Suggested order: the entanglement meter and the cat-state target, then the gas, which
+unlocks the rest of chapter 12 and Big cats die fast; "Environment in the plane" needs
+no engine work and could come any time. Bell / CHSH last.
