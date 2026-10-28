@@ -1,0 +1,105 @@
+{
+ "id": "10-1",
+ "chapter": 10,
+ "title": "Collide",
+ "intro": "As in Bunching, this square is two particles on one line: across is particle 1's position x₁, down is particle 2's x₂. This time they are different particles, and they repel each other only on contact: a ridge along the diagonal x₁ = x₂, where they would sit on top of each other. They fly at each other. Each run is played in two worlds at once with the same speed. In the first world you win if they bounced (particle 1 is still on the left: the top-left square), in the second if they passed through each other (the bottom-right square). You need both.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "tmax": 16,
+ "minObserveTime": 8,
+ "launch": {
+  "x": 13,
+  "y": 27,
+  "k": [
+   1.2,
+   0.8,
+   3.0
+  ],
+  "angle": -45,
+  "sigma": 2
+ },
+ "elements": [
+  {
+   "type": "rect",
+   "x": 20,
+   "y": 20,
+   "w": 0.6,
+   "h": 60,
+   "V": 3,
+   "angle": -45
+  }
+ ],
+ "targets": [
+  {
+   "shape": "rect",
+   "x": 12,
+   "y": 28,
+   "w": 16,
+   "h": 16
+  }
+ ],
+ "worlds": [
+  {
+   "name": "bounced"
+  },
+  {
+   "name": "passed",
+   "targets": [
+    {
+     "shape": "rect",
+     "x": 28,
+     "y": 12,
+     "w": 16,
+     "h": 16
+    }
+   ]
+  }
+ ],
+ "stars": [
+  0.15,
+  0.2,
+  0.22
+ ],
+ "expectThreshold": 0.2,
+ "reference": {
+  "setup": {
+   "launch": {
+    "k": 1.88
+   }
+  }
+ },
+ "naive": {
+  "setup": {}
+ },
+ "goal": "Tune the speed so that the collision is a perfect quantum coin: the score is P(bounced) × P(passed), at most ¼. Observe from t = 8, after the collision.",
+ "physics": {
+  "point": "After the collision the pair is in two histories at once, bounced and passed through. Neither particle has a wave function of its own any more: ψ(x₁, x₂) cannot be written as f(x₁)·g(x₂). That is entanglement, and it is largest when both histories are equally likely.",
+  "eq": "ψ → r |bounced⟩ + t |passed⟩,   score = R·T = C²/4 ≤ ¼",
+  "learn": {
+   "idea": [
+    "Two particles that have never met can be described separately: ψ(x₁, x₂) = f(x₁)·g(x₂). On this plane a product state looks like a single blob whose every horizontal slice has the same shape. The launch is one.",
+    "The particles interact only when they touch, so the potential depends on x₁ − x₂ alone: a ridge along the diagonal. The packet hits it head on. Part of it bounces (for equal masses that means the particles swap velocities, and particle 1 stays on the left of particle 2), part tunnels through (they pass through each other and keep their velocities). After the collision there are two blobs on opposite sides of the diagonal.",
+    "Now knowing where particle 1 is tells you where particle 2 is, and no product f(x₁)·g(x₂) can produce two blobs placed like that: the pair is entangled. Each particle alone is in a mixture, not a superposition: half a chance of being left, half of being right, with nothing to interfere.",
+    "The two worlds turn the amount of entanglement into a score. Winning both needs a bounce in one and a pass in the other, R·T, and that is exactly (C/2)², with C = 2|rt| the concurrence of the pair, which is 1 for a maximally entangled pair."
+   ],
+   "maths": [
+    "With centre-of-mass and relative coordinates X = (x₁ + x₂)/√2 and u = (x₁ − x₂)/√2, the contact ridge V(u) leaves X free. The launch at −45° has all its momentum in u, |k₀|, so the relative motion meets a thin barrier at speed |k₀| (each particle moves at |k₀|/√2). Long after the collision",
+    {
+     "eq": "ψ ≈ r · φ_L(x₁) φ_R(x₂) + t · φ_R(x₁) φ_L(x₂)"
+    },
+    "already in Schmidt form, with Schmidt coefficients |r| and |t|. The entanglement entropy is S = −R log₂R − T log₂T: 1 bit at R = T = ½. Measured, at the best moment after t = 8:",
+    {
+     "eq": "|k₀|      1.0   1.2   1.5   1.7   1.9   2.1   2.4   3.0\nbounced   65%   71%   65%   56%   44%   33%   18%    4%\npassed     7%   13%   26%   38%   51%   64%   80%   93%\nscore     5%    9%   17%   21%   23%   21%   14%    4%"
+    },
+    "A caveat that the next levels take up: these positions alone could be faked by a classical coin (\"bounce or pass, then fly\"). What makes the pair entangled is that the two histories are still coherent. Only an experiment that lets them interfere can tell the difference."
+   ],
+   "try": [
+    "At the default speed the ridge mostly bounces the pair: the passed world rarely wins.",
+    "Go fast (|k₀| = 3): now they almost always pass through, and the bounced world loses.",
+    "Set |k₀| ≈ 1.9 and watch ψ split into two equal blobs across the diagonal."
+   ]
+  }
+ }
+}

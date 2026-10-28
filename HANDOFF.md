@@ -8,10 +8,12 @@ is open, and how to work on it without breaking anything.
 
 ## 1. Where things stand
 
-* 39 levels in 10 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
+* 41 levels in 12 chapters: the guided tutorial (0-1…0-3), free propagation (1-1…1-4), tunnelling (2-1, 2-2),
   interference (3-1, 3-2), bound states and lenses (4-1…4-4), measurement (5-1, 5-2),
-  polarization (6-1…6-9, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1) and
-  rings and flux (9-1…9-9, periodic boundaries).
+  polarization (6-1…6-9, spinor ψ), gratings and lattices (7-1…7-3), two particles (8-1),
+  rings and flux (9-1…9-9, periodic boundaries), entanglement (10-1) and Schrödinger's cat
+  (11-1). Chapters 10 and 11 are openers; the rest of them, and a decoherence chapter, are
+  planned in §8.2.
 * Every level that re-enacts a textbook experiment names it in `experiment`, shown to the
   player under the level title, on the chapter-map card and in the physics drawer.
 * `npm test`: 69 tests, all passing (~1.5 min). `npm run verify`: every level passes. The
@@ -59,6 +61,8 @@ is open, and how to work on it without breaking anything.
 | 9-7 Chopper | time-of-flight velocity selection with a drain; post-selected score | 52 % | 19 % |
 | 9-8 Bound Pair | a spring-bound pair in the loop mirror: window at Φ₀/8 (h/2e) | 85 % | 16 % (Φ₀/4) |
 | 9-9 Pauli Ring | two fermions in the cold square need Φ₀/2 (parity effect) | 100 % | 0 % |
+| 10-1 Collide | distinguishable pair, contact ridge on x₁ = x₂; two `worlds` (bounced, passed) score R·T = C²/4 | 23 % | 9 % |
+| 11-1 Cat in a Trap | spin-dependent kick in a harmonic trap (Monroe 1996); the same kick again at T/2 restores the 45° spin | 92 % | 7 % |
 
 ## 2. Architecture (src/, ~3100 lines)
 
@@ -278,6 +282,9 @@ references and calibrate stars.
 5. **An adjoint solver** for hints and difficulty ratings (the dynamics are linear and
    differentiable), replacing the random-restart `solve.js`.
 6. **More textbook levels** (the full pending list is §8). Everything in §8.1 is built.
+7. **Entanglement, decoherence and cat chapters** (§8.2): finish chapters 10 and 11 with
+   the levels that need no engine work, then build the stochastic environment ("gas"),
+   which opens a decoherence chapter 12 and the cat-size level.
 
 ## 8. Pending level ideas (all of them, one place)
 
@@ -303,7 +310,7 @@ Each still has to pass the §4 contract (interior optimum, ≥ 2× over naive pl
 | Zener tunnelling | a stronger push lets part of the atom jump the gap and run away round the ring (Landau–Zener across the gap Δ; here Δ = 1.25 keeps it negligible) | none (9-2 machinery) | Bloch itself is built (9-2) |
 | Bragg diffraction (time domain) | at the Bragg angle a long weak pulse sends all into one order (vs Kapitza–Dirac's symmetric orders) | none (7-1 element, launch angle) | one-order k target |
 | Fermions / Pauli | 8-1 with fermions: always one on each side; empty diagonal | none (`particles: "fermions"`) | needs a puzzle; fermions are T-independent at a symmetric wall |
-| Collisions entangle | a V(x₁ − x₂) diagonal ridge; a detector strip on x₁ collapses particle 2 (EPR) | none (two-particle levels + detectors) | ledger shows the branches |
+| Collisions entangle (built: 10-1) | a V(x₁ − x₂) diagonal ridge splits the pair into bounced and passed | none | the detector-strip steering half is in §8.2 |
 | Bell / CHSH | two particles with polarization | N-component spinor (4) | generalise `comps()` |
 | Delayed choice | close the second splitter after the packet passed the first | none (gates) | statistics unchanged; weak as a puzzle |
 | Aharonov–Bohm around a solenoid in the plane | phase from an enclosed flux, with a 2D geometry | Peierls kinetic term (after WebGPU) | review §2; the ring version is built (9-1) |
@@ -324,3 +331,67 @@ estimates, not yet prototyped.
 | **Infinite gratings** | Kapitza–Dirac, Talbot and Bragg in a truly infinite crystal | done for 7-1 and 7-2 | Bragg (7-3) needs its transmitted beam to leave, so it stays absorbing |
 | **Two particles on a ring** (built: 9-4 total momentum, 9-8 a bound pair in the loop mirror (h/2e), 9-9 the fermion parity effect. For a tightly bound pair exchange statistics play no role; they enter through the Pauli principle on the comb, as in 9-9) | with x and y periodic, ψ(x₁, x₂) lives on a torus; with a flux, bosons and fermions on a ring see shifted spectra (the exchange phase meets the Aharonov–Bohm phase), a doorway to anyon-flavoured levels | twist θ on both axes | niche |
 | **Box revivals on a short ring** (built: 9-6, on a torus with L = 10, T = 31.8; `grid.L` is per level, so no non-square grid was needed) | a packet on a ring of length ℓ revives at ℓ²/π; a flux moves the revival | none | |
+
+### 8.2 Entanglement, Schrödinger's cat and decoherence (chapters 10–12)
+
+Chapter 10 (Entanglement) and chapter 11 (Schrödinger's cat) exist with one level each
+(10-1, 11-1). Decoherence is planned as chapter 12. The ideas below are estimates, not
+yet prototyped, unless a number says otherwise.
+
+**What the engine already gives these chapters.**
+
+* *Decoherence is already computed.* An unread detector is decoherence: the branch ledger
+  scores Tr(ρ P_T) for ρ = Σ w |ψ⟩⟨ψ|. A decoherence chapter is largely a framing: "the
+  environment is a detector nobody reads".
+* *The polarization is a ready-made environment.* On spinor levels a rotator or a
+  Stern–Gerlach magnet in one arm entangles path with polarization. The fringes vanish
+  while ψ stays pure and nothing collapses. The length of the mean Stokes vector
+  (`stokes()`) is the purity of the reduced polarization state, so a purity meter costs
+  nothing.
+* *The two-particle plane is an entanglement canvas.* A rotated rect along x₁ = x₂ is a
+  contact interaction V(x₁ − x₂) (note: `angle: -45` puts a rect's long axis on that
+  diagonal). A full-height strip as a target is the partial trace over particle 2.
+* *`worlds` turns a product of outcome probabilities into a score.* 10-1 uses it for
+  R·T = C²/4.
+
+**Chapter 10: Entanglement.**
+
+| Idea | Lesson | Engine | Notes |
+|---|---|---|---|
+| 10-1 Collide (built) | a contact collision makes r\|bounced⟩ + t\|passed⟩; R·T is largest at R = T | none | k = 1.88 gives 23 % (max ¼), default 1.2 gives 9 %; 64² agrees to 0.01 |
+| Spooky steering | a detector strip on x₁ after the collision collapses particle 2's slice; the branch-averaged score shows particle 2's marginal does **not** move (no-signalling); only a joint or conditional target can be won | none (two-particle level + detectors; the ledger enforces no-signalling) | needs a puzzle where steering *looks* useful; the lesson is that it is not |
+| Tied together | the `pair` bond gives narrow x₁ − x₂ and narrow k₁ + k₂: the EPR state | none for the state; a measurement basis per particle (x for one, k for the other) for the full EPR argument | `observe: "momentum"` is per level today |
+| Entanglement meter | Schmidt values / entanglement entropy of ψ(x₁, x₂) in the HUD | SVD of the N×N ψ every few frames (128² is cheap) | makes 10-1's two blobs a number |
+| Bell / CHSH | real nonlocality | two particles that each carry polarization: a 4-component state (generalise `comps()`) | large; a single-particle path ⊗ polarization CHSH is cheaper but shows contextuality, not nonlocality, and must say so |
+
+**Chapter 11: Schrödinger's cat.**
+
+| Idea | Lesson | Engine | Notes |
+|---|---|---|---|
+| 11-1 Cat in a Trap (built) | a spin-dependent kick in a trap makes \|H⟩\|α⟩ + \|V⟩\|−α⟩; the same kick at T/2 undoes it | none (spinor, `harmonic`, auto-fired `zeeman` pulse gate) | ω = 0.3, g = 1, τ = 1.5, \|α\|² ≈ 3.75. Press at 10.4: 92 %; none 7 %; at T/4 27 %. The overlap e^{−p²/ω} is constant along the swing, so waiting never helps |
+| Even or odd | prepare a cat with relative phase 0 or π, scored by fidelity | a cat-state target: two Gaussians with a set relative phase (extend `gaussianMode`) | the phase could come from a retarder on one half |
+| Cat fringes in momentum | the two halves of 11-1 crossing at T/2 have opposite momenta; their spin helix is the cat's interference | none | as a teaching view rather than a puzzle |
+| Big cats die fast | with the gas below, coherence decays as Λ(1 − cos q·d): a cat must be big enough for the target and small enough to survive | the gas | the textbook scaling of decoherence with size |
+
+Tried on paper and set aside: a **Kapitza–Dirac cat in a trap** (a lattice flash, then
+recombine). A pure phase flash leaves |ψ|² unchanged, and in a harmonic trap ψ(T/2) is
+ψ(0) mirrored, so the halves crossing at T/2 show no density fringes at all. Undoing the
+flash with a half-period-shifted lattice at T/2 does work, but a real split (orders that
+separate) needs the packet to span several lattice periods, i.e. a period ≲ σ. That puts
+the second order at about 2π/σ, above 0.6 k_max of the 64² grid, so it breaks the ghost
+(invariant 6). It may come back after the 256² port.
+
+**Chapter 12: Decoherence.**
+
+| Idea | Lesson | Engine | Notes |
+|---|---|---|---|
+| Tagged | a fixed rotator in one slit arm tags the path and kills the fringes; the player places a compensating optic so the environment states overlap again (recoherence); visibility = \|⟨e₁\|e₂⟩\| | none (spinor + rotator) | close to 6-9 Eraser; the difference is undoing the tag rather than post-selecting it |
+| Fringe dial | weak which-way marking: V² + D² ≤ 1 | `worlds` with a partial polarization marker | already listed as 5-5 in §8 |
+| Echo | a position-dependent precession (gated `zeeman` across a static packet) dephases the spin when you trace over x; a π flip at T/2 refocuses (Hahn echo) | none | close to 6-6 and 11-1; needs its own twist (e.g. fast vs quasi-static noise, which needs the gas) |
+| Collisional decoherence ("gas") | random kicks e^{iq·x} from a background gas: a which-way record that nobody reads. Coherence of a split packet decays as exp(−Λt(1 − cos q·d)). Puzzle: cross the gas fast, or keep the arms close | **new mechanic**: average over K noise realisations, re-using the ledger's rank-16 ρ compression | deterministic seeds keep replays exact; P_T stays linear in ρ, so scoring is the ledger's |
+| Environment in the plane | particle 2 scatters off particle 1 in one arm; fringes in x₁ (a full-height strip target) depend on whether the two scattered states of particle 2 overlap | none (two-particle level, contact ridge) | decoherence as entanglement, drawn |
+| Drains as environments | 9-5 already makes an edge record an escape | built | worth a cross-reference from chapter 12's text |
+
+Suggested order: Spooky steering and Tagged (no engine work), then the entanglement
+meter, the cat-state target, and the gas, which unlocks the rest of chapter 12 and Big
+cats die fast. Bell / CHSH last.
