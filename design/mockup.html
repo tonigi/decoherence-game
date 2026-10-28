@@ -1,0 +1,734 @@
+<meta charset="utf-8">
+<title>Born Rule UI Mock-up</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single dark instrument-panel world. Playfield is the hero and always fits the viewport;
+   a right rail carries objective / physics / probabilities; a transport bar under the field merges clock + P_T(t) plot. */
+:root {
+  color-scheme: dark;
+  --void: #07090f;        /* playfield ground, the vacuum */
+  --ink: #0e1220;         /* app ground */
+  --panel: #151a2b;       /* rails, cards */
+  --line: #262d45;
+  --fg: #e7e9f2;
+  --dim: #9097b2;
+  --faint: #5c6383;
+  --target: #4ff59a;      /* P_T, targets */
+  --mine: #ff5d6c;        /* mines */
+  --obs: #ffc44d;         /* the act of observation, stars, detectors */
+  --phys: #8fb4ff;        /* physics notes */
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--ink); color: var(--fg); font: 15px/1.5 var(--body); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--phys); outline-offset: 2px; }
+kbd { font: 11px var(--mono); color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; background: #0006; }
+sub { font-size: .72em; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- mock-up chrome (not part of the game) ---------- */
+.mock {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: #1c1730; border-bottom: 1px dashed #5d4d9a; font-size: 13px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: #1c1730; }
+.mock b { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: #b7a6ff; margin-right: 8px; text-transform: uppercase; }
+.mock button { background: transparent; border: 1px solid #3d3466; border-radius: 99px; padding: 3px 11px; color: #cfc6f5; }
+.mock button[aria-current="true"] { background: #b7a6ff; color: #120d24; border-color: #b7a6ff; }
+.mock label { margin-left: auto; color: #cfc6f5; display: flex; gap: 6px; align-items: center; }
+.wrap { padding-block: 18px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1440px; margin: 0 auto; }
+.screen { display: none; } .screen.on { display: block; }
+.frame { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--ink); position: relative; }
+.notes { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 22px; font-size: 13.5px; color: var(--dim); }
+.notes p { margin: 0; padding-left: 30px; position: relative; max-width: 62ch; }
+.notes p i { position: absolute; left: 0; top: 1px; font: 600 11px var(--mono); width: 21px; height: 21px; border-radius: 50%; background: #b7a6ff; color: #120d24; display: grid; place-items: center; font-style: normal; }
+.notes p strong { color: var(--fg); font-weight: 600; }
+.pin { position: absolute; z-index: 6; font: 600 11px var(--mono); width: 21px; height: 21px; border-radius: 50%; background: #b7a6ff; color: #120d24; display: grid; place-items: center; box-shadow: 0 0 0 3px #b7a6ff44; pointer-events: none; }
+body.nopins .pin { display: none; }
+
+/* ---------- game top bar ---------- */
+.topbar { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #0b0e19; }
+.logo { font: 800 19px var(--display); letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.logo .psi { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from 90deg, #ff4d4d, #ffd84d, #4dff7a, #4de1ff, #6a4dff, #ff4dd8, #ff4d4d); -webkit-mask: radial-gradient(circle, #000 35%, transparent 72%); mask: radial-gradient(circle, #000 35%, transparent 72%); }
+.crumb { color: var(--dim); font-size: 14px; } .crumb strong { color: var(--fg); font-weight: 600; }
+.topbar .sp { flex: 1; }
+.ghostbtn { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; color: var(--dim); font-size: 13px; }
+.stepdots { display: flex; gap: 5px; } .stepdots i { width: 22px; height: 4px; border-radius: 2px; background: var(--line); } .stepdots i.done { background: var(--target); } .stepdots i.cur { background: var(--fg); }
+
+/* ---------- play layout ---------- */
+.play { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: min(820px, calc(100vh - 140px)); min-height: 560px; }
+.stagecol { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; border-right: 1px solid var(--line); }
+.stage { position: relative; display: grid; place-items: center; padding: 14px; min-height: 0; }
+.field { position: relative; height: 100%; aspect-ratio: 1; max-width: 100%; }
+.field canvas { width: 100%; height: 100%; display: block; border-radius: 6px; background: var(--void); }
+.axis { position: absolute; font: 10px var(--mono); color: var(--faint); }
+.hud { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; }
+.chip { background: #000a; border: 1px solid #ffffff1a; border-radius: 99px; padding: 2px 10px; font-size: 12px; color: var(--dim); backdrop-filter: blur(4px); }
+.chip b { color: var(--fg); font-weight: 600; }
+.wheel { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 8px; background: #000a; border-radius: 10px; padding: 6px 10px 6px 6px; font-size: 11px; color: var(--dim); line-height: 1.3; }
+.wheel canvas { width: 34px; height: 34px; }
+.viewtoggle { position: absolute; top: 10px; right: 10px; display: flex; background: #000a; border-radius: 8px; border: 1px solid #ffffff1a; overflow: hidden; }
+.viewtoggle button { background: none; border: 0; padding: 3px 9px; font-size: 12px; color: var(--dim); }
+.viewtoggle button.on { background: #ffffff1c; color: var(--fg); }
+
+/* transport bar = clock + P_T(t) timeline + actions */
+.transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 16px 12px; border-top: 1px solid var(--line); background: #0b0e19; }
+.tbtn { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; }
+.tbtn.observe { background: var(--obs); color: #221800; border-color: var(--obs); font-family: var(--display); font-size: 17px; padding: 0 20px; }
+.tbtn.observe kbd { color: #221800aa; border-color: #22180044; background: #fff3; }
+.tgroup { display: flex; gap: 6px; }
+.timeline { position: relative; height: 54px; min-width: 0; }
+.timeline canvas { width: 100%; height: 100%; display: block; }
+
+/* right rail */
+.rail { overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; background: #0c1020; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.eyebrow { font: 600 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 0 0 6px; }
+.objective h3 { font: 700 20px/1.15 var(--display); margin: 0 0 6px; text-wrap: balance; }
+.objective p { margin: 0; color: var(--dim); font-size: 14px; }
+.physics { border-color: #2f4170; background: linear-gradient(#18213d, #151a2b); }
+.physics .eyebrow { color: var(--phys); }
+.physics p { margin: 0 0 8px; font-size: 14.5px; }
+.physics .eq { font: 14px var(--mono); color: var(--phys); display: block; margin: 4px 0 8px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--phys); font-weight: 600; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+.prob { display: grid; grid-template-columns: 92px 1fr; gap: 14px; align-items: center; }
+.ring { position: relative; width: 92px; height: 92px; }
+.ring canvas { width: 100%; height: 100%; }
+.ring .v { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 700 21px/1 var(--display); }
+.ring .v small { display: block; font: 10px var(--mono); color: var(--dim); margin-top: 4px; }
+.bars { display: grid; gap: 7px; font-size: 12.5px; }
+.bars div { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; color: var(--dim); }
+.bars em { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: #0007; position: relative; overflow: hidden; }
+.bars em::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--c); }
+.bars span { font-family: var(--mono); color: var(--fg); }
+.ctl { display: grid; grid-template-columns: 70px 1fr 44px; gap: 8px; align-items: center; font-size: 13px; color: var(--dim); margin: 4px 0; }
+.ctl input { width: 100%; accent-color: var(--phys); }
+.ctl output { font: 12px var(--mono); color: var(--fg); text-align: right; }
+.ctl.locked { opacity: .45; }
+.ctl small { grid-column: 2 / -1; color: var(--faint); font-size: 11.5px; margin-top: -4px; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tool { flex: 1 1 120px; display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px dashed #4a5274; background: none; text-align: left; font-size: 13px; }
+.tool b { font-weight: 600; } .tool span { color: var(--dim); font-size: 12px; }
+
+/* tutorial coach-mark */
+.dim { position: absolute; inset: 0; background: #04060ccc; z-index: 4; pointer-events: none; }
+.spot { position: absolute; z-index: 5; border-radius: 12px; box-shadow: 0 0 0 2px var(--obs), 0 0 0 9999px #04060cb8; pointer-events: none; }
+.coach { position: absolute; z-index: 7; width: min(330px, 86%); background: #fdf8ea; color: #1d1b16; border-radius: 14px; padding: 14px 16px 12px; box-shadow: 0 16px 40px #000a; }
+.coach .eyebrow { color: #8a6a10; }
+.coach h4 { font: 700 19px/1.2 var(--display); margin: 0 0 6px; }
+.coach p { margin: 0 0 10px; font-size: 14px; }
+.coach .phys { border-left: 3px solid #3e63c9; padding-left: 9px; color: #2b3a66; font-size: 13.5px; }
+.coach footer { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #6b6450; }
+.coach footer .sp { flex: 1; }
+.coach .go { background: #1d1b16; color: #fdf8ea; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; }
+.coach .wait { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1d1b16; }
+.coach .wait::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #d9a400; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* title screen */
+.title { position: relative; min-height: 620px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: 30px; padding: 40px clamp(20px, 5vw, 70px); overflow: hidden; background: var(--void); }
+.title canvas.bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .9; }
+.title > div { position: relative; }
+.title h1 { font: 800 clamp(54px, 8vw, 112px)/.9 var(--display); letter-spacing: -.035em; margin: 0 0 18px; }
+.title h1 span { display: block; color: transparent; -webkit-text-stroke: 1.5px var(--fg); }
+.title .lede { font-size: 18px; max-width: 34ch; color: #c8cce0; margin: 0 0 26px; }
+.title .born { font: 15px/1.6 var(--mono); color: var(--obs); margin: 0 0 26px; }
+.cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.big { height: 50px; padding: 0 22px; border-radius: 12px; font: 700 17px var(--display); border: 1px solid var(--line); background: var(--panel); }
+.big.prime { background: var(--fg); color: var(--ink); border-color: var(--fg); }
+.title .foot { position: absolute; left: clamp(20px, 5vw, 70px); bottom: 18px; font-size: 12px; color: var(--faint); }
+
+/* chapter map */
+.map { padding: 28px clamp(16px, 4vw, 48px) 36px; background: var(--ink); }
+.map h2 { font: 800 34px var(--display); margin: 0 0 4px; letter-spacing: -.02em; }
+.map > p { color: var(--dim); margin: 0 0 22px; }
+.chapters { display: grid; gap: 14px; }
+.chap { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 18px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); }
+.chap h3 { font: 700 19px/1.2 var(--display); margin: 0 0 4px; }
+.chap .idea { font-size: 13px; color: var(--phys); margin: 0; }
+.chap .n { font: 600 11px var(--mono); color: var(--faint); letter-spacing: .1em; }
+.lvls { display: flex; gap: 10px; flex-wrap: wrap; }
+.lv { width: 168px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; text-align: left; padding: 0; }
+.lv canvas { width: 100%; height: 74px; display: block; background: var(--void); }
+.lv div { padding: 7px 10px 9px; }
+.lv b { display: block; font-size: 13.5px; font-weight: 600; }
+.lv span { font-size: 12px; color: var(--obs); letter-spacing: 1px; }
+.lv.locked { opacity: .4; } .lv.cur { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
+.lv .new { color: #120d24; background: #b7a6ff; font: 600 9.5px var(--mono); padding: 1px 5px; border-radius: 4px; letter-spacing: .05em; margin-left: 6px; vertical-align: 1px; }
+
+/* result banner */
+.result { position: absolute; z-index: 8; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, 92%); background: #0b0e19f2; border: 1px solid var(--target); border-radius: 16px; padding: 18px 20px; box-shadow: 0 20px 60px #000c; }
+.result h3 { font: 800 30px var(--display); margin: 0; color: var(--target); }
+.result .stars { font-size: 26px; color: var(--obs); letter-spacing: 3px; }
+.result .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.result p { margin: 8px 0 0; color: #c8cce0; font-size: 14px; }
+.dots { display: grid; grid-template-columns: repeat(25, 1fr); gap: 3px; margin-top: 10px; }
+.dots i { aspect-ratio: 1; border-radius: 50%; background: #343b58; } .dots i.h { background: var(--target); } .dots i.me { box-shadow: 0 0 0 2px var(--obs); }
+
+/* deep-dive drawer */
+.drawer { position: absolute; z-index: 9; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: #10142a; border-left: 1px solid #2f4170; box-shadow: -30px 0 60px #0009; overflow: auto; padding: 22px 26px 30px; }
+.drawer .eyebrow { color: var(--phys); }
+.drawer h3 { font: 800 27px/1.1 var(--display); margin: 0 0 14px; letter-spacing: -.01em; }
+.drawer h4 { font: 700 16px var(--display); margin: 20px 0 6px; }
+.drawer p { color: #cfd3e6; margin: 0 0 10px; max-width: 64ch; }
+.drawer .eqblk { font: 15px/1.7 var(--mono); background: #0007; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0 12px; color: var(--phys); overflow-x: auto; }
+.drawer .tabs { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.drawer .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 10px; color: var(--dim); font-size: 13.5px; }
+.drawer .tabs button.on { color: var(--fg); border-color: var(--phys); }
+.drawer svg { width: 100%; height: auto; display: block; }
+.close { position: absolute; top: 14px; right: 16px; background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 10px; color: var(--dim); }
+
+/* phone */
+@media (max-width: 860px) {
+  .play { grid-template-columns: 1fr; height: auto; min-height: 0; }
+  .stagecol { border-right: 0; }
+  .stage { padding: 8px; }
+  .field { height: auto; width: 100%; }
+  .transport { grid-template-columns: auto 1fr; }
+  .transport .timeline { grid-column: 1 / -1; order: -1; }
+  .transport .tgroup:last-child { justify-self: end; }
+  .rail { overflow: visible; }
+  .title { grid-template-columns: 1fr; min-height: 0; padding-bottom: 60px; }
+  .chap { grid-template-columns: 1fr; gap: 8px; }
+  .lv { width: calc(50% - 5px); }
+  .topbar .crumb { display: none; }
+  .topbar { gap: 8px; } .topbar .ghostbtn:nth-last-child(-n+3) { display: none; }
+  .frame { max-width: 100%; } .play, .stagecol, .transport { min-width: 0; }
+  .drawer { position: fixed; z-index: 40; }
+  .pin { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .coach .wait::before { animation: none; } }
+</style>
+
+<nav class="mock" aria-label="Mock-up screens">
+  <b>Mock-up</b>
+  <button data-go="intro">1 · Title</button>
+  <button data-go="map">2 · Chapters</button>
+  <button data-go="tutorial">3 · Tutorial step</button>
+  <button data-go="play">4 · Playfield</button>
+  <button data-go="result">5 · Measurement</button>
+  <button data-go="learn">6 · Deep dive</button>
+  <label><input type="checkbox" id="pins" checked> design notes</label>
+</nav>
+
+<div class="wrap">
+
+<!-- ======================================================= 1 TITLE -->
+<section class="screen" id="s-intro">
+  <div class="frame title">
+    <canvas class="bg" id="titleField"></canvas>
+    <div>
+      <h1>Born<span>Rule</span></h1>
+      <p class="lede">You don't control the particle. You control its wavefunction. Then you look, and the universe rolls the dice.</p>
+      <p class="born">P(x) = |ψ(x, t)|²</p>
+      <div class="cta">
+        <button class="big prime">Start: First Light</button>
+        <button class="big">Chapters</button>
+      </div>
+    </div>
+    <div></div>
+    <p class="foot">Real 2D Schrödinger equation, solved live in your browser. ħ = m = 1.</p>
+    <span class="pin" style="left:46%;top:30%">1</span>
+    <span class="pin" style="left:5%;top:66%">2</span>
+  </div>
+  <div class="notes">
+    <p><i>1</i><strong>Live wavepacket behind the title.</strong> A real ψ drifts and spreads across the screen in domain colouring, so the first thing a player sees is the visual language of the whole game (hue is phase, brightness is |ψ|).</p>
+    <p><i>2</i><strong>Two doors.</strong> First-timers go straight into the tutorial chapter. Returning players go to the chapter map. The formula under the lede is the game's only rule, stated once.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 2 MAP -->
+<section class="screen" id="s-map">
+  <div class="frame map">
+    <h2>Chapters</h2>
+    <p>Each chapter teaches one idea. Every level comes with a one-line physics point; the full explanation is one click away.</p>
+    <div class="chapters" id="chapters"></div>
+    <span class="pin" style="left:22px;top:150px">1</span>
+    <span class="pin" style="left:250px;top:150px">2</span>
+  </div>
+  <div class="notes">
+    <p><i>1</i><strong>Chapter 0, "First Light", is new.</strong> Three short guided levels that teach the controls and the four core ideas (ψ is a wave, it spreads, |ψ|² is probability, observing rolls the dice). Later chapters unlock as you go, but nothing is hard-locked for people who already know QM.</p>
+    <p><i>2</i><strong>Thumbnails are drawn from the level JSON</strong> (targets, mines, walls, slits, harmonic rings, optics, k-space targets; schematic here). The physics idea is the chapter's subtitle, so the map doubles as a syllabus. This replaces the header drop-down; ◀ ▶ and <kbd>[</kbd> <kbd>]</kbd> stay in the game's top bar.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 3 TUTORIAL -->
+<section class="screen" id="s-tutorial">
+  <div class="frame" id="tutFrame"></div>
+  <div class="notes">
+    <p><i>1</i><strong>Coach marks gate on actions, not on "Next".</strong> This step waits until the player presses Play; the next waits for Observe. Each step spotlights one control and dims the rest.</p>
+    <p><i>2</i><strong>Every step carries one physics point</strong> in a blue-ruled line, at most two sentences. The tutorial levels are real levels with a fixed setup, so what they see is the actual simulation.</p>
+    <p><i>3</i><strong>Step dots in the top bar</strong> (here 2 of 5). Steps: 1 meet ψ, 2 let it evolve, 3 read P<sub>T</sub>, 4 observe, 5 stars come from P<sub>T</sub>, not luck. "Skip tutorial" is always available.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 4 PLAY -->
+<section class="screen" id="s-play">
+  <div class="frame" id="playFrame"></div>
+  <div class="notes">
+    <p><i>1</i><strong>The playfield always fits.</strong> It is sized by the viewport height, never scrolls, and keeps a 1:1 aspect. The absorbing edge (6 units) is drawn as a hatched band, so "lost" probability has a visible place to go. A faint dashed line marks where absorption starts.</p>
+    <p><i>2</i><strong>Setup handles are labelled and bigger:</strong> drag the packet for x₀, drag the arrow for k₀, drag the dashed ring for σ. Locked parameters show no handle.</p>
+    <p><i>3</i><strong>Transport bar merges the clock and the P<sub>T</sub>(t) plot.</strong> The faint curve is the ghost preview, the bright one is this run, dashed lines are the star thresholds. Play and Observe are always on screen; Observe is the one gold button in the game.</p>
+    <p><i>4</i><strong>Right rail, top to bottom:</strong> what to do, the one-line physics point with "Why?" for the long version, the probabilities (P<sub>T</sub> as a ring with star ticks; mines, lost, momentum budget as small bars), then launch controls and tools. On phones the rail stacks under the field.</p>
+    <p><i>5</i><strong>Legend on the field:</strong> a small phase wheel explains the colours in place, and it switches to the polarization key on chapter 6 levels (where a fourth view button, "pol", appears). The view switch is a segmented control. On levels with a world-observation time the timeline marks it in gold; the Heisenberg readout (Δx · Δkₓ ≥ ½) sits under the probabilities.</p>
+    <p><i>·</i><strong>Moved out of the rail:</strong> speed, expectation mode, current arrows, ghost and sound move to a "Settings" popover and the top bar. The long sound and polarization notes move into the "? Keys" sheet. Each rail card earns its place on every level or hides.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 5 RESULT -->
+<section class="screen" id="s-result">
+  <div class="frame" id="resFrame"></div>
+  <div class="notes">
+    <p><i>1</i><strong>The measurement is staged.</strong> The field freezes, a crosshair lands at the sampled point, then ψ collapses to a narrow blob there. Half a second of drama, then the card.</p>
+    <p><i>2</i><strong>The card teaches the Born rule by showing the ensemble:</strong> 100 dots, P<sub>T</sub>·100 of them green. "Yours" is outlined. Missing with P<sub>T</sub> = 44% is visibly bad luck, not bad play, and the stars say so. The ring freezes at P<sub>T</sub> at the moment of observation (today the meters show the collapsed state, which reads as a contradiction after a miss).</p>
+    <p><i>·</i><strong>Detector levels:</strong> the dots become the existing Branches panel, each branch a bar weighted by its Born probability with its own P<sub>T</sub>, and "you are here" marking the branch the dice picked. Stars come from the ledger's branch average, as now.</p>
+  </div>
+</section>
+
+<!-- ======================================================= 6 LEARN -->
+<section class="screen" id="s-learn">
+  <div class="frame" id="learnFrame"></div>
+  <div class="notes">
+    <p><i>1</i><strong>"Why?" opens a drawer over the rail,</strong> the field keeps running beside it. Three tabs: the idea in words, the maths, and "try this", a concrete experiment in the current level.</p>
+    <p><i>2</i><strong>The long text is level-specific and quantitative.</strong> For 1-1 it derives k₀ = 2.4 and σ₀* = √(t/2) = 2.24, exactly the level's reference solution. Players who read it get a real edge; players who don't lose nothing.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------- physics: exact free 2D Gaussian (hbar = m = 1)
+// psi(x,t) = a^{-1/2} exp(-(x - x0 - k t)^2 / (4 s^2 a) + i k (x - x0) - i k^2 t / 2),  a = 1 + i t / (2 s^2), per axis
+function fieldFree(N, L, p, t) {
+  const re = new Float32Array(N * N), im = new Float32Array(N * N), dx = L / N;
+  const s2 = p.s * p.s, ai = t / (2 * s2), aa = 1 + ai * ai;         // a = 1 + i ai
+  const cr = 1 / (4 * s2) / aa, ci = -ai / (4 * s2) / aa;              // 1/(4 s^2 a) = cr + i ci
+  const ax = new Float32Array(2 * N), ay = new Float32Array(2 * N);
+  const axis = (out, x0, k) => {
+    for (let i = 0; i < N; i++) {
+      const x = (i + 0.5) * dx, d = x - x0 - k * t, d2 = d * d;
+      const mag = -d2 * cr, ph = -d2 * ci + k * (x - x0) - 0.5 * k * k * t;
+      out[2 * i] = mag; out[2 * i + 1] = ph;
+    }
+  };
+  axis(ax, p.x, p.kx); axis(ay, p.y, p.ky);
+  const pre = -Math.atan2(ai, 1), pm = 1 / Math.sqrt(aa);              // a^{-1} for two axes
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const m = Math.exp(ax[2 * i] + ay[2 * j]) * pm, ph = ax[2 * i + 1] + ay[2 * j + 1] + pre;
+    re[j * N + i] = m * Math.cos(ph); im[j * N + i] = m * Math.sin(ph);
+  }
+  return { re, im, N, L };
+}
+function probIn(f, c) {
+  const { re, im, N, L } = f, dx = L / N; let tot = 0, inT = 0;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const k = j * N + i, p = re[k] * re[k] + im[k] * im[k]; tot += p;
+    const x = (i + .5) * dx, y = (j + .5) * dx;
+    if ((x - c.x) ** 2 + (y - c.y) ** 2 < c.r * c.r) inT += p;
+  }
+  return tot ? inT / tot : 0;
+}
+function hsv(h, s, v) {
+  const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  return [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]][((i % 6) + 6) % 6];
+}
+function paint(cv, f, { view = 'phase', ref } = {}) {
+  const { re, im, N } = f, off = document.createElement('canvas'); off.width = off.height = N;
+  const o = off.getContext('2d'), img = o.createImageData(N, N), d = img.data;
+  let peak = 1e-9; for (let i = 0; i < N * N; i++) peak = Math.max(peak, re[i] * re[i] + im[i] * im[i]);
+  const inv = 1 / (ref || peak);
+  for (let i = 0; i < N * N; i++) {
+    const b = Math.min(1, Math.pow((re[i] * re[i] + im[i] * im[i]) * inv, 0.45));
+    const [r, g, bl] = view === 'phase' ? hsv((Math.atan2(im[i], re[i]) / (2 * Math.PI) + 1) % 1, .8, b) : [b * .35, b * .8, b];
+    d[4 * i] = r * 255; d[4 * i + 1] = g * 255; d[4 * i + 2] = bl * 255; d[4 * i + 3] = 255;
+  }
+  o.putImageData(img, 0, 0);
+  const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(off, 0, 0, cv.width, cv.height);
+}
+function fit(cv) { const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1; const w = Math.round(r.width * d), h = Math.round(r.height * d); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return d; }
+
+// ---------------------------------------------------------------- level 1-1 data (from levels/1-1.json)
+const LV = { L: 40, tmax: 10, target: { x: 31, y: 20, r: 3.5 }, stars: [0.25, 0.35, 0.42], launch: { x: 7, y: 20, k: 2.4, s: 2.24 } };
+const pkt = (k = LV.launch.k, s = LV.launch.s) => ({ x: LV.launch.x, y: LV.launch.y, kx: k, ky: 0, s });
+
+// precompute P_T(t) for the ghost + run curves
+function curve(p, n = 120) { const t = [], v = []; for (let i = 0; i <= n; i++) { const tt = LV.tmax * i / n; t.push(tt); v.push(probIn(fieldFree(64, LV.L, p, tt), LV.target)); } return { t, v }; }
+const ghost = curve(pkt());
+
+// ---------------------------------------------------------------- playfield overlay drawing
+function drawOverlay(cv, { setup = false, t = 0, sample = null } = {}) {
+  const g = cv.getContext('2d'), W = cv.width, S = W / LV.L, d = devicePixelRatio || 1;
+  // absorbing band: hatched frame
+  g.save();
+  const A = 6 * S;
+  g.beginPath(); g.rect(0, 0, W, W); g.rect(A, A, W - 2 * A, W - 2 * A); g.clip('evenodd');
+  g.strokeStyle = 'rgba(140,150,190,0.10)'; g.lineWidth = 1 * d;
+  for (let x = -W; x < W; x += 9 * d) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + W, W); g.stroke(); }
+  g.restore();
+  g.strokeStyle = 'rgba(140,150,190,0.25)'; g.setLineDash([3 * d, 4 * d]); g.lineWidth = d; g.strokeRect(A, A, W - 2 * A, W - 2 * A); g.setLineDash([]);
+  g.fillStyle = 'rgba(140,150,190,0.55)'; g.font = `${10 * d}px JetBrains Mono, monospace`; g.fillText('absorbing edge', A + 4 * d, W - A + 13 * d);
+  // target
+  const T = LV.target; g.beginPath(); g.arc(T.x * S, T.y * S, T.r * S, 0, 2 * Math.PI);
+  g.fillStyle = 'rgba(79,245,154,0.10)'; g.fill(); g.strokeStyle = '#4ff59a'; g.lineWidth = 2 * d; g.stroke();
+  g.fillStyle = '#4ff59a'; g.font = `600 ${11 * d}px IBM Plex Sans, sans-serif`; g.textAlign = 'center'; g.fillText('TARGET', T.x * S, (T.y - T.r) * S - 7 * d); g.textAlign = 'left';
+  if (setup) {
+    const l = LV.launch, x = l.x * S, y = l.y * S, hx = x + l.k * 2 * S, ring = l.s * 2 * S;
+    g.setLineDash([2 * d, 4 * d]); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.5 * d; g.beginPath(); g.arc(x, y, ring, 0, 2 * Math.PI); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(x + ring * Math.cos(-0.8), y + ring * Math.sin(-0.8), 5 * d, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = '#fff'; g.lineWidth = 2.5 * d; g.beginPath(); g.moveTo(x, y); g.lineTo(hx, y); g.lineTo(hx - 10 * d, y - 6 * d); g.moveTo(hx, y); g.lineTo(hx - 10 * d, y + 6 * d); g.stroke();
+    g.beginPath(); g.arc(hx, y, 7 * d, 0, 2 * Math.PI); g.fill();
+    const tag = (s, tx, ty) => { g.font = `${11 * d}px JetBrains Mono, monospace`; const w = g.measureText(s).width + 10 * d; g.fillStyle = '#000b'; g.fillRect(tx, ty - 12 * d, w, 17 * d); g.fillStyle = '#fff'; g.fillText(s, tx + 5 * d, ty); };
+    tag('k₀ = 2.40  drag', hx + 10 * d, y + 4 * d);
+    tag('σ₀ = 2.24  drag', x + ring * Math.cos(-0.8) + 8 * d, y + ring * Math.sin(-0.8) - 6 * d);
+  }
+  if (sample) {
+    const sx = sample.x * S, sy = sample.y * S; g.strokeStyle = '#ffc44d'; g.lineWidth = 2.5 * d;
+    g.beginPath(); g.arc(sx, sy, 12 * d, 0, 2 * Math.PI); g.moveTo(sx - 20 * d, sy); g.lineTo(sx + 20 * d, sy); g.moveTo(sx, sy - 20 * d); g.lineTo(sx, sy + 20 * d); g.stroke();
+  }
+}
+
+function drawTimeline(cv, t, { showRun = true } = {}) {
+  const d = fit(cv), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.clearRect(0, 0, W, H);
+  const ymax = 0.6, X = (tt) => 6 * d + (W - 12 * d) * tt / LV.tmax, Y = (v) => H - 14 * d - (H - 20 * d) * v / ymax;
+  g.fillStyle = '#ffffff08'; g.fillRect(X(0), Y(ymax), X(LV.tmax) - X(0), Y(0) - Y(ymax));
+  g.setLineDash([3 * d, 3 * d]); g.strokeStyle = '#ffc44d55'; g.lineWidth = d;
+  for (const s of LV.stars) { g.beginPath(); g.moveTo(X(0), Y(s)); g.lineTo(X(LV.tmax), Y(s)); g.stroke(); }
+  g.setLineDash([]);
+  g.fillStyle = '#5c6383'; g.font = `${9.5 * d}px JetBrains Mono, monospace`;
+  for (let tt = 0; tt <= LV.tmax; tt += 2) g.fillText(tt, X(tt) - (tt ? 5 * d : 0), H - 2 * d);
+  const line = (n, col, w) => { g.strokeStyle = col; g.lineWidth = w * d; g.beginPath(); for (let i = 0; i <= n; i++) { const p = [ghost.t[i], ghost.v[i]]; i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])); } g.stroke(); };
+  line(ghost.t.length - 1, 'rgba(79,245,154,0.25)', 3);
+  if (showRun) { const n = Math.min(ghost.t.length - 1, Math.round(t / LV.tmax * (ghost.t.length - 1))); if (n > 0) line(n, '#4ff59a', 2); }
+  g.fillStyle = '#ffc44d'; g.textAlign = 'right'; g.fillText('world observes ▸', X(LV.tmax) - 4 * d, 10 * d); g.textAlign = 'left'; g.fillRect(X(LV.tmax) - 1.5 * d, 0, 3 * d, H - 14 * d);
+  g.strokeStyle = '#fff'; g.lineWidth = 1.5 * d; g.beginPath(); g.moveTo(X(t), 2 * d); g.lineTo(X(t), H - 14 * d); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(X(t), 4 * d, 3.5 * d, 0, 2 * Math.PI); g.fill();
+}
+function drawRing(cv, v) {
+  const d = fit(cv), g = cv.getContext('2d'), W = cv.width, c = W / 2, r = W / 2 - 7 * d;
+  g.clearRect(0, 0, W, W); g.lineWidth = 8 * d; g.lineCap = 'round';
+  g.strokeStyle = '#ffffff12'; g.beginPath(); g.arc(c, c, r, 0, 2 * Math.PI); g.stroke();
+  g.strokeStyle = '#4ff59a'; g.beginPath(); g.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * v); g.stroke();
+  g.lineWidth = 2 * d; g.strokeStyle = '#ffc44d';
+  for (const s of LV.stars) { const a = -Math.PI / 2 + 2 * Math.PI * s; g.beginPath(); g.moveTo(c + (r - 7 * d) * Math.cos(a), c + (r - 7 * d) * Math.sin(a)); g.lineTo(c + (r + 7 * d) * Math.cos(a), c + (r + 7 * d) * Math.sin(a)); g.stroke(); }
+}
+function drawWheel(cv) {
+  const N = 68; cv.width = cv.height = N; const g = cv.getContext('2d'), img = g.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = i - N / 2 + .5, y = j - N / 2 + .5, r = Math.hypot(x, y) / (N / 2), k = 4 * (j * N + i);
+    if (r > 1) continue; const [a, b, c] = hsv((Math.atan2(-y, x) / (2 * Math.PI) + 1) % 1, .8, Math.min(1, r * 1.1));
+    img.data[k] = a * 255; img.data[k + 1] = b * 255; img.data[k + 2] = c * 255; img.data[k + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+}
+
+// ---------------------------------------------------------------- shared play screen markup
+function playMarkup({ tutorial = false, result = false, learn = false } = {}) {
+  return `
+  <div class="topbar">
+    <div class="logo"><span class="psi"></span>Born Rule</div>
+    <div class="crumb">${tutorial ? 'Ch 0 · First Light · <strong>0-1 Meet ψ</strong>' : 'Ch 1 · Free propagation · <strong>1-1 Rendezvous</strong>'}</div>
+    <div class="sp"></div>
+    ${tutorial ? '<div class="stepdots" aria-label="Tutorial step 2 of 5"><i class="done"></i><i class="cur"></i><i></i><i></i><i></i></div><button class="ghostbtn">Skip tutorial</button>' : '<button class="ghostbtn" aria-label="Previous level">◀</button><button class="ghostbtn">1-1 of 18</button><button class="ghostbtn" aria-label="Next level">▶</button><button class="ghostbtn">♪ Sound off</button><button class="ghostbtn">? Keys</button><button class="ghostbtn">Chapters</button>'}
+  </div>
+  <div class="play">
+    <div class="stagecol">
+      <div class="stage">
+        <div class="field">
+          <canvas class="fieldcv"></canvas>
+          <div class="hud"><span class="chip">t = <b class="tval mono">0.0</b> / 10</span><span class="chip phasechip">setup</span></div>
+          <div class="viewtoggle" role="group" aria-label="View"><button class="on">ψ</button><button>|ψ|²</button><button>φ(k)</button></div>
+          <div class="wheel"><canvas class="wheelcv"></canvas><div>hue = phase<br>brightness = |ψ|</div></div>
+        </div>
+      </div>
+      <div class="transport">
+        <div class="tgroup"><button class="tbtn playbtn" aria-label="Play">▶ <kbd>Space</kbd></button><button class="tbtn" aria-label="Reset">↺</button></div>
+        <div class="timeline"><canvas class="tlcv"></canvas></div>
+        <div class="tgroup"><button class="tbtn observe">Observe <kbd>Enter</kbd></button></div>
+      </div>
+    </div>
+    <aside class="rail">
+      <div class="card objective">
+        <p class="eyebrow">${tutorial ? 'Tutorial · step 2 of 5' : 'Goal'}</p>
+        <h3>${tutorial ? 'Let it evolve' : 'Be in the green circle at t = 10'}</h3>
+        <p>${tutorial ? 'Press Play and watch what ψ does on its own.' : 'The world measures at t = 10 sharp. The target is 24 units away: pick the speed so the packet arrives on time, then the width.'}</p>
+      </div>
+      <div class="card physics">
+        <p class="eyebrow">Physics point</p>
+        <p>A narrow packet is made of many momenta, so it spreads fast. A wide one spreads slowly but starts big.</p>
+        <span class="eq">Δx · Δp ≥ ħ/2</span>
+        <button class="linkbtn whybtn">Why? Show the maths →</button>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Probabilities now</p>
+        <div class="prob">
+          <div class="ring"><canvas class="ringcv"></canvas><div class="v"><div><span class="ptval">0%</span><small>P<sub>T</sub> target</small></div></div></div>
+          <div class="bars">
+            <div>mines<span>0.0%</span><em style="--w:0%;--c:var(--mine)"></em></div>
+            <div>lost at edge<span class="lostval">0.0%</span><em class="lostbar" style="--w:0%;--c:#7d849f"></em></div>
+            <div>momentum budget<span>ok</span><em style="--w:6%;--c:#e8a33d"></em></div>
+          </div>
+        </div>
+        <p class="mono heis" style="margin:10px 0 0;font-size:12px;color:var(--dim)">Δx <span class="dxv" style="color:var(--fg)">2.24</span> · Δkₓ 0.22 · product <span class="pv" style="color:var(--fg)">0.50</span> ≥ ½</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Launch</p>
+        <div class="ctl locked"><span>position</span><input id="c-x${tutorial ? 't' : ''}" type="range" disabled value="7" min="0" max="40"><output>7, 20</output></div>
+        <div class="ctl"><span>speed k₀</span><input id="c-k${tutorial ? 't' : ''}" type="range" value="2.4" min=".5" max="3" step=".05"><output>2.40</output><small>λ = 2π/k₀ = 2.62 · centre at t = 10: x = 7 + 10·k₀ = 31</small></div>
+        <div class="ctl"><span>width σ</span><input id="c-s${tutorial ? 't' : ''}" type="range" value="2.24" min=".6" max="4" step=".05"><output>2.24</output><small>momentum spread Δk = 1/(2σ₀) = 0.22</small></div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Tools in this level</p>
+        <div class="tools"><button class="tool" disabled><b>None</b><span>Kicks, barriers and detectors arrive in later chapters.</span></button></div>
+      </div>
+    </aside>
+  </div>`;
+}
+
+function mountPlay(frame, opts) {
+  frame.innerHTML = playMarkup(opts);
+  const q = (s) => frame.querySelector(s);
+  drawWheel(q('.wheelcv'));
+  return { frame, q, cv: q('.fieldcv'), tl: q('.tlcv'), ring: q('.ringcv') };
+}
+function renderPlay(h, t, { setup = false, sample = null, collapsed = false } = {}) {
+  fit(h.cv);
+  let f;
+  if (collapsed) f = fieldFree(96, LV.L, { x: sample.x, y: sample.y, kx: 0, ky: 0, s: 0.7 }, 0);
+  else f = fieldFree(96, LV.L, pkt(), t);
+  paint(h.cv, f);
+  drawOverlay(h.cv, { setup, t, sample });
+  drawTimeline(h.tl, t, { showRun: !setup });
+  const pT = probIn(fieldFree(64, LV.L, pkt(), t), LV.target);
+  drawRing(h.ring, collapsed ? 0.441 : pT);
+  h.q('.ptval').textContent = ((collapsed ? 0.441 : pT) * 100).toFixed(1) + '%';
+  h.q('.tval').textContent = t.toFixed(1);
+  h.q('.phasechip').textContent = setup ? 'setup · drag the packet, its arrow, its ring' : collapsed ? 'measured' : 'running';
+  const sx = LV.launch.s * Math.sqrt(1 + (t / (2 * LV.launch.s ** 2)) ** 2); h.q('.dxv').textContent = sx.toFixed(2); h.q('.pv').textContent = (sx * 0.5 / LV.launch.s).toFixed(2);
+  const lost = 0; h.q('.lostval').textContent = (lost * 100).toFixed(1) + '%'; h.q('.lostbar').style.setProperty('--w', lost * 100 + '%');
+}
+
+// ---------------------------------------------------------------- screens
+const screens = {};
+screens.intro = () => {
+  const cv = document.getElementById('titleField');
+  let t0 = performance.now(), raf;
+  const tick = (now) => {
+    if (!document.getElementById('s-intro').classList.contains('on')) return;
+    fit(cv); const asp = cv.height / cv.width, L = 40, t = ((now - t0) / 1000 * 0.9) % 22;
+    const f = fieldFree(110, L, { x: 18, y: 20, kx: 1.0, ky: -0.15, s: 1.4 }, t);
+    const off = document.createElement('canvas'); off.width = cv.width; off.height = cv.width; paint(off, f);
+    const g = cv.getContext('2d'); g.fillStyle = '#07090f'; g.fillRect(0, 0, cv.width, cv.height);
+    g.globalAlpha = .85; g.drawImage(off, 0, (cv.height - cv.width) / 2); g.globalAlpha = 1;
+    const grd = g.createLinearGradient(0, 0, cv.width * .6, 0); grd.addColorStop(0, '#07090fee'); grd.addColorStop(1, '#07090f00'); g.fillStyle = grd; g.fillRect(0, 0, cv.width, cv.height);
+    raf = requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+
+const CHAPTERS = [
+  { n: 0, name: 'First Light', idea: 'ψ is a wave; |ψ|² is where you might find it', lv: [['0-1', 'Meet ψ', 3], ['0-2', 'Look', 3], ['0-3', 'Aim', 2]], fresh: true },
+  { n: 1, name: 'Free propagation', idea: 'Uncertainty makes packets spread', lv: [['1-1', 'Rendezvous', 3], ['1-2', 'Between the Mines', 1], ['1-3', 'Nudge', 0], ['1-4', 'Sharp Momentum', 0]] },
+  { n: 2, name: 'Tunnelling', idea: 'Walls leak where ψ decays, not stops', lv: [['2-1', 'Thin Wall', 0], ['2-2', 'Mirror', 0]] },
+  { n: 3, name: 'Interference', idea: 'Amplitudes add, then you square', lv: [['3-1', 'Two Slits', 0], ['3-2', 'Mach–Zehnder', 0]] },
+  { n: 4, name: 'Bound states & lenses', idea: 'A harmonic well swaps x and k every quarter period', lv: [['4-1', 'Coherent State', 0, 1], ['4-2', 'Fourier Lens', 0, 1], ['4-3', 'Delta-Kick Cooling', 0, 1]] },
+  { n: 5, name: 'Measurement', idea: 'Looking changes ψ, even when you find nothing', lv: [['5-1', 'Which Way?', 0, 1], ['5-2', 'Hold Still', 0, 1]] },
+  { n: 6, name: 'Polarization', idea: 'A second component: ψ becomes a spinor', lv: [['6-1', 'Three Polarizers', 0, 1], ['6-2', 'Watched Pot', 0, 1], ['6-3', 'Half-Wave', 0, 1], ['6-4', 'Stern–Gerlach', 0, 1], ['6-5', 'Bomb Tester', 0, 1]] },
+];
+// schematic geometry for thumbnails: tg targets, mn mines, wall [x,w], slits, rings (harmonic), slab [x,y,w,h,colour], ksp (k-space target)
+const GEOM = {
+  '0-1': { tg: [[30, 20, 4]] }, '0-2': { tg: [[28, 20, 6]] }, '0-3': { tg: [[30, 12, 4]] },
+  '1-1': { tg: [[31, 20, 3.5]] }, '1-2': { tg: [[31, 20, 3]], mn: [[30, 12, 3], [30, 28, 3]] }, '1-3': { tg: [[30, 31, 3.5]] }, '1-4': { ksp: 1 },
+  '2-1': { tg: [[30, 20, 4]], wall: [[20, 1]] }, '2-2': { tg: [[10, 20, 4]], mn: [[32, 20, 4]] },
+  '3-1': { tg: [[33, 20, 2.5]], mn: [[33, 15, 2], [33, 25, 2]], slits: 1 }, '3-2': { mz: 1, tg: [[33, 30, 2.5]] },
+  '4-1': { rings: 1, tg: [[26, 20, 2.5]] }, '4-2': { rings: 1, tg: [[20, 20, 2]] }, '4-3': { rings: 1, ksp: 1 },
+  '5-1': { mz: 1, tg: [[33, 30, 2.5]] }, '5-2': { tg: [[20, 20, 3]] },
+  '6-1': { slab: [[16, 20, 1.5, 14, '#a86bff'], [24, 20, 1.5, 14, '#a86bff']], tg: [[33, 20, 3]] }, '6-2': { slab: [[20, 20, 18, 10, '#ffb84d']], tg: [[34, 20, 3]] },
+  '6-3': { slab: [[20, 20, 3, 14, '#3fd6c0']], tg: [[33, 20, 3]] }, '6-4': { slab: [[19, 20, 8, 8, '#ff7ad1']], tg: [[33, 12, 3]] }, '6-5': { slab: [[13, 20, 3, 8, '#ffb84d'], [21, 20, 3, 8, '#ffb84d'], [29, 20, 3, 8, '#ffb84d']], tg: [[36, 20, 2.5]] },
+};
+screens.map = () => {
+  const host = document.getElementById('chapters'); if (host.childElementCount) return;
+  for (const c of CHAPTERS) {
+    const row = document.createElement('div'); row.className = 'chap';
+    row.innerHTML = `<div><span class="n">CHAPTER ${c.n}</span><h3>${c.name}</h3><p class="idea">${c.idea}</p></div><div class="lvls"></div>`;
+    for (const [id, name, stars, locked] of c.lv) {
+      const b = document.createElement('button'); b.className = 'lv' + (locked ? ' locked' : '') + (id === '1-2' ? ' cur' : '');
+      b.innerHTML = `<canvas></canvas><div><b>${id} · ${name}${c.fresh && id === '0-1' ? '<span class="new">NEW</span>' : ''}</b><span>${locked ? 'locked' : '★'.repeat(stars) + '☆'.repeat(3 - stars)}</span></div>`;
+      row.querySelector('.lvls').append(b);
+      requestAnimationFrame(() => thumb(b.querySelector('canvas'), GEOM[id]));
+    }
+    host.append(row);
+  }
+};
+function thumb(cv, G) {
+  const d = fit(cv), g = cv.getContext('2d'), W = cv.width, H = cv.height, S = H / 40, ox = (W - 40 * S) / 2;
+  g.fillStyle = '#07090f'; g.fillRect(0, 0, W, H);
+  g.save(); g.translate(ox, 0);
+  if (G.wall) for (const [x, w] of G.wall) { g.fillStyle = '#ff8a3d88'; g.fillRect((x - w / 2) * S, 0, w * S, H); }
+  if (G.rings) for (let r = 4; r < 22; r += 4) { g.beginPath(); g.arc(20 * S, 20 * S, r * S, 0, 7); g.strokeStyle = '#6aa8ff40'; g.lineWidth = d; g.stroke(); }
+  if (G.mz) { g.strokeStyle = '#ff8a3daa'; g.lineWidth = 2 * d; for (const [x, y] of [[13, 13], [27, 13], [13, 27], [27, 27]]) { g.beginPath(); g.moveTo((x - 2.5) * S, (y - 2.5) * S); g.lineTo((x + 2.5) * S, (y + 2.5) * S); g.stroke(); } }
+  for (const [x, y, w, h, c] of G.slab || []) { g.fillStyle = c + '55'; g.fillRect((x - w / 2) * S, (y - h / 2) * S, w * S, h * S); }
+  if (G.ksp) { g.strokeStyle = '#4ff59a'; g.setLineDash([2 * d, 2 * d]); g.strokeRect(25 * S, 6 * S, 12 * S, 12 * S); g.setLineDash([]); g.beginPath(); g.arc(31 * S, 12 * S, 1.5 * S, 0, 7); g.stroke(); g.fillStyle = '#4ff59a'; g.font = `${8 * d}px JetBrains Mono, monospace`; g.fillText('k', 26 * S, 9 * S); }
+  if (G.slits) { g.fillStyle = '#ff8a3d88'; for (const [a, b] of [[0, 16.5], [18, 22], [23.5, 40]]) g.fillRect(9.5 * S, a * S, 1.2 * S, (b - a) * S); }
+  const f = fieldFree(40, 40, { x: 7, y: 20, kx: 1.5, ky: 0, s: 1.6 }, 0); const off = document.createElement('canvas'); off.width = off.height = 40 * S; paint(off, f);
+  g.globalCompositeOperation = 'lighter'; g.drawImage(off, 0, 0); g.globalCompositeOperation = 'source-over';
+  for (const [x, y, r] of G.tg || []) { g.beginPath(); g.arc(x * S, y * S, r * S, 0, 7); g.strokeStyle = '#4ff59a'; g.lineWidth = 1.5 * d; g.stroke(); }
+  for (const [x, y, r] of G.mn || []) { g.beginPath(); g.arc(x * S, y * S, r * S, 0, 7); g.fillStyle = '#ff5d6c33'; g.fill(); g.strokeStyle = '#ff5d6c'; g.lineWidth = 1.5 * d; g.stroke(); }
+  g.restore();
+}
+
+let anims = {};
+function loopScreen(key, h, opts, extra) {
+  cancelAnimationFrame(anims[key]); let t0 = performance.now();
+  const tick = (now) => {
+    if (!document.getElementById('s-' + key).classList.contains('on')) return;
+    const t = opts.fixedT ?? ((now - t0) / 1000 * 1.2) % 10.5;
+    renderPlay(h, t, opts); extra && extra(t);
+    if (opts.fixedT == null) anims[key] = requestAnimationFrame(tick);
+  };
+  anims[key] = requestAnimationFrame(tick);
+}
+
+screens.tutorial = () => {
+  const fr = document.getElementById('tutFrame');
+  if (!fr.childElementCount) {
+    const h = mountPlay(fr, { tutorial: true }); fr._h = h;
+    fr.insertAdjacentHTML('beforeend', `
+      <div class="spot" id="tutSpot"></div>
+      <div class="coach" id="tutCoach">
+        <p class="eyebrow">Step 2 of 5</p>
+        <h4>Let it evolve</h4>
+        <p>Press <b>Play</b>. Nobody pushes the packet: the Schrödinger equation alone moves it and spreads it out.</p>
+        <p class="phys">The colour bands are the phase of ψ. Their spacing is the wavelength λ = 2π/k₀, and they march in the direction of travel.</p>
+        <footer><span class="wait">Waiting for Play</span><span class="sp"></span><span>or press <kbd>Space</kbd></span></footer>
+      </div>
+      <span class="pin" id="tp1">1</span><span class="pin" id="tp2">2</span><span class="pin" style="right:300px;top:16px">3</span>`);
+  }
+  const h = fr._h;
+  requestAnimationFrame(() => {
+    const fb = fr.getBoundingClientRect(), pb = h.q('.playbtn').getBoundingClientRect(), field = h.q('.field').getBoundingClientRect();
+    const spot = fr.querySelector('#tutSpot'), coach = fr.querySelector('#tutCoach');
+    Object.assign(spot.style, { left: pb.left - fb.left - 6 + 'px', top: pb.top - fb.top - 6 + 'px', width: pb.width + 12 + 'px', height: pb.height + 12 + 'px' });
+    const cl = Math.min(field.left - fb.left + 30, fb.width - 350);
+    Object.assign(coach.style, { left: Math.max(10, cl) + 'px', top: Math.max(60, pb.top - fb.top - coach.offsetHeight - 26) + 'px' });
+    Object.assign(fr.querySelector('#tp1').style, { left: pb.left - fb.left - 14 + 'px', top: pb.top - fb.top - 14 + 'px' });
+    Object.assign(fr.querySelector('#tp2').style, { left: Math.max(10, cl) + coach.offsetWidth - 12 + 'px', top: coach.offsetTop + 130 + 'px' });
+  });
+  renderPlay(h, 0, { setup: false });
+  h.q('.phasechip').textContent = 'paused';
+};
+
+screens.play = () => {
+  const fr = document.getElementById('playFrame');
+  if (!fr.childElementCount) {
+    fr._h = mountPlay(fr, {});
+    fr.insertAdjacentHTML('beforeend', `<span class="pin" style="left:30px;top:70px">1</span><span class="pin" id="pp2">2</span><span class="pin" id="pp3">3</span><span class="pin" style="right:318px;top:70px">4</span><span class="pin" id="pp5">5</span>`);
+    const h = fr._h;
+    requestAnimationFrame(() => {
+      const fb = fr.getBoundingClientRect(), f = h.q('.field').getBoundingClientRect(), tl = h.q('.timeline').getBoundingClientRect();
+      Object.assign(fr.querySelector('#pp2').style, { left: f.left - fb.left + f.width * 0.13 + 'px', top: f.top - fb.top + f.height * 0.36 + 'px' });
+      Object.assign(fr.querySelector('#pp3').style, { left: tl.left - fb.left + tl.width * 0.5 + 'px', top: tl.top - fb.top - 12 + 'px' });
+      Object.assign(fr.querySelector('#pp5').style, { left: f.right - fb.left - 150 + 'px', top: f.bottom - fb.top - 60 + 'px' });
+    });
+  }
+  const h = fr._h; let mode = 'setup', t0 = performance.now();
+  cancelAnimationFrame(anims.play);
+  const tick = (now) => {
+    if (!document.getElementById('s-play').classList.contains('on')) return;
+    const el = (now - t0) / 1000;
+    if (el < 2.2) renderPlay(h, 0, { setup: true });
+    else { const t = Math.min(9.6, (el - 2.2) * 1.2); renderPlay(h, t); if (el > 2.2 + 9.6 / 1.2 + 1.5) t0 = now; }
+    anims.play = requestAnimationFrame(tick);
+  };
+  anims.play = requestAnimationFrame(tick);
+};
+
+screens.result = () => {
+  const fr = document.getElementById('resFrame');
+  if (!fr.childElementCount) {
+    fr._h = mountPlay(fr, {});
+    const dots = Array.from({ length: 100 }, (_, i) => `<i class="${i < 44 ? 'h' : ''}${i === 17 ? ' me' : ''}"></i>`).join('');
+    fr.insertAdjacentHTML('beforeend', `
+      <div class="result" role="dialog" aria-label="Result">
+        <h3>Hit</h3>
+        <div class="stars">★★★</div>
+        <p>The world looked at <b class="mono">t = 10</b>, when P<sub>T</sub> was <b class="mono">44.1%</b>. Three stars need 42%.</p>
+        <p>If you ran this exact setup 100 times, about 44 runs would find the particle in the target:</p>
+        <div class="dots" aria-hidden="true">${dots}</div>
+        <p style="font-size:13px;color:var(--dim)">Outcome is chance. P<sub>T</sub> is skill. Stars come from P<sub>T</sub>.</p>
+        <div class="row"><button class="tbtn observe" style="height:40px;font-size:15px">Next level →</button><button class="tbtn" style="height:40px">Retry, new dice</button><button class="tbtn" style="height:40px">Back to setup</button></div>
+      </div>
+      <span class="pin" id="rp1">1</span><span class="pin" id="rp2">2</span>`);
+  }
+  const h = fr._h, sample = { x: 30.2, y: 21.1 };
+  requestAnimationFrame(() => {
+    const fb = fr.getBoundingClientRect(), f = h.q('.field').getBoundingClientRect(), S = f.width / 40;
+    Object.assign(fr.querySelector('#rp1').style, { left: f.left - fb.left + sample.x * S + 18 + 'px', top: f.top - fb.top + sample.y * S - 34 + 'px' });
+    Object.assign(fr.querySelector('#rp2').style, { left: f.left - fb.left + 4 + 'px', top: f.top - fb.top + 230 + 'px' });
+    if (innerWidth > 860) Object.assign(fr.querySelector('.result').style, { left: f.left - fb.left + 16 + 'px', top: f.top - fb.top + 60 + 'px', transform: 'none' });
+  });
+  renderPlay(h, 10, { sample, collapsed: true });
+};
+
+screens.learn = () => {
+  const fr = document.getElementById('learnFrame');
+  if (!fr.childElementCount) {
+    fr._h = mountPlay(fr, {});
+    fr.insertAdjacentHTML('beforeend', `
+      <aside class="drawer" aria-label="Deep dive">
+        <button class="close">Close <kbd>Esc</kbd></button>
+        <p class="eyebrow">1-1 · Deep dive</p>
+        <h3>Why the packet spreads, and the best width</h3>
+        <div class="tabs" role="tablist"><button class="on">The idea</button><button>The maths</button><button>Try this</button></div>
+        <p>A wavepacket is a sum of plane waves with different momenta. The narrower you make it in space, the more momenta you need (Δx·Δp ≥ ħ/2). Each momentum travels at its own speed, so a narrow packet comes apart quickly.</p>
+        <p>A free Gaussian of initial width σ₀ has width</p>
+        <div class="eqblk">σ(t) = σ₀ · √(1 + (t / 2σ₀²)²)</div>
+        <p>after a time t (with ħ = m = 1). Early on it barely changes. Once t passes 2σ₀², it grows linearly with slope 1/(2σ₀).</p>
+        <h4>Best launch for this level</h4>
+        <p>The world measures at t = 10, and the centre moves at k₀ (group velocity, m = 1), so it must cover 24 units in 10: k₀ = 2.4. The width at t = 10 is smallest when</p>
+        <div class="eqblk">dσ(t)/dσ₀ = 0  ⇒  σ₀* = √(t/2) = √5 = 2.24<br>σ(10) = √2 · σ₀* = √t = 3.16</div>
+        <svg id="sigplot" viewBox="0 0 480 190" role="img" aria-label="Width on arrival versus initial width, minimum at 2.33"></svg>
+        <p style="font-size:13px;color:var(--dim)">Width at t = 10 against launch width σ₀. The level's reference solution is k₀ = 2.4, σ₀ = 2.24.</p>
+        <h4>Why this is Heisenberg</h4>
+        <p>At the optimum the packet starts at minimum uncertainty, Δx·Δk = ½, and the two contributions to its final width are equal: the initial size σ₀ and the spread from momentum uncertainty, t·Δk = t/(2σ₀). Make either one smaller and the other grows faster.</p>
+      </aside>
+      <span class="pin" style="right:540px;top:90px">1</span><span class="pin" style="right:30px;top:420px">2</span>`);
+    const svg = fr.querySelector('#sigplot'), T = 10;
+    const xs = [], ys = []; for (let s = 0.8; s <= 4.001; s += 0.05) { xs.push(s); ys.push(s * Math.sqrt(1 + (T / (2 * s * s)) ** 2)); }
+    const X = (s) => 44 + (s - 0.8) / 3.2 * 420, Y = (v) => 166 - (v - 3) / 4 * 150; // σ(t) axis 3..7
+    let path = xs.map((s, i) => (i ? 'L' : 'M') + X(s).toFixed(1) + ' ' + Y(Math.min(7, ys[i])).toFixed(1)).join(' ');
+    const sx = Math.sqrt(T / 2), sy = sx * Math.SQRT2;
+    let ax = ''; for (const v of [3, 4, 5, 6, 7]) ax += `<line x1="44" x2="464" y1="${Y(v)}" y2="${Y(v)}" stroke="#262d45"/><text x="36" y="${Y(v) + 4}" fill="#5c6383" font-size="11" text-anchor="end" font-family="JetBrains Mono">${v}</text>`;
+    for (const v of [1, 2, 3, 4]) ax += `<text x="${X(v)}" y="184" fill="#5c6383" font-size="11" text-anchor="middle" font-family="JetBrains Mono">${v}</text>`;
+    svg.innerHTML = ax + `<path d="${path}" fill="none" stroke="#8fb4ff" stroke-width="2.5"/>
+      <line x1="${X(sx)}" x2="${X(sx)}" y1="${Y(sy)}" y2="166" stroke="#ffc44d" stroke-dasharray="3 3"/>
+      <circle cx="${X(sx)}" cy="${Y(sy)}" r="5" fill="#ffc44d"/>
+      <text x="${X(sx) + 9}" y="${Y(sy) - 8}" fill="#ffc44d" font-size="12" font-family="JetBrains Mono">σ₀* = ${sx.toFixed(2)}</text>
+      <text x="464" y="${Y(7) + 14}" fill="#9097b2" font-size="11" text-anchor="end" font-family="IBM Plex Sans">σ(t = 10)</text>
+      <text x="464" y="160" fill="#9097b2" font-size="11" text-anchor="end" font-family="IBM Plex Sans">launch width σ₀ →</text>`;
+  }
+  loopScreen('learn', fr._h, {}, null);
+};
+
+// ---------------------------------------------------------------- routing
+const NAMES = ['intro', 'map', 'tutorial', 'play', 'result', 'learn'];
+function show(name) {
+  if (!NAMES.includes(name)) name = 'intro';
+  for (const n of NAMES) document.getElementById('s-' + n).classList.toggle('on', n === name);
+  for (const b of document.querySelectorAll('.mock button')) b.setAttribute('aria-current', b.dataset.go === name);
+  screens[name]();
+}
+for (const b of document.querySelectorAll('.mock button')) b.onclick = () => { location.hash = b.dataset.go; };
+addEventListener('hashchange', () => show(location.hash.slice(1)));
+document.getElementById('pins').onchange = (e) => document.body.classList.toggle('nopins', !e.target.checked);
+addEventListener('resize', () => show(location.hash.slice(1) || 'intro'));
+show(location.hash.slice(1) || 'intro');
+</script>
