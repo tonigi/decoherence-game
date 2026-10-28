@@ -15,6 +15,10 @@ npm run verify     # every level: reference reaches 2 stars, naive play stays be
 npm run solve -- levels/2-2.json   # random-restart optimiser over the setup parameters
 ```
 
+### Publishing
+
+`.github/workflows/pages.yml` runs the tests and `verify`, then publishes the static files to GitHub Pages on every push to `main` (or by hand from the Actions tab). One-time setup: repository Settings → Pages → Source: **GitHub Actions**.
+
 ## Controls
 
 | | |
