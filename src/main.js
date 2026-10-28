@@ -135,7 +135,7 @@ function rebuildSetupView() { ui.rebuildPending = true; }
 // ---------------------------------------------------------------- setup UI
 function buildLaunchSliders() {
   const host = $('launchSliders'); host.innerHTML = '';
-  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width', sigmaT: 'σ⊥ width', pol: 'polarization °', ellip: 'ellipticity' };
+  const names = { x: 'x', y: 'y', k: '|k₀| speed', angle: 'angle °', sigma: 'σ width', sigmaT: 'σ⊥ width', flux: 'flux Φ/Φ₀', pol: 'polarization °', ellip: 'ellipticity' };
   for (const key of launchKeys(ui.level)) {
     const p = param(ui.level.launch[key]), deg = DEGREE_KEYS.has(key);
     const row = document.createElement('div'); row.className = 'slider' + (p.max > p.min ? '' : ' fixed');

@@ -35,18 +35,12 @@ export class Sim {
     this.kmax = Math.PI / this.dx;
     this.scratchRe = new Float64Array(n2); this.scratchIm = new Float64Array(n2);
 
-    // kinetic propagator exp(-i k^2 dt / 2), in the transposed [kx][ky] layout;
-    // the 1/N^2 inverse-FFT normalisation is folded in.
-    const dk = (2 * Math.PI) / L;
-    for (let a = 0; a < N; a++) {
-      const fa = (a < N / 2 ? a : a - N) * dk;
-      for (let b = 0; b < N; b++) {
-        const fb = (b < N / 2 ? b : b - N) * dk;
-        const ang = -0.5 * (fa * fa + fb * fb) * dt;
-        this.kc[a * N + b] = Math.cos(ang) / n2;
-        this.ks[a * N + b] = Math.sin(ang) / n2;
-      }
-    }
+    // Gauge shift of the kinetic momentum, p = k + gauge, per axis (periodic axes only).
+    // A twist theta (psi(x + L) = e^{i theta} psi(x): a flux threading the ring) is
+    // gauge = theta / L; a force F along a periodic axis is a flux growing in time,
+    // gauge += F dt (Faraday), which is exact and has no seam, unlike F x.
+    this.twist = [0, 0]; this.gauge = [0, 0]; this.kinGauge = null;
+    this._buildKinetic([0, 0]);
     // absorbing boundary: smooth quadratic ramp in each axis. The FFT makes the box a
     // torus; an axis marked periodic keeps no absorber, so psi leaving one side
     // re-enters on the other with its phase intact (a portal instead of a drain).
@@ -64,6 +58,28 @@ export class Sim {
     }
   }
 
+  /** Kinetic propagator exp(-i (k + g)^2 dt / 2), in the transposed [kx][ky] layout;
+   *  the 1/N^2 inverse-FFT normalisation is folded in. */
+  _buildKinetic(g) {
+    if (this.kinGauge && g[0] === this.kinGauge[0] && g[1] === this.kinGauge[1]) return;
+    const { N, dt } = this, n2 = N * N, dk = (2 * Math.PI) / this.L;
+    for (let a = 0; a < N; a++) {
+      const fa = (a < N / 2 ? a : a - N) * dk + g[0];
+      for (let b = 0; b < N; b++) {
+        const fb = (b < N / 2 ? b : b - N) * dk + g[1];
+        const ang = -0.5 * (fa * fa + fb * fb) * dt;
+        this.kc[a * N + b] = Math.cos(ang) / n2;
+        this.ks[a * N + b] = Math.sin(ang) / n2;
+      }
+    }
+    this.kinGauge = [g[0], g[1]];
+  }
+  /** Twist the boundary of periodic axis `axis` (0 = x, 1 = y) by theta: an enclosed flux. */
+  setTwist(axis, theta) {
+    if (!this.periodic[axis]) throw new Error('a twist needs a periodic axis');
+    this.gauge[axis] += (theta - this.twist[axis]) / this.L;
+    this.twist[axis] = theta;
+  }
   addStatic(V) { for (let i = 0; i < V.length; i++) this.Vstat[i] += V[i]; this.dirty = true; }
   /** Smooth wells (harmonic) are drawn as equipotential contours, not as a tint. */
   addContour(V) {
@@ -214,7 +230,7 @@ export class Sim {
         if (this.Vcont) this.Vcont[k] = vc;
         Vdraw[k] = v;
         if (this.Wshow) this.Wshow[k] = Wel[k] + wg;
-        v -= tilt[0] * ((i + 0.5) * dx - hx) + tilt[1] * y;
+        v -= (this.periodic[0] ? 0 : tilt[0] * ((i + 0.5) * dx - hx)) + (this.periodic[1] ? 0 : tilt[1] * y);
         const a = 0.5 * dt, w = W[k] + Wel[k] + wg, d = Math.exp(-w * a);
         cH[k] = Math.cos(v * a) * d; sH[k] = -Math.sin(v * a) * d;
         fEl[k] = Wel[k] > 0 ? (1 - d * d) * Wel[k] / w : 0;
@@ -263,6 +279,10 @@ export class Sim {
   step(n = 1, others = []) {
     for (let s = 0; s < n; s++) {
       this._refresh();
+      // a force along a periodic axis drives the gauge; the step uses its midpoint value
+      const F = this.periodic.map((p, a) => (p ? this.tilt[a] : 0));
+      this._buildKinetic([this.gauge[0] + 0.5 * F[0] * this.dt, this.gauge[1] + 0.5 * F[1] * this.dt]);
+      this.gauge[0] += F[0] * this.dt; this.gauge[1] += F[1] * this.dt;
       this.caught += this._advance(this);
       for (const o of others) o.caught = (o.caught || 0) + this._advance(o);
     }
@@ -361,10 +381,11 @@ export class Sim {
     }
     const P = this._kPower(this._kbuf);
     let m = 0, kx = 0, kxx = 0, k2 = 0;
+    // kinetic momentum k + gauge (they differ on a ring with a flux or a force)
     for (let j = 0; j < N; j++) {
-      const ky = (j < N / 2 ? j : j - N) * dk;
+      const ky = (j < N / 2 ? j : j - N) * dk + this.gauge[1];
       for (let i = 0; i < N; i++) {
-        const kk = (i < N / 2 ? i : i - N) * dk, p = P[j * N + i];
+        const kk = (i < N / 2 ? i : i - N) * dk + this.gauge[0], p = P[j * N + i];
         m += p; kx += p * kk; kxx += p * kk * kk; k2 += p * (kk * kk + ky * ky);
       }
     }
@@ -408,11 +429,14 @@ export class Sim {
   }
   /** |phi(k)|^2 fft-shifted into `out` (kx right, ky down), scaled to sum 1. */
   momentumDensity(out) {
-    const { N } = this, P = this._kPower(this._kbuf);
+    const { N } = this, P = this._kPower(this._kbuf), dk = (2 * Math.PI) / this.L;
+    // for display: shifted by the gauge (to the nearest k cell) so it shows the kinetic
+    // momentum, which a force on a ring moves although the canonical k stays put
+    const sx = Math.round(this.gauge[0] / dk), sy = Math.round(this.gauge[1] / dk), wrap = (v) => ((v % N) + N) % N;
     let tot = 0;
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
       const p = P[j * N + i];
-      out[((j + N / 2) % N) * N + ((i + N / 2) % N)] = p; tot += p;
+      out[wrap(j + N / 2 + sy) * N + wrap(i + N / 2 + sx)] = p; tot += p;
     }
     for (let i = 0; i < out.length; i++) out[i] /= tot || 1;
   }

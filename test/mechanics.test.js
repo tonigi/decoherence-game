@@ -129,13 +129,13 @@ test('periodic boundaries: what leaves one side comes back on the other', () => 
   ab.step(400); assert.ok(ab.alive() < 0.05, 'absorbed at the x edge by default');
 });
 
-test('periodic axes: kicks come in whole quanta 2 pi / L, forces are refused, lattices fit the box', () => {
+test('periodic axes: kicks come in whole quanta 2 pi / L, lattices fit the box', () => {
   const lv = { id: 't', grid: { N: 64, L: 40 }, tmax: 10, boundary: 'periodic', launch: { x: 20, y: 20, k: 0, angle: 0, sigma: 2 }, inventory: { kick: { charges: 1, dk: 1 } }, targets: [{ shape: 'circle', x: 10, y: 20, r: 3 }] };
   const s = new Session(lv, defaultSetup(lv), { N: 64 });
   s.kick(1, 0);
   const q = (2 * Math.PI) / 40;
   near(s.events[0].dk[0], 6 * q, 1e-12, 'dk = 1 rounds to 6 quanta');
-  assert.throws(() => new Session({ ...lv, field: [0.1, 0] }, defaultSetup(lv), { N: 64 }), /periodic/);
+  assert.throws(() => new Session({ ...lv, observe: 'momentum', field: [0.1, 0] }, defaultSetup(lv), { N: 64 }), /momentum/);
   // every level with a periodic axis: full-length lattices along it must fit a whole number of periods
   const index = JSON.parse(fs.readFileSync(new URL('../levels/index.json', import.meta.url), 'utf8'));
   for (const id of index.levels) {
@@ -145,4 +145,43 @@ test('periodic axes: kicks come in whole quanta 2 pi / L, forces are refused, la
       const n = l.grid.L / el.period; near(n, Math.round(n), 1e-9, id + ' lattice periods around the box');
     }
   }
+});
+
+const centroidX = (sim) => {
+  let m = 0, n = 0;
+  for (let j = 0; j < sim.N; j++) for (let i = 0; i < sim.N; i++) { const p = sim.re[j * sim.N + i] ** 2 + sim.im[j * sim.N + i] ** 2; m += p * (i + 0.5) * sim.dx; n += p; }
+  return m / n;
+};
+
+test('a force along a periodic axis is a growing flux: x = x0 + F t^2 / 2, the same as a tilt on an open axis', () => {
+  const base = { id: 't', grid: { N: 64, L: 40 }, tmax: 10, field: [0.2, 0], launch: { x: 16, y: 20, k: 0, angle: 0, sigma: 2 }, targets: [{ shape: 'circle', x: 10, y: 20, r: 3 }] };
+  const ring = new Session({ ...base, boundary: { x: 'periodic', y: 'absorb' } }, defaultSetup(base), { N: 64 });
+  const open = new Session(base, defaultSetup(base), { N: 64 });
+  ring.step(100); open.step(100);
+  near(centroidX(ring.sim), 16 + 0.5 * 0.2 * 25, 0.02, 'ring: uniformly accelerated');
+  near(centroidX(ring.sim), centroidX(open.sim), 0.02, 'ring and tilted open box agree');
+  near(ring.sim.gauge[0], 0.2 * 5, 1e-12, 'the gauge is F t');
+  near(ring.alive(), 1, 1e-6, 'unitary');
+});
+
+test('flux on a ring: the launch speed is the same for every flux, only the phase per lap changes (loop mirror)', () => {
+  const lv = load('9-1'), at = (flux) => { const st = defaultSetup(lv); st.launch.flux = flux; return new Session(lv, st, { N: 64 }); };
+  const a = at(0), b = at(0.25);
+  a.step(40); b.step(40);
+  near(centroidX(a.sim), centroidX(b.sim), 1e-3, 'same motion before any lap');
+  a.step(400); b.step(400);
+  assert.ok(a.pM() > 0.45 && a.pT() < 0.1, 'no flux: a mirror ' + a.pT() + ' / ' + a.pM());
+  assert.ok(b.pT() > 0.55 && b.pM() < 0.05, 'a quarter flux quantum: a window ' + b.pT() + ' / ' + b.pM());
+  const c = at(0.5); c.step(440);
+  near(c.pT(), a.pT(), 0.03, 'period of half a flux quantum (each half makes one lap, in opposite senses)');
+});
+
+test('Bloch oscillations on a ring: holding the push brings the atom back, a quarter period sends it away', () => {
+  const lv = load('9-2'), run = (off) => {
+    const s = new Session(lv, defaultSetup(lv), { N: 64 }); s.setTilt(1, 0);
+    for (let i = 0; i < 628; i++) { if (i === off) s.setTilt(0, 0); s.step(1); }
+    return centroidX(s.sim);
+  };
+  near(run(Infinity), 10, 1.5, 'after one Bloch period T_B = 31.4 the atom is home');
+  assert.ok(Math.abs(run(157) - 10) > 8, 'released at T_B/4 it has glided away');
 });

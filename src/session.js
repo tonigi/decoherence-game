@@ -14,9 +14,10 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const LAUNCH_KEYS = ['x', 'y', 'k', 'angle', 'sigma'];
 // spinor levels may also set the launch polarization: angle `pol` (deg) and ellipticity `ellip`
 const SPIN_LAUNCH_KEYS = ['pol', 'ellip'];
-// any level may give the packet a different width across its direction of motion, `sigmaT`
+// any level may give the packet a different width across its direction of motion, `sigmaT`,
+// and a level with a periodic axis may thread it with a flux, `flux` (in flux quanta)
 export function launchKeys(level) {
-  return [...LAUNCH_KEYS, ...(level.launch.sigmaT !== undefined ? ['sigmaT'] : []), ...(level.spinor ? SPIN_LAUNCH_KEYS.filter(k => level.launch[k] !== undefined) : [])];
+  return [...LAUNCH_KEYS, ...['sigmaT', 'flux'].filter(k => level.launch[k] !== undefined), ...(level.spinor ? SPIN_LAUNCH_KEYS.filter(k => level.launch[k] !== undefined) : [])];
 }
 export const ITEM_KEYS = {
   rect: ['w', 'h', 'V'], absorber: ['w', 'h'], detector_rect: ['w', 'h'], detector_circle: ['r'],
@@ -122,10 +123,11 @@ export class Session {
     const g = level.grid;
     this.periodic = boundaryOf(level);
     this.sim = new Sim(opts.N || g.N, g.L, DT, { spinor: !!level.spinor, periodic: this.periodic });
-    // a constant force along a periodic axis would be a sawtooth with a jump at the seam
-    // (the consistent version is a growing flux, not built yet); refuse it
+    // along a periodic axis a force acts through the gauge (a flux growing in time, see
+    // Sim), so canonical and kinetic momentum differ there: no momentum measurement then
     const forced = [level.field?.[0] || level.inventory?.tilt?.max, level.field?.[1] || level.inventory?.tilt?.max];
-    if (this.periodic.some((p, a) => p && forced[a])) throw new Error(level.id + ': no field or tilt along a periodic axis');
+    if (level.observe === 'momentum' && (level.launch.flux !== undefined || this.periodic.some((p, a) => p && forced[a])))
+      throw new Error(level.id + ': no momentum measurement with a flux or a force along a periodic axis');
     this.stepCount = 0;
     this.events = [];
     this.result = null;
@@ -203,8 +205,13 @@ export class Session {
     this.mineMask = unionMask(sim, level.mines || [], raster);
 
     if (level.field) sim.setTilt(this.field[0], this.field[1]);
+    // `flux` (flux quanta) threads the ring of the periodic axis `fluxAxis` ('x' by default):
+    // psi picks up e^{2 pi i flux} per lap (Aharonov-Bohm)
+    if (this.setup.launch.flux !== undefined) sim.setTwist(level.fluxAxis === 'y' ? 1 : 0, 2 * Math.PI * this.setup.launch.flux);
     const l = this.setup.launch, a = (l.angle * Math.PI) / 180;
-    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a), ky: l.k * Math.sin(a), sigma: l.sigma, sigmaT: l.sigmaT ?? l.sigma, dir: a, pol: jones(l.pol, l.ellip) });
+    // with a flux, canonical and kinetic momentum differ by the gauge: launch the packet
+    // with the kinetic momentum asked for, so the flux changes only the phase per lap
+    sim.setGaussian({ x: l.x, y: l.y, kx: l.k * Math.cos(a) - sim.gauge[0], ky: l.k * Math.sin(a) - sim.gauge[1], sigma: l.sigma, sigmaT: l.sigmaT ?? l.sigma, dir: a, pol: jones(l.pol, l.ellip) });
     // `particles: "bosons" | "fermions"`: the grid is psi(x1, x2) of two particles on a line,
     // (anti)symmetrised under exchange; "distinguishable" (or nothing) keeps the product state
     const ex = { bosons: 1, fermions: -1 }[level.particles];

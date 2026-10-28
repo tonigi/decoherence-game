@@ -1,0 +1,75 @@
+{
+ "id": "9-2",
+ "chapter": 9,
+ "title": "Push Less",
+ "experiment": "Bloch oscillations in an optical lattice (Ben Dahan et al., 1996)",
+ "intro": "An atom at rest in a crystal of light (period 2) that wraps round the ring. Hold → (or D) to push it with a constant force towards the target. A pushed ball keeps speeding up; this atom does not. In a crystal its speed rises, falls to zero and reverses, every Bloch period T = 2π/(F·a) ≈ 31. Push too long and it comes back. Find the push that sends it cruising to the target.",
+ "grid": {
+  "N": 128,
+  "L": 40
+ },
+ "boundary": {
+  "x": "periodic",
+  "y": "absorb"
+ },
+ "tmax": 40,
+ "launch": {
+  "x": 10,
+  "y": 20,
+  "k": 0,
+  "angle": 0,
+  "sigma": 4
+ },
+ "elements": [
+  { "type": "lattice", "x": 10, "y": 20, "V": 2.5, "period": 2 }
+ ],
+ "inventory": {
+  "tilt": { "max": 0.1 }
+ },
+ "targets": [
+  { "shape": "rect", "x": 28, "y": 20, "w": 8, "h": 24 }
+ ],
+ "stars": [
+  0.3,
+  0.45,
+  0.55
+ ],
+ "expectThreshold": 0.45,
+ "reference": {
+  "setup": {},
+  "events": [
+   { "step": 0, "type": "tilt", "u": [1, 0] },
+   { "step": 188, "type": "tilt", "u": [0, 0] }
+  ]
+ },
+ "naive": {
+  "setup": {},
+  "events": [
+   { "step": 0, "type": "tilt", "u": [1, 0] }
+  ]
+ },
+ "goal": "Push (hold → or D) and let go at the right moment so the atom glides onto the target; observe when it is there. Holding the push all the way does not work.",
+ "physics": {
+  "point": "In a lattice a force changes the quasi-momentum steadily, k = Ft, but the speed is the slope of the energy band, which rises, falls to zero at the zone edge and reverses. Let go when the speed is highest, near a quarter Bloch period.",
+  "eq": "ẋ = ∂E/∂k,  k(t) = F t,  T_B = 2π/(F a)",
+  "learn": {
+   "idea": [
+    "Bloch (1928) and Zener (1934) predicted that an electron in a perfect crystal under a constant electric field does not accelerate for ever: it oscillates. In real metals collisions come first, so it was seen only in semiconductor superlattices (1992) and then, very cleanly, with cold atoms in optical lattices (Ben Dahan, Peik, Reichel, Castin and Salomon, 1996).",
+    "In a crystal the energy is a band E(k) with a finite width, periodic in k with period 2π/a. A force moves k at a constant rate, F per unit time, through the band. The velocity is the slope ∂E/∂k: zero at the bottom, largest halfway, zero again at the zone edge k = π/a, where the wave is Bragg-reflected (the mirror of 7-3) and k re-enters at −π/a, moving backwards.",
+    "So a push of a quarter Bloch period gives the most speed, and the atom keeps it once you let go (a band velocity needs no force). Push for half a period and it stops dead at the zone edge; push for a whole period and it is back where it started, at rest."
+   ],
+   "maths": [
+    "Here a = 2, F = 0.1, so T_B = 2π/(F a) ≈ 31.4 and the zone edge π/a ≈ 1.57 is reached after 15.7. The lattice V sin²(πx/2) with V = 2.5 is about twice the recoil energy (π/a)²/2 ≈ 1.23: the atom moves by tunnelling from well to well, with a lowest band 0.73 wide, a gap of 1.25 above it (so Zener tunnelling across the gap is negligible at this force), and a top band speed of 0.75.",
+    "The ring matters. A constant force on a ring cannot be a tilted potential (it would jump at the seam); it is a magnetic flux growing at a steady rate, whose electromotive force pushes the atom round. The solver does exactly that: the kinetic momentum is k + F t.",
+    "Best P_T for a push of length τ, then let go:",
+    { "eq": "τ/T_B    0.10  0.15  0.20  0.25  0.30  0.35  0.40  0.50  hold\nP_T      25%   45%   53%   58%   62%   62%   57%   21%    8%" },
+    "The best push is a little longer than T_B/4 because the push also moves the atom part of the way."
+   ],
+   "try": [
+    "Hold the push all the time: the atom drifts a few wells, stops, and comes back every 31 time units. It never reaches the target.",
+    "Push for about 9 time units (until t ≈ 9.4) and let go: it glides at constant speed onto the target and keeps going round the ring.",
+    "Push for about 16 (half a Bloch period): at the zone edge it stops again, wherever it is."
+   ]
+  }
+ }
+}

@@ -179,7 +179,12 @@ export class Renderer {
     if (px || py) {
       ctx.save(); ctx.strokeStyle = 'rgba(120,220,255,0.55)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
       ctx.fillStyle = 'rgba(120,220,255,0.75)'; ctx.font = mono;
-      if (px) { for (const x of [1, W - 1]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, W); ctx.stroke(); } ctx.fillText('⇄ portal', 6, W / 2 - 6); }
+      if (px) {
+        for (const x of [1, W - 1]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, W); ctx.stroke(); }
+        ctx.fillText('⇄ portal', 6, W / 2 - 6);
+        // the flux threading the ring, in flux quanta
+        if (sim.twist?.[0]) ctx.fillText(`Φ = ${(sim.twist[0] / (2 * Math.PI)).toFixed(3)} Φ₀`, 6, W / 2 + 10);
+      }
       if (py) { for (const y of [1, W - 1]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } ctx.fillText('⇅ portal', W / 2 + 6, 14); }
       ctx.restore();
     }
